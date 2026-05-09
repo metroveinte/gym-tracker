@@ -1,10 +1,24 @@
 const form = document.getElementById('session-form');
 const sessionsBody = document.getElementById('sessions-body');
 const exportButton = document.getElementById('export-button');
+const messageDiv = document.getElementById('message');
 
 async function fetchSessions() {
-  const response = await fetch('/api/sessions');
-  return response.ok ? response.json() : [];
+  try {
+    const response = await fetch('/api/sessions');
+    if (!response.ok) throw new Error('Error al cargar sesiones');
+    return await response.json();
+  } catch (error) {
+    showMessage('Error al cargar sesiones: ' + error.message, 'error');
+    return [];
+  }
+}
+
+function showMessage(text, type = 'error') {
+  messageDiv.textContent = text;
+  messageDiv.className = `message ${type}`;
+  messageDiv.classList.remove('hidden');
+  setTimeout(() => messageDiv.classList.add('hidden'), 5000);
 }
 
 function formatValue(value) {
@@ -39,17 +53,35 @@ async function loadSessions() {
 }
 
 async function addSession(session) {
-  await fetch('/api/sessions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(session),
-  });
-  await loadSessions();
+  try {
+    const response = await fetch('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(session),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Error al guardar');
+    }
+    showMessage('Sesión guardada correctamente', 'success');
+    await loadSessions();
+  } catch (error) {
+    showMessage('Error al guardar sesión: ' + error.message, 'error');
+  }
 }
 
 async function deleteSession(id) {
-  await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
-  await loadSessions();
+  try {
+    const response = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Error al eliminar');
+    }
+    showMessage('Sesión eliminada correctamente', 'success');
+    await loadSessions();
+  } catch (error) {
+    showMessage('Error al eliminar sesión: ' + error.message, 'error');
+  }
 }
 
 form.addEventListener('submit', async (event) => {
@@ -64,7 +96,7 @@ form.addEventListener('submit', async (event) => {
   };
 
   if (!session.date || !session.exercise || !session.sets || !session.reps) {
-    alert('Completa todos los campos obligatorios antes de guardar.');
+    showMessage('Completa todos los campos obligatorios antes de guardar.');
     return;
   }
 

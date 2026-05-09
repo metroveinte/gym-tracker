@@ -12,7 +12,7 @@ if (!fs.existsSync(dataDir)) {
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('No se pudo abrir la base de datos:', err.message);
-    process.exit(1);
+    throw new Error('Error al conectar con la base de datos');
   }
 });
 

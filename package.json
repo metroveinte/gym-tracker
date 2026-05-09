@@ -4,7 +4,10 @@
   "description": "Webapp de seguimiento de entrenamiento en el gimnasio con persistencia en SQLite y exportación de datos.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js",
+    "lint": "echo 'No linter configured'",
+    "test": "echo 'No tests configured'"
   },
   "dependencies": {
     "express": "^4.18.4",
