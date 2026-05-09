@@ -38,12 +38,11 @@ function renderSeriesTable() {
     return;
   }
 
-  let html = '<table style="width: 100%; margin-bottom: 15px;"><thead><tr><th>Serie</th><th>Sets</th><th>Reps</th><th>Peso (kg)</th><th>Acción</th></tr></thead><tbody>';
+  let html = '<table style="width: 100%; margin-bottom: 15px;"><thead><tr><th>Serie</th><th>Reps</th><th>Peso (kg)</th><th>Acción</th></tr></thead><tbody>';
   currentSeries.forEach((serie, idx) => {
     html += `
       <tr>
         <td><strong>Serie ${idx + 1}</strong></td>
-        <td>${serie.sets}</td>
         <td>${serie.reps}</td>
         <td>${formatValue(serie.weight)}</td>
         <td><button class="delete-serie-btn" data-idx="${idx}" style="padding: 5px 10px; font-size: 0.85rem;">Eliminar</button></td>
@@ -65,18 +64,10 @@ function renderSeriesTable() {
 }
 
 addSeriesBtn.addEventListener('click', () => {
-  const sets = prompt('Sets de la SERIE ' + (currentSeries.length + 1) + ':');
-  if (sets === null) return;
-  
-  const setsNum = parseInt(sets, 10);
-  if (isNaN(setsNum) || setsNum <= 0) {
-    showMessage('Sets debe ser un número positivo', 'error');
-    return;
-  }
-
+  // No pedimos sets, se asume 1 por serie
   const reps = prompt('Repeticiones de la SERIE ' + (currentSeries.length + 1) + ':');
   if (reps === null) return;
-  
+
   const repsNum = parseInt(reps, 10);
   if (isNaN(repsNum) || repsNum <= 0) {
     showMessage('Repeticiones debe ser un número positivo', 'error');
@@ -93,7 +84,7 @@ addSeriesBtn.addEventListener('click', () => {
     }
   }
 
-  currentSeries.push({ sets: setsNum, reps: repsNum, weight: weightNum });
+  currentSeries.push({ sets: 1, reps: repsNum, weight: weightNum });
   renderSeriesTable();
   showMessage('Serie ' + currentSeries.length + ' agregada correctamente', 'success');
 });

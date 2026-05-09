@@ -59,10 +59,12 @@ app.post('/api/sessions/:id/series', (req, res) => {
   if (isNaN(idNum) || idNum <= 0) {
     return res.status(400).json({ error: 'ID de sesión inválido.' });
   }
-  if (sets === undefined || reps === undefined) {
-    return res.status(400).json({ error: 'Series y repeticiones son obligatorios.' });
+  // 'sets' is optional for individual series (default 1). 'reps' is required.
+  if (reps === undefined) {
+    return res.status(400).json({ error: 'Repeticiones son obligatorias.' });
   }
-  if (typeof sets !== 'number' || sets <= 0 || typeof reps !== 'number' || reps <= 0) {
+  const setsNum = (sets !== undefined) ? sets : 1;
+  if (typeof setsNum !== 'number' || setsNum <= 0 || typeof reps !== 'number' || reps <= 0) {
     return res.status(400).json({ error: 'Series y repeticiones deben ser números positivos.' });
   }
   if (weight !== undefined && (typeof weight !== 'number' || weight < 0)) {
@@ -72,11 +74,11 @@ app.post('/api/sessions/:id/series', (req, res) => {
   const stmt = db.prepare(
     'INSERT INTO series (session_id, sets, reps, weight) VALUES (?, ?, ?, ?)'
   );
-  stmt.run(idNum, sets, reps, weight || null, function (err) {
+  stmt.run(idNum, setsNum, reps, weight || null, function (err) {
     if (err) {
       return res.status(500).json({ error: 'Error al guardar la serie.' });
     }
-    res.json({ id: this.lastID, sets, reps, weight: weight || null });
+    res.json({ id: this.lastID, sets: setsNum, reps, weight: weight || null });
   });
   stmt.finalize();
 });
