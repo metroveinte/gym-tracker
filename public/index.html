@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gym Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Gym Tracker</h1>
+    <section class="card">
+      <h2>Agregar sesión</h2>
+      <form id="session-form">
+        <label>
+          Fecha
+          <input type="date" id="date" required />
+        </label>
+        <label>
+          Ejercicio
+          <input type="text" id="exercise" placeholder="Press de banca" required />
+        </label>
+        <div class="row">
+          <label>
+            Series
+            <input type="number" id="sets" min="1" value="3" required />
+          </label>
+          <label>
+            Repeticiones
+            <input type="number" id="reps" min="1" value="10" required />
+          </label>
+          <label>
+            Peso (kg)
+            <input type="number" id="weight" min="0" step="0.5" placeholder="Opcional" />
+          </label>
+        </div>
+        <label>
+          Notas
+          <textarea id="notes" rows="2" placeholder="Opcional"></textarea>
+        </label>
+        <button type="submit">Guardar sesión</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h2>Historial de entrenamientos</h2>
+        <button id="export-button" class="secondary">Exportar CSV</button>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Ejercicio</th>
+              <th>Series</th>
+              <th>Reps</th>
+              <th>Peso</th>
+              <th>Notas</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-body">
+            <tr><td colspan="7">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
