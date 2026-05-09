@@ -63,7 +63,9 @@ function renderSeriesTable() {
     });
   });
 }
-ts de la SERIE ' + (currentSeries.length + 1) + ':');
+
+addSeriesBtn.addEventListener('click', () => {
+  const sets = prompt('Sets de la SERIE ' + (currentSeries.length + 1) + ':');
   if (sets === null) return;
   
   const setsNum = parseInt(sets, 10);
@@ -93,9 +95,7 @@ ts de la SERIE ' + (currentSeries.length + 1) + ':');
 
   currentSeries.push({ sets: setsNum, reps: repsNum, weight: weightNum });
   renderSeriesTable();
-  showMessage('Serie ' + currentSeries.length + ' agregada correctamente', 'success'
-  currentSeries.push({ sets: setsNum, reps: repsNum, weight: weightNum });
-  renderSeriesTable();
+  showMessage('Serie ' + currentSeries.length + ' agregada correctamente', 'success');
 });
 
 function renderSessions(sessions) {
@@ -199,13 +199,13 @@ async function deleteSession(id) {
   }
 }
 
+// Agregar evento al form
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
 });
 
 // Agregar evento para el botón de guardar
-saveSessionBtn.addEventListener('click', saveSessio = '20px';
-saveBtn.className = 'btn-primary';
-saveBtn.addEventListener('click', saveSession);
-form.appendChild(saveBtn);
+saveSessionBtn.addEventListener('click', saveSession);
 
 sessionsBody.addEventListener('click', async (event) => {
   if (event.target.matches('.delete-button')) {
