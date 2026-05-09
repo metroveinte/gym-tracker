@@ -20,5 +20,5 @@ COPY . ./
 
 VOLUME ["/usr/src/app/data"]
 
-EXPOSE 3000
+EXPOSE 3005
 CMD ["npm", "start"]

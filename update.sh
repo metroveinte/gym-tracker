@@ -14,9 +14,9 @@ docker stop gym-tracker
 docker rm gym-tracker
 docker run -d \
   --name gym-tracker \
-  -p 3000:3000 \
+  -p 3005:3005 \
   -v /mnt/user/appdata/gym-tracker/data:/usr/src/app/data \
   --restart unless-stopped \
   gym-tracker
 
-echo "Actualización completada. Accede a http://<IP>:3000"
+echo "Actualización completada. Accede a http://<IP>:3005"

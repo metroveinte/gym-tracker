@@ -27,7 +27,7 @@ npm install
 npm start
 ```
 
-Luego abre `http://localhost:3000` en tu navegador.
+Luego abre `http://localhost:3005` en tu navegador.
 
 ## Despliegue en Docker
 
@@ -46,7 +46,7 @@ Usa un volumen para persistir la base de datos SQLite:
 ```bash
 docker run -d \
   --name gym-tracker \
-  -p 3000:3000 \
+  -p 3005:3005 \
   -v /ruta/local/data:/usr/src/app/data \
   --restart unless-stopped \
   gym-tracker
@@ -59,7 +59,7 @@ Reemplaza `/ruta/local/data` por la carpeta donde quieras guardar los datos.
 Abre en el navegador:
 
 ```text
-http://localhost:3000
+http://localhost:3005
 ```
 
 ## Despliegue en Unraid
@@ -92,8 +92,8 @@ docker build -t gym-tracker .
    - **Repository**: `gym-tracker` (la imagen que acabas de construir)
    - **Docker Hub URL**: Deja vacío (es una imagen local)
 3. En **Port Mappings**:
-   - Host Port: `3000` (o el puerto que quieras usar)
-   - Container Port: `3000`
+   - Host Port: `3005` (o el puerto que quieras usar)
+   - Container Port: `3005`
 4. En **Volume Mappings**:
    - Container Path: `/usr/src/app/data`
    - Host Path: `/mnt/user/appdata/gym-tracker/data` (o la ruta donde quieres persistir la DB)
@@ -105,7 +105,7 @@ docker build -t gym-tracker .
 Abre en el navegador:
 
 ```text
-http://<IP-de-tu-servidor-Unraid>:3000
+http://<IP-de-tu-servidor-Unraid>:3005
 ```
 
 ### Notas para Unraid
