@@ -198,6 +198,12 @@ h1 {
   letter-spacing: 2px;
 }
 
+h2, h3 {
+  font-family: 'Bebas Neue', cursive;
+  color: #ff0000;
+  letter-spacing: 1px;
+}
+
 .card {
   background: #2a2a2a;
   border: 1px solid #444444;
@@ -264,6 +270,25 @@ button {
 
 button:hover {
   background: #cc0000;
+}
+
+.btn-primary {
+  background: #ff0000;
+}
+
+.btn-primary:hover {
+  background: #cc0000;
+}
+
+.btn-secondary {
+  background: #555555;
+  margin-top: 0;
+  padding: 12px 18px;
+  font-size: 0.95rem;
+}
+
+.btn-secondary:hover {
+  background: #777777;
 }
 
 .secondary {

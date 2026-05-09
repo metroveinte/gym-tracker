@@ -9,18 +9,58 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/sessions', (req, res) => {
-  db.all('SELECT * FROM sessions ORDER BY date DESC, id DESC', [], (err, rows) => {
+  db.all('SELECT * FROM sessions ORDER BY date DESC, id DESC', [], (err, sessions) => {
     if (err) {
       return res.status(500).json({ error: 'Error al leer la base de datos.' });
     }
-    res.json(rows);
+    
+    // Obtener series para cada sesión
+    let completed = 0;
+    sessions.forEach((session, idx) => {
+      db.all('SELECT * FROM series WHERE session_id = ? ORDER BY id ASC', [session.id], (err, series) => {
+        if (!err) {
+          sessions[idx].series = series || [];
+        }
+        completed++;
+        if (completed === sessions.length) {
+          res.json(sessions);
+        }
+      });
+    });
+    
+    if (sessions.length === 0) {
+      res.json([]);
+    }
   });
 });
 
 app.post('/api/sessions', (req, res) => {
-  const { date, exercise, sets, reps, weight, notes } = req.body;
-  if (!date || !exercise || sets === undefined || reps === undefined) {
-    return res.status(400).json({ error: 'Fecha, ejercicio, series y repeticiones son obligatorios.' });
+  const { date, exercise, notes } = req.body;
+  if (!date || !exercise) {
+    return res.status(400).json({ error: 'Fecha y ejercicio son obligatorios.' });
+  }
+  const stmt = db.prepare(
+    'INSERT INTO sessions (date, exercise, notes) VALUES (?, ?, ?)'
+  );
+  stmt.run(date, exercise, notes || '', function (err) {
+    if (err) {
+      return res.status(500).json({ error: 'Error al guardar la sesión.' });
+    }
+    res.json({ id: this.lastID, date, exercise, notes: notes || '', series: [] });
+  });
+  stmt.finalize();
+});
+
+app.post('/api/sessions/:id/series', (req, res) => {
+  const { id } = req.params;
+  const { sets, reps, weight } = req.body;
+  const idNum = parseInt(id, 10);
+  
+  if (isNaN(idNum) || idNum <= 0) {
+    return res.status(400).json({ error: 'ID de sesión inválido.' });
+  }
+  if (sets === undefined || reps === undefined) {
+    return res.status(400).json({ error: 'Series y repeticiones son obligatorios.' });
   }
   if (typeof sets !== 'number' || sets <= 0 || typeof reps !== 'number' || reps <= 0) {
     return res.status(400).json({ error: 'Series y repeticiones deben ser números positivos.' });
@@ -28,14 +68,15 @@ app.post('/api/sessions', (req, res) => {
   if (weight !== undefined && (typeof weight !== 'number' || weight < 0)) {
     return res.status(400).json({ error: 'Peso debe ser un número positivo o nulo.' });
   }
+  
   const stmt = db.prepare(
-    'INSERT INTO sessions (date, exercise, sets, reps, weight, notes) VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT INTO series (session_id, sets, reps, weight) VALUES (?, ?, ?, ?)'
   );
-  stmt.run(date, exercise, sets, reps, weight || null, notes || '', function (err) {
+  stmt.run(idNum, sets, reps, weight || null, function (err) {
     if (err) {
-      return res.status(500).json({ error: 'Error al guardar la sesión.' });
+      return res.status(500).json({ error: 'Error al guardar la serie.' });
     }
-    res.json({ id: this.lastID, date, exercise, sets, reps, weight: weight || null, notes: notes || '' });
+    res.json({ id: this.lastID, sets, reps, weight: weight || null });
   });
   stmt.finalize();
 });
@@ -58,28 +99,57 @@ app.delete('/api/sessions/:id', (req, res) => {
 });
 
 app.get('/api/export/csv', (req, res) => {
-  db.all('SELECT * FROM sessions ORDER BY date DESC, id DESC', [], (err, rows) => {
+  db.all('SELECT * FROM sessions ORDER BY date DESC, id DESC', [], (err, sessions) => {
     if (err) {
       return res.status(500).send('Error al generar CSV.');
     }
-    const header = ['id', 'date', 'exercise', 'sets', 'reps', 'weight', 'notes'];
+    
+    const header = ['Fecha', 'Ejercicio', 'Series', 'Reps', 'Peso', 'Notas'];
     const csvRows = [header.join(',')];
-    rows.forEach((row) => {
-      const values = [
-        row.id,
-        `"${row.date}"`,
-        `"${row.exercise.replace(/"/g, '""')}"`,
-        row.sets,
-        row.reps,
-        row.weight === null ? '' : row.weight,
-        `"${(row.notes || '').replace(/"/g, '""')}"`
-      ];
-      csvRows.push(values.join(','));
+    
+    let completed = 0;
+    sessions.forEach((session) => {
+      db.all('SELECT * FROM series WHERE session_id = ? ORDER BY id ASC', [session.id], (err, series) => {
+        if (series && series.length > 0) {
+          series.forEach((s) => {
+            const values = [
+              `"${session.date}"`,
+              `"${session.exercise.replace(/"/g, '""')}"`,
+              s.sets,
+              s.reps,
+              s.weight === null ? '' : s.weight,
+              `"${(session.notes || '').replace(/"/g, '""')}"`
+            ];
+            csvRows.push(values.join(','));
+          });
+        } else {
+          const values = [
+            `"${session.date}"`,
+            `"${session.exercise.replace(/"/g, '""')}"`,
+            '-',
+            '-',
+            '-',
+            `"${(session.notes || '').replace(/"/g, '""')}"`
+          ];
+          csvRows.push(values.join(','));
+        }
+        
+        completed++;
+        if (completed === sessions.length) {
+          const csv = csvRows.join('\r\n');
+          res.setHeader('Content-Type', 'text/csv');
+          res.setHeader('Content-Disposition', 'attachment; filename="gym-sessions.csv"');
+          res.send(csv);
+        }
+      });
     });
-    const csv = csvRows.join('\r\n');
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="gym-sessions.csv"');
-    res.send(csv);
+    
+    if (sessions.length === 0) {
+      const csv = header.join(',');
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="gym-sessions.csv"');
+      res.send(csv);
+    }
   });
 });
 

@@ -22,10 +22,18 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       date TEXT NOT NULL,
       exercise TEXT NOT NULL,
+      notes TEXT
+    )
+  `);
+  
+  db.run(`
+    CREATE TABLE IF NOT EXISTS series (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id INTEGER NOT NULL,
       sets INTEGER NOT NULL,
       reps INTEGER NOT NULL,
       weight REAL,
-      notes TEXT
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
     )
   `);
 });
