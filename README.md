@@ -4,11 +4,13 @@ Aplicación web para seguimiento de entrenamiento en el gimnasio con persistenci
 
 ## Características
 
-- Registrar sesiones de entrenamiento con fecha, ejercicio, series, repeticiones, peso y notas.
-- Guardar los datos en una base de datos SQLite local.
-- Ver historial de entrenamientos.
-- Eliminar sesiones.
-- Exportar el historial completo a CSV.
+- **Página principal motivadora** con diseño agresivo y moderno
+- Registrar sesiones de entrenamiento con fecha, ejercicio, series, repeticiones, peso y notas
+- Ver historial completo de entrenamientos
+- Página de estadísticas básicas
+- Guardar los datos en una base de datos SQLite local
+- Eliminar sesiones
+- Exportar el historial completo a CSV
 
 ## Desarrollo Local
 
@@ -27,7 +29,7 @@ npm install
 npm start
 ```
 
-Luego abre `http://localhost:3005` en tu navegador.
+Luego abre `http://localhost:3005` en tu navegador para ver la página principal.
 
 ## Despliegue en Docker
 
@@ -119,13 +121,20 @@ http://<IP-de-tu-servidor-Unraid>:3005
 
 - `server.js`: servidor Express y API REST.
 - `db.js`: configuración y creación de base de datos SQLite.
-- `public/`: frontend con HTML, CSS y JavaScript.
+- `public/index.html`: página principal con diseño motivador.
+- `public/sessions.html`: página para gestionar sesiones de entrenamiento.
+- `public/stats.html`: página de estadísticas básicas.
+- `public/app.js`: JavaScript para la gestión de sesiones.
+- `public/stats.js`: JavaScript para estadísticas.
+- `public/styles.css`: estilos CSS agresivos y modernos.
 - `data/`: contenedor de la base de datos SQLite generada.
 - `Dockerfile`: configuración para construir el contenedor Docker.
 - `.dockerignore`: archivos a ignorar al construir la imagen.
 
 ## Uso
 
+- Desde la página principal, accede a "Nueva Sesión" para registrar entrenamientos.
+- Usa "Ver Estadísticas" para ver métricas básicas.
 - Agrega una sesión en el formulario.
 - Revisa el historial en la tabla.
 - Usa el botón "Exportar CSV" para descargar los datos.

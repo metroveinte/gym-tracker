@@ -83,8 +83,20 @@ app.get('/api/export/csv', (req, res) => {
   });
 });
 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'home.html'));
+});
+
+app.get('/sessions', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sessions.html'));
+});
+
+app.get('/stats', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'stats.html'));
+});
+
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'home.html'));
 });
 
 app.listen(PORT, () => {
