@@ -30,6 +30,7 @@ body {
   z-index: 2;
   max-width: 800px;
   padding: 20px;
+  position: relative;
 }
 
 .hero-title {
@@ -100,6 +101,7 @@ body {
   background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text fill="rgba(255,255,255,0.1)" font-size="20" y="50%">💪</text></svg>') repeat;
   opacity: 0.1;
   z-index: 1;
+  pointer-events: none;
 }
 
 .features {
