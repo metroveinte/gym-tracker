@@ -3,6 +3,7 @@ const sessionsBody = document.getElementById('sessions-body');
 const exportButton = document.getElementById('export-button');
 const messageDiv = document.getElementById('message');
 const addSeriesBtn = document.getElementById('add-series-btn');
+const saveSessionBtn = document.getElementById('save-session-btn');
 const seriesContainer = document.getElementById('series-container');
 
 let currentSeries = [];
@@ -37,10 +38,11 @@ function renderSeriesTable() {
     return;
   }
 
-  let html = '<table style="width: 100%; margin-bottom: 15px;"><thead><tr><th>Sets</th><th>Reps</th><th>Peso (kg)</th><th>Acción</th></tr></thead><tbody>';
+  let html = '<table style="width: 100%; margin-bottom: 15px;"><thead><tr><th>Serie</th><th>Sets</th><th>Reps</th><th>Peso (kg)</th><th>Acción</th></tr></thead><tbody>';
   currentSeries.forEach((serie, idx) => {
     html += `
       <tr>
+        <td><strong>Serie ${idx + 1}</strong></td>
         <td>${serie.sets}</td>
         <td>${serie.reps}</td>
         <td>${formatValue(serie.weight)}</td>
@@ -54,25 +56,24 @@ function renderSeriesTable() {
   // Agregar event listeners a los botones de eliminar
   document.querySelectorAll('.delete-serie-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      e.preventDefault();
       const idx = parseInt(e.target.dataset.idx);
       currentSeries.splice(idx, 1);
       renderSeriesTable();
     });
   });
 }
-
-addSeriesBtn.addEventListener('click', () => {
-  const sets = prompt('Series (número):');
-  if (!sets) return;
+ts de la SERIE ' + (currentSeries.length + 1) + ':');
+  if (sets === null) return;
   
   const setsNum = parseInt(sets, 10);
   if (isNaN(setsNum) || setsNum <= 0) {
-    showMessage('Series debe ser un número positivo', 'error');
+    showMessage('Sets debe ser un número positivo', 'error');
     return;
   }
 
-  const reps = prompt('Repeticiones (número):');
-  if (!reps) return;
+  const reps = prompt('Repeticiones de la SERIE ' + (currentSeries.length + 1) + ':');
+  if (reps === null) return;
   
   const repsNum = parseInt(reps, 10);
   if (isNaN(repsNum) || repsNum <= 0) {
@@ -80,7 +81,7 @@ addSeriesBtn.addEventListener('click', () => {
     return;
   }
 
-  const weight = prompt('Peso en kg (opcional):');
+  const weight = prompt('Peso en kg de la SERIE ' + (currentSeries.length + 1) + ' (Opcional):');
   let weightNum = null;
   if (weight) {
     weightNum = parseFloat(weight);
@@ -90,6 +91,9 @@ addSeriesBtn.addEventListener('click', () => {
     }
   }
 
+  currentSeries.push({ sets: setsNum, reps: repsNum, weight: weightNum });
+  renderSeriesTable();
+  showMessage('Serie ' + currentSeries.length + ' agregada correctamente', 'success'
   currentSeries.push({ sets: setsNum, reps: repsNum, weight: weightNum });
   renderSeriesTable();
 });
@@ -195,17 +199,10 @@ async function deleteSession(id) {
   }
 }
 
-// Agregar evento al form (cambiar a guardar sesión sin submit por defecto)
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-  saveSession();
 });
 
-// Agregar evento para el botón de guardar (lo agregamos dinámicamente)
-const saveBtn = document.createElement('button');
-saveBtn.type = 'button';
-saveBtn.textContent = 'GUARDAR SESIÓN';
-saveBtn.style.marginTop = '20px';
+// Agregar evento para el botón de guardar
+saveSessionBtn.addEventListener('click', saveSessio = '20px';
 saveBtn.className = 'btn-primary';
 saveBtn.addEventListener('click', saveSession);
 form.appendChild(saveBtn);
