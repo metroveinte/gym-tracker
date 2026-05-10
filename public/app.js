@@ -96,17 +96,17 @@ function renderSessions(sessions) {
   }
   sessionsBody.innerHTML = sessions
     .map((session) => {
-      let sets = '-', reps = '-', weight = '-';
+      let seriesCount = '-', reps = '-', weight = '-';
       if (session.series && session.series.length > 0) {
-        sets = session.series[0].sets;
-        reps = session.series[0].reps;
-        weight = formatValue(session.series[0].weight);
+        seriesCount = session.series.length;
+        reps = session.series.map(s => s.reps).join(', ');
+        weight = session.series.map(s => formatValue(s.weight)).join(', ');
       }
       return `
         <tr>
           <td>${session.date}</td>
           <td>${session.exercise}</td>
-          <td>${sets}</td>
+          <td>${seriesCount}</td>
           <td>${reps}</td>
           <td>${weight}</td>
           <td>${formatValue(session.notes)}</td>
