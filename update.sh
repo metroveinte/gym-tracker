@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#!/bin/bash
-
 # Script para actualizar Gym Tracker desde GitHub y reconstruir imagen
 # Uso: ./update.sh [directorio] [puerto]
 
@@ -16,11 +14,11 @@ echo "Reconstruyendo imagen Docker..."
 docker build -t gym-tracker .
 
 echo "Reiniciando contenedor..."
-docker stop gym-tracker
-docker rm gym-tracker
+docker stop gym-tracker || true
+docker rm gym-tracker || true
 docker run -d \
   --name gym-tracker \
-  -p $PORT:$PORT \
+  -p $PORT:3005 \
   -v "$DIR/data:/usr/src/app/data" \
   --restart unless-stopped \
   gym-tracker

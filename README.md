@@ -43,7 +43,7 @@ docker build -t gym-tracker .
 
 ### Ejecutar el Contenedor
 
-Usa un volumen para persistir la base de datos SQLite:
+Usa un volumen para persistir la base de datos SQLite. Si el directorio de datos no existe, Docker lo creará automáticamente.
 
 ```bash
 docker run -d \
@@ -54,7 +54,7 @@ docker run -d \
   gym-tracker
 ```
 
-Reemplaza `/ruta/local/data` por la carpeta donde quieras guardar los datos.
+Reemplaza `/ruta/local/data` por la carpeta donde quieras guardar los datos. Asegúrate de que la ruta tenga permisos de escritura.
 
 ### Acceder a la Aplicación
 
@@ -63,6 +63,8 @@ Abre en el navegador:
 ```text
 http://localhost:3005
 ```
+
+> Nota: el `Dockerfile` usa `node:20-slim` para evitar problemas de compilación de `sqlite3` en sistemas Alpine. Esto mejora la compatibilidad en Unraid.
 
 ## Despliegue en Unraid
 
