@@ -15,6 +15,10 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'home.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/sessions', (req, res) => {
