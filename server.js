@@ -19,7 +19,15 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'home.html'));
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.get('/version', (req, res) => {
+  res.send('v1.0.0');
+});
+
+app.get('/index.html', (req, res) => {
+  res.redirect(301, '/');
+});
+
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 app.get('/api/sessions', (req, res) => {
   db.all('SELECT * FROM sessions ORDER BY date DESC, id DESC', [], (err, sessions) => {
