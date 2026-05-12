@@ -8,12 +8,17 @@ PORT=${2:-3005}
 
 echo "==== ACTUALIZACIÓN DE GYM TRACKER ===="
 echo ""
-echo "Actualizando código desde GitHub en $DIR..."
+echo "Actualizando código en $DIR..."
 cd "$DIR" || exit 1
 
-if ! git pull origin main; then
-  echo "ERROR: No se pudo hacer git pull. Verifica la rama (por defecto: main)"
-  exit 1
+if [ -d ".git" ] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "Repositorio Git detectado. Haciendo git pull..."
+  if ! git pull origin main; then
+    echo "ERROR: No se pudo hacer git pull. Verifica la rama (por defecto: main)"
+    exit 1
+  fi
+else
+  echo "No hay repositorio Git en $DIR. Se omite git pull y se usa el código local del directorio."
 fi
 
 echo ""
