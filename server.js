@@ -6,6 +6,15 @@ const app = express();
 const PORT = process.env.PORT || 3005;
 
 app.use(express.json());
+
+// Prevenir caching agresivo de archivos estáticos para desarrollo
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/sessions', (req, res) => {
