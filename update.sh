@@ -5,20 +5,56 @@
 
 DIR=${1:-/mnt/user/appdata/gym-tracker}
 PORT=${2:-3005}
+REPO_URL=${3:-https://github.com/metroveinte/gym-tracker.git}
+BRANCH=${4:-main}
 
 echo "==== ACTUALIZACIÓN DE GYM TRACKER ===="
 echo ""
 echo "Actualizando código en $DIR..."
-cd "$DIR" || exit 1
 
-if [ -d ".git" ] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "Repositorio Git detectado. Haciendo git pull..."
-  if ! git pull origin main; then
-    echo "ERROR: No se pudo hacer git pull. Verifica la rama (por defecto: main)"
+if [ ! -d "$DIR" ]; then
+  echo "Directorio no existe. Clonando repositorio desde $REPO_URL"
+  mkdir -p "$(dirname "$DIR")"
+  if ! git clone --branch "$BRANCH" "$REPO_URL" "$DIR"; then
+    echo "ERROR: Falló git clone desde $REPO_URL"
     exit 1
   fi
 else
-  echo "No hay repositorio Git en $DIR. Se omite git pull y se usa el código local del directorio."
+  cd "$DIR" || exit 1
+
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    remote_url=$(git config --get remote.origin.url || true)
+    if [ "$remote_url" != "$REPO_URL" ]; then
+      echo "Remote origin actual es '$remote_url'. Ajustando a $REPO_URL"
+      git remote remove origin 2>/dev/null || true
+      git remote add origin "$REPO_URL"
+    fi
+    echo "Repositorio Git detectado. Haciendo git pull de $BRANCH desde $REPO_URL..."
+    if ! git fetch origin "$BRANCH"; then
+      echo "ERROR: Falló git fetch desde $REPO_URL"
+      exit 1
+    fi
+    if ! git checkout "$BRANCH"; then
+      echo "ERROR: Falló git checkout $BRANCH"
+      exit 1
+    fi
+    if ! git pull origin "$BRANCH"; then
+      echo "ERROR: No se pudo hacer git pull de $BRANCH"
+      exit 1
+    fi
+  else
+    if [ -z "$(ls -A "$DIR")" ]; then
+      echo "El directorio está vacío. Clonando repositorio desde $REPO_URL"
+      if ! git clone --branch "$BRANCH" "$REPO_URL" "$DIR"; then
+        echo "ERROR: Falló git clone desde $REPO_URL"
+        exit 1
+      fi
+    else
+      echo "AVISO: $DIR no es un repositorio Git y no está vacío."
+      echo "Se usará el código local existente porque no hay historial Git disponible."
+      echo "Si quieres forzar una clonación limpia, elimina el contenido de $DIR y vuelve a ejecutar el script."
+    fi
+  fi
 fi
 
 echo ""
