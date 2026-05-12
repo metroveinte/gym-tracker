@@ -28,22 +28,17 @@
           <input type="date" id="date" required />
         </label>
         <label>
-          Ejercicio
-          <input type="text" id="exercise" placeholder="Press de banca" required />
-        </label>
-        <label>
           Notas (Opcional)
           <textarea id="notes" rows="2" placeholder="Notas sobre la sesión"></textarea>
         </label>
       </form>
 
-      <h3 style="margin-top: 30px; margin-bottom: 15px;">Series</h3>
-      <div id="series-container">
-        <p style="color: #999; text-align: center;">Agrega series a continuación</p>
+      <h3 style="margin-top: 30px; margin-bottom: 15px;">Ejercicios</h3>
+      <div id="exercises-container">
+        <p style="color: #999; text-align: center;">Agrega ejercicios a continuación</p>
       </div>
 
-      <button type="button" id="add-series-btn" class="btn-secondary" style="margin-top: 15px;">+ AGREGAR SERIE</button>
-      <button type="button" id="save-session-btn" class="btn-primary" style="margin-top: 20px;">GUARDAR SESIÓN</button>
+      <button type="button" id="add-exercise-btn" class="btn-secondary" style="margin-top: 15px;">+ AÑADIR EJERCICIO</button>
     </section>
 
     <section class="card">
@@ -69,6 +64,7 @@
           </tbody>
         </table>
       </div>
+      <button type="button" id="save-session-btn" class="btn-primary" style="margin-top: 20px; width: 100%;">GUARDAR SESIÓN</button>
     </section>
   </main>
   <script src="app.js"></script>

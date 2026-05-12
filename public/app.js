@@ -2,11 +2,11 @@ const form = document.getElementById('session-form');
 const sessionsBody = document.getElementById('sessions-body');
 const exportButton = document.getElementById('export-button');
 const messageDiv = document.getElementById('message');
-const addSeriesBtn = document.getElementById('add-series-btn');
+const addExerciseBtn = document.getElementById('add-exercise-btn');
 const saveSessionBtn = document.getElementById('save-session-btn');
-const seriesContainer = document.getElementById('series-container');
+const exercisesContainer = document.getElementById('exercises-container');
 
-let currentSeries = [];
+let currentExercises = [];
 let currentSessionId = null;
 
 async function fetchSessions() {
@@ -32,40 +32,88 @@ function formatValue(value) {
   return value;
 }
 
-function renderSeriesTable() {
-  if (currentSeries.length === 0) {
-    seriesContainer.innerHTML = '<p style="color: #999; text-align: center;">Agrega series a continuación</p>';
+function renderExercises() {
+  if (currentExercises.length === 0) {
+    exercisesContainer.innerHTML = '<p style="color: #999; text-align: center;">Agrega ejercicios a continuación</p>';
     return;
   }
 
-  let html = '<table style="width: 100%; margin-bottom: 15px;"><thead><tr><th>Serie</th><th>Reps</th><th>Peso (kg)</th><th>Acción</th></tr></thead><tbody>';
-  currentSeries.forEach((serie, idx) => {
+  let html = '';
+  currentExercises.forEach((exercise, exIdx) => {
     html += `
-      <tr>
-        <td><strong>Serie ${idx + 1}</strong></td>
-        <td>${serie.reps}</td>
-        <td>${formatValue(serie.weight)}</td>
-        <td><button class="delete-serie-btn" data-idx="${idx}" style="padding: 5px 10px; font-size: 0.85rem;">Eliminar</button></td>
-      </tr>
+      <div style="margin-bottom: 25px; padding: 15px; background: #1a1a1a; border-radius: 8px; border-left: 3px solid #d32f2f;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h4 style="margin: 0; color: #fff;">${exercise.name}</h4>
+          <button class="delete-exercise-btn" data-idx="${exIdx}" style="padding: 5px 10px; font-size: 0.85rem;">Eliminar Ejercicio</button>
+        </div>
+        
+        <table style="width: 100%; margin-bottom: 10px;">
+          <thead>
+            <tr>
+              <th>Serie</th>
+              <th>Reps</th>
+              <th>Peso (kg)</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    exercise.series.forEach((serie, serieIdx) => {
+      html += `
+        <tr>
+          <td><strong>Serie ${serieIdx + 1}</strong></td>
+          <td>${serie.reps}</td>
+          <td>${formatValue(serie.weight)}</td>
+          <td><button class="delete-serie-btn" data-ex="${exIdx}" data-ser="${serieIdx}" style="padding: 5px 10px; font-size: 0.85rem;">Eliminar</button></td>
+        </tr>
+      `;
+    });
+    
+    html += `
+          </tbody>
+        </table>
+        <button class="add-serie-to-exercise" data-idx="${exIdx}" style="padding: 8px 12px; font-size: 0.9rem; margin-top: 10px;">+ Agregar Serie</button>
+      </div>
     `;
   });
-  html += '</tbody></table>';
-  seriesContainer.innerHTML = html;
+  
+  exercisesContainer.innerHTML = html;
 
-  // Agregar event listeners a los botones de eliminar
-  document.querySelectorAll('.delete-serie-btn').forEach(btn => {
+  // Event listeners para eliminar ejercicios
+  document.querySelectorAll('.delete-exercise-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const idx = parseInt(e.target.dataset.idx);
-      currentSeries.splice(idx, 1);
-      renderSeriesTable();
+      currentExercises.splice(idx, 1);
+      renderExercises();
+    });
+  });
+
+  // Event listeners para eliminar series
+  document.querySelectorAll('.delete-serie-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const exIdx = parseInt(e.target.dataset.ex);
+      const serIdx = parseInt(e.target.dataset.ser);
+      currentExercises[exIdx].series.splice(serIdx, 1);
+      renderExercises();
+    });
+  });
+
+  // Event listeners para agregar series a cada ejercicio
+  document.querySelectorAll('.add-serie-to-exercise').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const exIdx = parseInt(e.target.dataset.idx);
+      addSerieToExercise(exIdx);
     });
   });
 }
 
-addSeriesBtn.addEventListener('click', () => {
-  // No pedimos sets, se asume 1 por serie
-  const reps = prompt('Repeticiones de la SERIE ' + (currentSeries.length + 1) + ':');
+function addSerieToExercise(exerciseIdx) {
+  const exercise = currentExercises[exerciseIdx];
+  const reps = prompt('Repeticiones de la SERIE ' + (exercise.series.length + 1) + ':');
   if (reps === null) return;
 
   const repsNum = parseInt(reps, 10);
@@ -74,7 +122,7 @@ addSeriesBtn.addEventListener('click', () => {
     return;
   }
 
-  const weight = prompt('Peso en kg de la SERIE ' + (currentSeries.length + 1) + ' (Opcional):');
+  const weight = prompt('Peso en kg de la SERIE ' + (exercise.series.length + 1) + ' (Opcional):');
   let weightNum = null;
   if (weight) {
     weightNum = parseFloat(weight);
@@ -84,9 +132,19 @@ addSeriesBtn.addEventListener('click', () => {
     }
   }
 
-  currentSeries.push({ sets: 1, reps: repsNum, weight: weightNum });
-  renderSeriesTable();
-  showMessage('Serie ' + currentSeries.length + ' agregada correctamente', 'success');
+  exercise.series.push({ sets: 1, reps: repsNum, weight: weightNum });
+  renderExercises();
+  showMessage('Serie agregada a ' + exercise.name, 'success');
+}
+
+addExerciseBtn.addEventListener('click', () => {
+  const exerciseName = prompt('Nombre del ejercicio (ej. Press de banca):');
+  if (exerciseName === null || exerciseName.trim() === '') return;
+
+  const trimmedName = exerciseName.trim();
+  currentExercises.push({ name: trimmedName, series: [] });
+  renderExercises();
+  showMessage('Ejercicio "' + trimmedName + '" agregado. Ahora agrega series.', 'success');
 });
 
 function renderSessions(sessions) {
@@ -123,53 +181,74 @@ async function loadSessions() {
 
 async function saveSession() {
   const date = document.getElementById('date').value;
-  const exercise = document.getElementById('exercise').value.trim();
   const notes = document.getElementById('notes').value.trim();
 
-  if (!date || !exercise) {
-    showMessage('Completa fecha y ejercicio antes de guardar.');
+  if (!date) {
+    showMessage('Completa la fecha antes de guardar.');
     return;
   }
 
-  if (currentSeries.length === 0) {
-    showMessage('Agrega al menos una serie antes de guardar.');
+  if (currentExercises.length === 0) {
+    showMessage('Agrega al menos un ejercicio antes de guardar.');
+    return;
+  }
+
+  // Validar que todos los ejercicios tengan al menos una serie
+  for (const exercise of currentExercises) {
+    if (exercise.series.length === 0) {
+      showMessage('El ejercicio "' + exercise.name + '" no tiene series. Agrega al menos una.');
+      return;
+    }
+  }
+
+  // Preparar resumen para confirmación
+  const summary = currentExercises.map(ex => 
+    `${ex.name} (${ex.series.length} serie${ex.series.length > 1 ? 's' : ''})`
+  ).join('\n');
+
+  const confirmMessage = `Confirmar registro:\n\nFecha: ${date}\nEjercicios:\n${summary}\n\n¿Todo es correcto?`;
+  
+  if (!confirm(confirmMessage)) {
+    showMessage('Guardado cancelado', 'error');
     return;
   }
 
   try {
-    // Guardar sesión
-    const sessionRes = await fetch('/api/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, exercise, notes }),
-    });
-
-    if (!sessionRes.ok) {
-      const error = await sessionRes.json();
-      throw new Error(error.error || 'Error al guardar');
-    }
-
-    const session = await sessionRes.json();
-    currentSessionId = session.id;
-
-    // Guardar series
-    for (const serie of currentSeries) {
-      const serieRes = await fetch(`/api/sessions/${session.id}/series`, {
+    // Guardar una sesión por cada ejercicio
+    for (const exercise of currentExercises) {
+      const sessionRes = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(serie),
+        body: JSON.stringify({ date, exercise: exercise.name, notes }),
       });
 
-      if (!serieRes.ok) {
-        const error = await serieRes.json();
-        throw new Error(error.error || 'Error al guardar serie');
+      if (!sessionRes.ok) {
+        const error = await sessionRes.json();
+        throw new Error(error.error || 'Error al guardar');
+      }
+
+      const session = await sessionRes.json();
+      currentSessionId = session.id;
+
+      // Guardar series para esta sesión
+      for (const serie of exercise.series) {
+        const serieRes = await fetch(`/api/sessions/${session.id}/series`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(serie),
+        });
+
+        if (!serieRes.ok) {
+          const error = await serieRes.json();
+          throw new Error(error.error || 'Error al guardar serie');
+        }
       }
     }
 
     showMessage('Sesión guardada correctamente', 'success');
     form.reset();
-    currentSeries = [];
-    renderSeriesTable();
+    currentExercises = [];
+    renderExercises();
     await loadSessions();
   } catch (error) {
     showMessage('Error al guardar sesión: ' + error.message, 'error');
@@ -212,5 +291,6 @@ exportButton.addEventListener('click', () => {
 });
 
 // Inicializar
-renderSeriesTable();
+renderExercises();
 loadSessions();
+
