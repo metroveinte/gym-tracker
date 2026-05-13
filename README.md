@@ -2,6 +2,8 @@
 
 Aplicación web para seguimiento de entrenamiento en el gimnasio con persistencia en SQLite y exportación de datos en CSV.
 
+# **WIP** - WORK IN PROGRESS
+
 ## Características
 
 - **Página principal motivadora** con diseño agresivo y moderno
