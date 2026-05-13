@@ -6,7 +6,6 @@ Aplicación web para seguimiento de entrenamiento en el gimnasio con persistenci
 
 ## Características
 
-- **Página principal motivadora** con diseño agresivo y moderno
 - Registrar sesiones de entrenamiento con fecha, ejercicio, series, repeticiones, peso y notas
 - Ver historial completo de entrenamientos
 - Página de estadísticas básicas
@@ -16,22 +15,6 @@ Aplicación web para seguimiento de entrenamiento en el gimnasio con persistenci
 
 ## Desarrollo Local
 
-### Instalación
-
-1. Abre una terminal en `c:\Users\Gonzalo\Documents\VSCode\Proyectos\gym-tracker`
-2. Ejecuta:
-
-```bash
-npm install
-```
-
-### Ejecutar
-
-```bash
-npm start
-```
-
-Luego abre `http://localhost:3005` en tu navegador para ver la página principal.
 
 ## Despliegue en Docker
 
@@ -145,11 +128,7 @@ http://<IP-de-tu-servidor-Unraid>:3005
 
 ## Actualización Automatizada con GitHub
 
-### Limitaciones Técnicas
-
-Un contenedor Docker no puede reconstruir su propia imagen mientras está corriendo, porque eso requiere acceso al Docker host. Por eso, no es posible que el contenedor "se actualice solo" completamente.
-
-### Solución Recomendada: Script en el Host (Unraid)
+Script en el Host (Unraid)
 
 Usa el script `update.sh` que creé, pero ejecútalo desde Unraid. No es "externo" en el sentido de separado, sino parte del proceso de despliegue.
 
@@ -193,6 +172,5 @@ git push -u origin main
 
 ### Notas
 
-- El Dockerfile ahora incluye git, por si quieres experimentar con entrypoints.
 - Para actualizaciones, el proceso siempre requiere reconstruir la imagen en el host.
-- Si hago cambios, te envío el código para que lo subas a GitHub y ejecutes la actualización.
+
