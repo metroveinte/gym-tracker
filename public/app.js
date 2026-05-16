@@ -1,24 +1,10 @@
 const form = document.getElementById('session-form');
-const sessionsBody = document.getElementById('sessions-body');
-const exportButton = document.getElementById('export-button');
 const messageDiv = document.getElementById('message');
 const addExerciseBtn = document.getElementById('add-exercise-btn');
 const saveSessionBtn = document.getElementById('save-session-btn');
 const exercisesContainer = document.getElementById('exercises-container');
 
 let currentExercises = [];
-let currentSessionId = null;
-
-async function fetchSessions() {
-  try {
-    const response = await fetch('/api/sessions');
-    if (!response.ok) throw new Error('Error al cargar sesiones');
-    return await response.json();
-  } catch (error) {
-    showMessage('Error al cargar sesiones: ' + error.message, 'error');
-    return [];
-  }
-}
 
 function showMessage(text, type = 'error') {
   messageDiv.textContent = text;
@@ -73,7 +59,10 @@ function renderExercises() {
     html += `
           </tbody>
         </table>
-        <button class="add-serie-to-exercise" data-idx="${exIdx}" style="padding: 8px 12px; font-size: 0.9rem; margin-top: 10px;">+ Agregar Serie</button>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="add-serie-to-exercise" data-idx="${exIdx}" style="padding: 8px 12px; font-size: 0.9rem;">+ Agregar Serie</button>
+          ${exercise.series.length > 0 ? `<button class="repeat-serie-btn" data-idx="${exIdx}" style="padding: 8px 12px; font-size: 0.9rem;">Repetir última serie</button>` : ''}
+        </div>
       </div>
     `;
   });
@@ -109,6 +98,14 @@ function renderExercises() {
       addSerieToExercise(exIdx);
     });
   });
+
+  document.querySelectorAll('.repeat-serie-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const exIdx = parseInt(e.target.dataset.idx);
+      repeatLastSerie(exIdx);
+    });
+  });
 }
 
 function addSerieToExercise(exerciseIdx) {
@@ -137,6 +134,19 @@ function addSerieToExercise(exerciseIdx) {
   showMessage('Serie agregada a ' + exercise.name, 'success');
 }
 
+function repeatLastSerie(exerciseIdx) {
+  const exercise = currentExercises[exerciseIdx];
+  if (!exercise || exercise.series.length === 0) {
+    showMessage('No hay serie previa para repetir.', 'error');
+    return;
+  }
+
+  const lastSerie = exercise.series[exercise.series.length - 1];
+  exercise.series.push({ sets: lastSerie.sets, reps: lastSerie.reps, weight: lastSerie.weight });
+  renderExercises();
+  showMessage('Última serie repetida en ' + exercise.name, 'success');
+}
+
 addExerciseBtn.addEventListener('click', () => {
   const exerciseName = prompt('Nombre del ejercicio (ej. Press de banca):');
   if (exerciseName === null || exerciseName.trim() === '') return;
@@ -146,38 +156,6 @@ addExerciseBtn.addEventListener('click', () => {
   renderExercises();
   showMessage('Ejercicio "' + trimmedName + '" agregado. Ahora agrega series.', 'success');
 });
-
-function renderSessions(sessions) {
-  if (sessions.length === 0) {
-    sessionsBody.innerHTML = '<tr><td colspan="7">No hay registros todavía.</td></tr>';
-    return;
-  }
-  sessionsBody.innerHTML = sessions
-    .map((session) => {
-      let seriesCount = '-', reps = '-', weight = '-';
-      if (session.series && session.series.length > 0) {
-        seriesCount = session.series.length;
-        reps = session.series.map(s => s.reps).join(', ');
-        weight = session.series.map(s => formatValue(s.weight)).join(', ');
-      }
-      return `
-        <tr>
-          <td>${session.date}</td>
-          <td>${session.exercise}</td>
-          <td>${seriesCount}</td>
-          <td>${reps}</td>
-          <td>${weight}</td>
-          <td>${formatValue(session.notes)}</td>
-          <td><button class="delete-button" data-id="${session.id}">Eliminar</button></td>
-        </tr>`;
-    })
-    .join('');
-}
-
-async function loadSessions() {
-  const sessions = await fetchSessions();
-  renderSessions(sessions);
-}
 
 async function saveSession() {
   const date = document.getElementById('date').value;
@@ -228,7 +206,6 @@ async function saveSession() {
       }
 
       const session = await sessionRes.json();
-      currentSessionId = session.id;
 
       // Guardar series para esta sesión
       for (const serie of exercise.series) {
@@ -249,23 +226,8 @@ async function saveSession() {
     form.reset();
     currentExercises = [];
     renderExercises();
-    await loadSessions();
   } catch (error) {
     showMessage('Error al guardar sesión: ' + error.message, 'error');
-  }
-}
-
-async function deleteSession(id) {
-  try {
-    const response = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Error al eliminar');
-    }
-    showMessage('Sesión eliminada correctamente', 'success');
-    await loadSessions();
-  } catch (error) {
-    showMessage('Error al eliminar sesión: ' + error.message, 'error');
   }
 }
 
@@ -277,20 +239,6 @@ form.addEventListener('submit', (e) => {
 // Agregar evento para el botón de guardar
 saveSessionBtn.addEventListener('click', saveSession);
 
-sessionsBody.addEventListener('click', async (event) => {
-  if (event.target.matches('.delete-button')) {
-    const id = event.target.dataset.id;
-    if (confirm('¿Eliminar esta sesión?')) {
-      await deleteSession(id);
-    }
-  }
-});
-
-exportButton.addEventListener('click', () => {
-  window.location.href = '/api/export/csv';
-});
-
 // Inicializar
 renderExercises();
-loadSessions();
 

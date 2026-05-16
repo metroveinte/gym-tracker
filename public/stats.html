@@ -16,11 +16,35 @@
   </header>
   <main class="container">
     <h1>Estadísticas de Entrenamiento</h1>
-    <p>Próximamente: gráficos, métricas y análisis de tu progreso.</p>
     <div class="card">
       <h2>Resumen</h2>
       <p>Total de sesiones: <span id="total-sessions">-</span></p>
       <p>Ejercicios únicos: <span id="unique-exercises">-</span></p>
+      <p>Total de series: <span id="total-series">-</span></p>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+        <h2>Historial completo</h2>
+        <button id="export-button" class="secondary">Exportar CSV</button>
+      </div>
+
+      <div class="table-container">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Ejercicio</th>
+              <th>Series</th>
+              <th>Reps</th>
+              <th>Peso</th>
+              <th>Notas</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-body"></tbody>
+        </table>
+        <p id="no-records" style="display:none; color:#999; margin-top: 15px;">No hay sesiones registradas aún.</p>
+      </div>
     </div>
   </main>
   <script src="stats.js"></script>
