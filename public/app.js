@@ -21,9 +21,19 @@ function formatValue(value) {
   return value;
 }
 
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function syncExerciseOptions() {
   exerciseOptions.innerHTML = availableExercises
-    .map(exercise => `<option value="${exercise}"></option>`)
+    .map(exercise => `<option value="${escapeHtml(exercise)}"></option>`)
     .join('');
 }
 
@@ -82,10 +92,10 @@ function renderExercises() {
     html += `
       <div style="margin-bottom: 25px; padding: 15px; background: #1a1a1a; border-radius: 8px; border-left: 3px solid #d32f2f;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h4 style="margin: 0; color: #fff;">${exercise.name}</h4>
+          <h4 style="margin: 0; color: #fff;">${escapeHtml(exercise.name)}</h4>
           <button class="delete-exercise-btn" data-idx="${exIdx}" style="padding: 5px 10px; font-size: 0.85rem;">Eliminar Ejercicio</button>
         </div>
-        
+
         <table style="width: 100%; margin-bottom: 10px;">
           <thead>
             <tr>
@@ -97,13 +107,13 @@ function renderExercises() {
           </thead>
           <tbody>
     `;
-    
+
     exercise.series.forEach((serie, serieIdx) => {
       html += `
         <tr>
           <td><strong>Serie ${serieIdx + 1}</strong></td>
-          <td>${serie.reps}</td>
-          <td>${formatValue(serie.weight)}</td>
+          <td>${escapeHtml(serie.reps)}</td>
+          <td>${escapeHtml(formatValue(serie.weight))}</td>
           <td><button class="delete-serie-btn" data-ex="${exIdx}" data-ser="${serieIdx}" style="padding: 5px 10px; font-size: 0.85rem;">Eliminar</button></td>
         </tr>
       `;

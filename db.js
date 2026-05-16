@@ -17,6 +17,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
 });
 
 db.serialize(() => {
+  db.run('PRAGMA foreign_keys = ON');
+
   db.run(`
     CREATE TABLE IF NOT EXISTS sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,7 +27,7 @@ db.serialize(() => {
       notes TEXT
     )
   `);
-  
+
   db.run(`
     CREATE TABLE IF NOT EXISTS series (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,6 +45,9 @@ db.serialize(() => {
       name TEXT NOT NULL COLLATE NOCASE UNIQUE
     )
   `);
+
+  db.run('CREATE INDEX IF NOT EXISTS idx_series_session_id ON series(session_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date)');
 
   db.run(`
     INSERT OR IGNORE INTO exercises (name)

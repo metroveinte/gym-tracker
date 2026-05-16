@@ -34,12 +34,12 @@ function renderHistory(sessions) {
 
     return `
       <tr>
-        <td>${session.date}</td>
-        <td>${session.exercise}</td>
-        <td>${seriesCount}</td>
-        <td>${reps}</td>
-        <td>${weights}</td>
-        <td>${formatValue(session.notes)}</td>
+        <td>${escapeHtml(session.date)}</td>
+        <td>${escapeHtml(session.exercise)}</td>
+        <td>${escapeHtml(seriesCount)}</td>
+        <td>${escapeHtml(reps)}</td>
+        <td>${escapeHtml(weights)}</td>
+        <td>${escapeHtml(formatValue(session.notes))}</td>
       </tr>
     `;
   }).join('');
@@ -48,6 +48,16 @@ function renderHistory(sessions) {
 function formatValue(value) {
   if (value === null || value === undefined || value === '') return '-';
   return value;
+}
+
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function downloadCsv(sessions) {

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch *)",
+      "Bash(git reset *)",
+      "Bash(npm view *)",
+      "PowerShell(npm view express version)",
+      "PowerShell(npm view express@4 version)",
+      "PowerShell(node --check server.js)",
+      "PowerShell(node --check db.js)",
+      "PowerShell(node --check public/app.js)",
+      "PowerShell(node --check public/stats.js)"
+    ]
+  }
+}

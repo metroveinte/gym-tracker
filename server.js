@@ -15,10 +15,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'home.html'));
-});
-
 app.get('/version', (req, res) => {
   res.send('v1.0.0');
 });
@@ -30,28 +26,47 @@ app.get('/index.html', (req, res) => {
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 app.get('/api/sessions', (req, res) => {
-  db.all('SELECT * FROM sessions ORDER BY date DESC, id DESC', [], (err, sessions) => {
+  const sql = `
+    SELECT
+      s.id          AS session_id,
+      s.date        AS date,
+      s.exercise    AS exercise,
+      s.notes       AS notes,
+      se.id         AS serie_id,
+      se.sets       AS sets,
+      se.reps       AS reps,
+      se.weight     AS weight
+    FROM sessions s
+    LEFT JOIN series se ON se.session_id = s.id
+    ORDER BY s.date DESC, s.id DESC, se.id ASC
+  `;
+  db.all(sql, [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: 'Error al leer la base de datos.' });
     }
-    
-    // Obtener series para cada sesión
-    let completed = 0;
-    sessions.forEach((session, idx) => {
-      db.all('SELECT * FROM series WHERE session_id = ? ORDER BY id ASC', [session.id], (err, series) => {
-        if (!err) {
-          sessions[idx].series = series || [];
-        }
-        completed++;
-        if (completed === sessions.length) {
-          res.json(sessions);
-        }
-      });
-    });
-    
-    if (sessions.length === 0) {
-      res.json([]);
+    const byId = new Map();
+    for (const row of rows) {
+      let session = byId.get(row.session_id);
+      if (!session) {
+        session = {
+          id: row.session_id,
+          date: row.date,
+          exercise: row.exercise,
+          notes: row.notes,
+          series: []
+        };
+        byId.set(row.session_id, session);
+      }
+      if (row.serie_id !== null) {
+        session.series.push({
+          id: row.serie_id,
+          sets: row.sets,
+          reps: row.reps,
+          weight: row.weight
+        });
+      }
     }
+    res.json(Array.from(byId.values()));
   });
 });
 
@@ -127,14 +142,15 @@ app.post('/api/sessions/:id/series', (req, res) => {
     return res.status(400).json({ error: 'Peso debe ser un número positivo o nulo.' });
   }
   
+  const weightValue = (weight === undefined || weight === null) ? null : weight;
   const stmt = db.prepare(
     'INSERT INTO series (session_id, sets, reps, weight) VALUES (?, ?, ?, ?)'
   );
-  stmt.run(idNum, setsNum, reps, weight || null, function (err) {
+  stmt.run(idNum, setsNum, reps, weightValue, function (err) {
     if (err) {
       return res.status(500).json({ error: 'Error al guardar la serie.' });
     }
-    res.json({ id: this.lastID, sets: setsNum, reps, weight: weight || null });
+    res.json({ id: this.lastID, sets: setsNum, reps, weight: weightValue });
   });
   stmt.finalize();
 });
@@ -221,6 +237,10 @@ app.get('/sessions', (req, res) => {
 
 app.get('/stats', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'stats.html'));
+});
+
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'Endpoint no encontrado.' });
 });
 
 app.get('*', (req, res) => {
