@@ -36,6 +36,18 @@ db.serialize(() => {
       FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
     )
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS exercises (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL COLLATE NOCASE UNIQUE
+    )
+  `);
+
+  db.run(`
+    INSERT OR IGNORE INTO exercises (name)
+    SELECT DISTINCT exercise FROM sessions WHERE exercise IS NOT NULL
+  `);
 });
 
 module.exports = db;

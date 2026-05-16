@@ -60,16 +60,51 @@ app.post('/api/sessions', (req, res) => {
   if (!date || !exercise) {
     return res.status(400).json({ error: 'Fecha y ejercicio son obligatorios.' });
   }
-  const stmt = db.prepare(
-    'INSERT INTO sessions (date, exercise, notes) VALUES (?, ?, ?)'
-  );
-  stmt.run(date, exercise, notes || '', function (err) {
-    if (err) {
-      return res.status(500).json({ error: 'Error al guardar la sesión.' });
+
+  db.run(
+    'INSERT OR IGNORE INTO exercises (name) VALUES (?)',
+    [exercise],
+    (err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Error al guardar el ejercicio.' });
+      }
+
+      const stmt = db.prepare(
+        'INSERT INTO sessions (date, exercise, notes) VALUES (?, ?, ?)'
+      );
+      stmt.run(date, exercise, notes || '', function (err) {
+        if (err) {
+          return res.status(500).json({ error: 'Error al guardar la sesión.' });
+        }
+        res.json({ id: this.lastID, date, exercise, notes: notes || '', series: [] });
+      });
+      stmt.finalize();
     }
-    res.json({ id: this.lastID, date, exercise, notes: notes || '', series: [] });
+  );
+});
+
+app.get('/api/exercises', (req, res) => {
+  db.all('SELECT name FROM exercises ORDER BY name COLLATE NOCASE ASC', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error al cargar ejercicios.' });
+    }
+    res.json(rows.map(row => row.name));
   });
-  stmt.finalize();
+});
+
+app.post('/api/exercises', (req, res) => {
+  const { name } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Nombre de ejercicio inválido.' });
+  }
+
+  const trimmedName = name.trim();
+  db.run('INSERT OR IGNORE INTO exercises (name) VALUES (?)', [trimmedName], function (err) {
+    if (err) {
+      return res.status(500).json({ error: 'Error al guardar el ejercicio.' });
+    }
+    res.json({ name: trimmedName });
+  });
 });
 
 app.post('/api/sessions/:id/series', (req, res) => {

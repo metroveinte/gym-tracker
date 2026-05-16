@@ -1,10 +1,13 @@
 const form = document.getElementById('session-form');
 const messageDiv = document.getElementById('message');
+const exerciseInput = document.getElementById('exercise-input');
+const exerciseOptions = document.getElementById('exercise-options');
 const addExerciseBtn = document.getElementById('add-exercise-btn');
 const saveSessionBtn = document.getElementById('save-session-btn');
 const exercisesContainer = document.getElementById('exercises-container');
 
 let currentExercises = [];
+let availableExercises = [];
 
 function showMessage(text, type = 'error') {
   messageDiv.textContent = text;
@@ -16,6 +19,56 @@ function showMessage(text, type = 'error') {
 function formatValue(value) {
   if (value === null || value === undefined || value === '') return '-';
   return value;
+}
+
+function syncExerciseOptions() {
+  exerciseOptions.innerHTML = availableExercises
+    .map(exercise => `<option value="${exercise}"></option>`)
+    .join('');
+}
+
+async function loadExerciseOptions() {
+  try {
+    availableExercises = await fetch('/api/exercises').then(r => r.json());
+    syncExerciseOptions();
+  } catch (error) {
+    console.error('Error cargando ejercicios:', error);
+  }
+}
+
+function addExerciseToList(exerciseName) {
+  const normalized = exerciseName.trim();
+  if (!normalized) {
+    showMessage('Ingresa un nombre de ejercicio válido.', 'error');
+    return;
+  }
+
+  const alreadyAdded = currentExercises.some(ex => ex.name.toLowerCase() === normalized.toLowerCase());
+  if (alreadyAdded) {
+    showMessage('Ese ejercicio ya está en la sesión.', 'error');
+    return;
+  }
+
+  currentExercises.push({ name: normalized, series: [] });
+  if (!availableExercises.some(ex => ex.toLowerCase() === normalized.toLowerCase())) {
+    availableExercises.push(normalized);
+    syncExerciseOptions();
+  }
+
+  renderExercises();
+  exerciseInput.value = '';
+  exerciseInput.focus();
+  showMessage(`Ejercicio "${normalized}" agregado. Ahora agrega series.`, 'success');
+}
+
+function addExerciseFromInput() {
+  const exerciseName = exerciseInput.value;
+  if (!exerciseName || !exerciseName.trim()) {
+    showMessage('Escribe o selecciona un ejercicio antes de agregar.', 'error');
+    return;
+  }
+
+  addExerciseToList(exerciseName);
 }
 
 function renderExercises() {
@@ -147,15 +200,7 @@ function repeatLastSerie(exerciseIdx) {
   showMessage('Última serie repetida en ' + exercise.name, 'success');
 }
 
-addExerciseBtn.addEventListener('click', () => {
-  const exerciseName = prompt('Nombre del ejercicio (ej. Press de banca):');
-  if (exerciseName === null || exerciseName.trim() === '') return;
-
-  const trimmedName = exerciseName.trim();
-  currentExercises.push({ name: trimmedName, series: [] });
-  renderExercises();
-  showMessage('Ejercicio "' + trimmedName + '" agregado. Ahora agrega series.', 'success');
-});
+addExerciseBtn.addEventListener('click', addExerciseFromInput);
 
 async function saveSession() {
   const date = document.getElementById('date').value;
@@ -240,5 +285,6 @@ form.addEventListener('submit', (e) => {
 saveSessionBtn.addEventListener('click', saveSession);
 
 // Inicializar
+loadExerciseOptions();
 renderExercises();
 
