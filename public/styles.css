@@ -347,6 +347,46 @@ th {
   background: #cc0000;
 }
 
+.icon-btn {
+  width: auto;
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 1.1rem;
+  line-height: 1;
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid #555;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.icon-btn:hover {
+  background: #333;
+  border-color: #888;
+  transform: translateY(-1px);
+}
+
+.icon-btn:active {
+  transform: translateY(0);
+}
+
+.icon-btn-danger:hover {
+  background: #cc0000;
+  border-color: #ff0000;
+}
+
+.row-actions {
+  white-space: nowrap;
+}
+
+.row-actions .icon-btn + .icon-btn {
+  margin-left: 6px;
+}
+
 .message {
   padding: 15px 20px;
   border-radius: 8px;

@@ -114,17 +114,19 @@ function renderExercises() {
           <td><strong>Serie ${serieIdx + 1}</strong></td>
           <td>${escapeHtml(serie.reps)}</td>
           <td>${escapeHtml(formatValue(serie.weight))}</td>
-          <td><button class="delete-serie-btn" data-ex="${exIdx}" data-ser="${serieIdx}" style="padding: 5px 10px; font-size: 0.85rem;">Eliminar</button></td>
+          <td class="row-actions">
+            <button type="button" class="icon-btn repeat-serie-btn" data-ex="${exIdx}" data-ser="${serieIdx}" title="Repetir esta serie" aria-label="Repetir esta serie">🔁</button>
+            <button type="button" class="icon-btn icon-btn-danger delete-serie-btn" data-ex="${exIdx}" data-ser="${serieIdx}" title="Eliminar esta serie" aria-label="Eliminar esta serie">🗑</button>
+          </td>
         </tr>
       `;
     });
-    
+
     html += `
           </tbody>
         </table>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           <button class="add-serie-to-exercise" data-idx="${exIdx}" style="padding: 8px 12px; font-size: 0.9rem;">+ Agregar Serie</button>
-          ${exercise.series.length > 0 ? `<button class="repeat-serie-btn" data-idx="${exIdx}" style="padding: 8px 12px; font-size: 0.9rem;">Repetir última serie</button>` : ''}
         </div>
       </div>
     `;
@@ -165,8 +167,9 @@ function renderExercises() {
   document.querySelectorAll('.repeat-serie-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      const exIdx = parseInt(e.target.dataset.idx);
-      repeatLastSerie(exIdx);
+      const exIdx = parseInt(e.currentTarget.dataset.ex);
+      const serIdx = parseInt(e.currentTarget.dataset.ser);
+      repeatSerie(exIdx, serIdx);
     });
   });
 }
@@ -197,17 +200,17 @@ function addSerieToExercise(exerciseIdx) {
   showMessage('Serie agregada a ' + exercise.name, 'success');
 }
 
-function repeatLastSerie(exerciseIdx) {
+function repeatSerie(exerciseIdx, serieIdx) {
   const exercise = currentExercises[exerciseIdx];
-  if (!exercise || exercise.series.length === 0) {
-    showMessage('No hay serie previa para repetir.', 'error');
+  if (!exercise || !exercise.series[serieIdx]) {
+    showMessage('No se encontró la serie para repetir.', 'error');
     return;
   }
 
-  const lastSerie = exercise.series[exercise.series.length - 1];
-  exercise.series.push({ sets: lastSerie.sets, reps: lastSerie.reps, weight: lastSerie.weight });
+  const source = exercise.series[serieIdx];
+  exercise.series.push({ sets: source.sets, reps: source.reps, weight: source.weight });
   renderExercises();
-  showMessage('Última serie repetida en ' + exercise.name, 'success');
+  showMessage('Serie repetida en ' + exercise.name, 'success');
 }
 
 addExerciseBtn.addEventListener('click', addExerciseFromInput);
