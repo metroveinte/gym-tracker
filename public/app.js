@@ -2,6 +2,7 @@ const form = document.getElementById('session-form');
 const messageDiv = document.getElementById('message');
 const exerciseInput = document.getElementById('exercise-input');
 const exerciseDropdown = document.getElementById('exercise-dropdown');
+const exerciseSelector = document.querySelector('.exercise-selector');
 const addExerciseBtn = document.getElementById('add-exercise-btn');
 const saveSessionBtn = document.getElementById('save-session-btn');
 const exercisesContainer = document.getElementById('exercises-container');
@@ -124,8 +125,8 @@ function selectExercise(exerciseName) {
   currentExercises.push({ name: normalized, series: [] });
   renderExercises();
   exerciseInput.value = '';
-  exerciseInput.focus();
   exerciseDropdown.classList.add('hidden');
+  exerciseSelector.classList.add('hidden');
   showMessage(`Ejercicio "${normalized}" agregado. Ahora agrega series.`, 'success');
 }
 
@@ -311,12 +312,10 @@ function repeatSerie(exerciseIdx, serieIdx) {
 }
 
 addExerciseBtn.addEventListener('click', () => {
-  const exerciseName = exerciseInput.value.trim();
-  if (!exerciseName) {
-    showMessage('Escribe o selecciona un ejercicio antes de agregar.', 'error');
-    return;
-  }
-  selectExercise(exerciseName);
+  exerciseSelector.classList.remove('hidden');
+  exerciseInput.focus();
+  exerciseInput.value = '';
+  exerciseDropdown.classList.add('hidden');
 });
 
 exerciseInput.addEventListener('input', (e) => {
@@ -324,7 +323,12 @@ exerciseInput.addEventListener('input', (e) => {
 });
 
 exerciseInput.addEventListener('blur', () => {
-  setTimeout(() => exerciseDropdown.classList.add('hidden'), 200);
+  setTimeout(() => {
+    if (exerciseInput.value.trim() === '') {
+      exerciseSelector.classList.add('hidden');
+      exerciseDropdown.classList.add('hidden');
+    }
+  }, 250);
 });
 
 async function saveSession() {
