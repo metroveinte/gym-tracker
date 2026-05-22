@@ -93,7 +93,10 @@ function renderExercises() {
       <div style="margin-bottom: 25px; padding: 15px; background: #1a1a1a; border-radius: 8px; border-left: 3px solid #d32f2f;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
           <h4 style="margin: 0; color: #fff;">${escapeHtml(exercise.name)}</h4>
-          <button class="delete-exercise-btn" data-idx="${exIdx}" style="padding: 5px 10px; font-size: 0.85rem;">Eliminar Ejercicio</button>
+          <div style="display: flex; gap: 10px;">
+            <button class="add-serie-to-exercise" data-idx="${exIdx}" style="padding: 8px 12px; font-size: 0.9rem;">+ Agregar Serie</button>
+            <button class="delete-exercise-btn" data-idx="${exIdx}" style="padding: 5px 10px; font-size: 0.85rem;">Eliminar Ejercicio</button>
+          </div>
         </div>
 
         <table style="width: 100%; margin-bottom: 10px;">
@@ -125,9 +128,6 @@ function renderExercises() {
     html += `
           </tbody>
         </table>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <button class="add-serie-to-exercise" data-idx="${exIdx}" style="padding: 8px 12px; font-size: 0.9rem;">+ Agregar Serie</button>
-        </div>
       </div>
     `;
   });
