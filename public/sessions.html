@@ -33,8 +33,10 @@
         </label>
         <label>
           Ejercicio
-          <input list="exercise-options" id="exercise-input" placeholder="Selecciona o escribe un ejercicio" autocomplete="off" />
-          <datalist id="exercise-options"></datalist>
+          <div class="exercise-selector">
+            <input id="exercise-input" type="text" placeholder="Buscar o escribir ejercicio" autocomplete="off" />
+            <div id="exercise-dropdown" class="exercise-dropdown hidden"></div>
+          </div>
         </label>
       </form>
 

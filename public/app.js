@@ -1,13 +1,50 @@
 const form = document.getElementById('session-form');
 const messageDiv = document.getElementById('message');
 const exerciseInput = document.getElementById('exercise-input');
-const exerciseOptions = document.getElementById('exercise-options');
+const exerciseDropdown = document.getElementById('exercise-dropdown');
 const addExerciseBtn = document.getElementById('add-exercise-btn');
 const saveSessionBtn = document.getElementById('save-session-btn');
 const exercisesContainer = document.getElementById('exercises-container');
 
+const PREDEFINED_EXERCISES = [
+  'Press de banca',
+  'Press inclinado con mancuernas',
+  'Fondos en paralelas',
+  'Aperturas con mancuernas',
+  'Cruce de poleas',
+  'Dominadas',
+  'Jalón al pecho',
+  'Remo con barra',
+  'Remo con mancuerna',
+  'Peso muerto',
+  'Press militar',
+  'Elevaciones laterales',
+  'Pájaros',
+  'Face pulls',
+  'Sentadilla',
+  'Prensa de piernas',
+  'Peso muerto rumano',
+  'Zancadas',
+  'Hip thrust',
+  'Curl femoral',
+  'Extensión de cuádriceps',
+  'Elevación de gemelos',
+  'Curl con barra',
+  'Curl martillo',
+  'Curl en banco inclinado',
+  'Curl en polea',
+  'Press francés',
+  'Extensión de tríceps en polea',
+  'Fondos para tríceps',
+  'Extensión por encima de la cabeza',
+  'Crunch abdominal',
+  'Elevaciones de piernas',
+  'Plancha',
+  'Rueda abdominal'
+];
+
 let currentExercises = [];
-let availableExercises = [];
+let availableExercises = [...PREDEFINED_EXERCISES];
 
 function showMessage(text, type = 'error') {
   messageDiv.textContent = text;
@@ -31,16 +68,76 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function syncExerciseOptions() {
-  exerciseOptions.innerHTML = availableExercises
-    .map(exercise => `<option value="${escapeHtml(exercise)}"></option>`)
-    .join('');
+function filterExercises(query) {
+  const normalized = query.toLowerCase().trim();
+  if (!normalized) {
+    exerciseDropdown.classList.add('hidden');
+    return;
+  }
+
+  const filtered = availableExercises.filter(ex =>
+    ex.toLowerCase().includes(normalized)
+  );
+
+  let html = '';
+  filtered.forEach(ex => {
+    html += `<div class="dropdown-item" data-exercise="${escapeHtml(ex)}">${escapeHtml(ex)}</div>`;
+  });
+
+  const exactMatch = availableExercises.some(ex => ex.toLowerCase() === normalized);
+  if (!exactMatch && normalized.length > 0) {
+    html += `<div class="dropdown-item dropdown-item-new" data-exercise="${escapeHtml(normalized)}">+ Agregar nuevo: ${escapeHtml(normalized)}</div>`;
+  }
+
+  if (html) {
+    exerciseDropdown.innerHTML = html;
+    exerciseDropdown.classList.remove('hidden');
+
+    document.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        const exercise = e.currentTarget.dataset.exercise;
+        selectExercise(exercise);
+      });
+    });
+  } else {
+    exerciseDropdown.classList.add('hidden');
+  }
+}
+
+function selectExercise(exerciseName) {
+  const normalized = exerciseName.trim();
+  if (!normalized) {
+    showMessage('Ingresa un nombre de ejercicio válido.', 'error');
+    return;
+  }
+
+  const alreadyAdded = currentExercises.some(ex => ex.name.toLowerCase() === normalized.toLowerCase());
+  if (alreadyAdded) {
+    showMessage('Ese ejercicio ya está en la sesión.', 'error');
+    return;
+  }
+
+  if (!availableExercises.includes(normalized) && !availableExercises.some(ex => ex.toLowerCase() === normalized.toLowerCase())) {
+    availableExercises.push(normalized);
+  }
+
+  currentExercises.push({ name: normalized, series: [] });
+  renderExercises();
+  exerciseInput.value = '';
+  exerciseInput.focus();
+  exerciseDropdown.classList.add('hidden');
+  showMessage(`Ejercicio "${normalized}" agregado. Ahora agrega series.`, 'success');
 }
 
 async function loadExerciseOptions() {
   try {
-    availableExercises = await fetch('/api/exercises').then(r => r.json());
-    syncExerciseOptions();
+    const response = await fetch('/api/exercises');
+    const exercises = await response.json();
+    exercises.forEach(ex => {
+      if (!availableExercises.includes(ex)) {
+        availableExercises.push(ex);
+      }
+    });
   } catch (error) {
     console.error('Error cargando ejercicios:', error);
   }
@@ -213,7 +310,22 @@ function repeatSerie(exerciseIdx, serieIdx) {
   showMessage('Serie repetida en ' + exercise.name, 'success');
 }
 
-addExerciseBtn.addEventListener('click', addExerciseFromInput);
+addExerciseBtn.addEventListener('click', () => {
+  const exerciseName = exerciseInput.value.trim();
+  if (!exerciseName) {
+    showMessage('Escribe o selecciona un ejercicio antes de agregar.', 'error');
+    return;
+  }
+  selectExercise(exerciseName);
+});
+
+exerciseInput.addEventListener('input', (e) => {
+  filterExercises(e.target.value);
+});
+
+exerciseInput.addEventListener('blur', () => {
+  setTimeout(() => exerciseDropdown.classList.add('hidden'), 200);
+});
 
 async function saveSession() {
   const date = document.getElementById('date').value;

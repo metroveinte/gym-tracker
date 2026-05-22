@@ -386,6 +386,55 @@ th {
   white-space: nowrap;
 }
 
+.exercise-selector {
+  position: relative;
+  width: 100%;
+}
+
+.exercise-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #1a1a1a;
+  border: 2px solid #ff0000;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.exercise-dropdown.hidden {
+  display: none;
+}
+
+.dropdown-item {
+  padding: 12px 15px;
+  cursor: pointer;
+  color: #ffffff;
+  transition: background 0.2s ease;
+  border-bottom: 1px solid #333;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: #333;
+}
+
+.dropdown-item-new {
+  color: #ffcc00;
+  font-weight: 700;
+}
+
+.dropdown-item-new:hover {
+  background: #2a2a00;
+}
+
 .message {
   padding: 15px 20px;
   border-radius: 8px;
