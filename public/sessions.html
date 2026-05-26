@@ -31,13 +31,6 @@
           Notas (Opcional)
           <textarea id="notes" rows="2" placeholder="Notas sobre la sesión"></textarea>
         </label>
-        <label>
-          Ejercicio
-          <div class="exercise-selector hidden">
-            <input id="exercise-input" type="text" placeholder="Buscar o escribir ejercicio" autocomplete="off" />
-            <div id="exercise-dropdown" class="exercise-dropdown hidden"></div>
-          </div>
-        </label>
       </form>
 
       <h3 style="margin-top: 30px; margin-bottom: 15px;">Ejercicios</h3>
@@ -49,6 +42,43 @@
       <button type="button" id="save-session-btn" class="btn-primary" style="margin-top: 20px; width: 100%;">GUARDAR SESIÓN</button>
     </section>
   </main>
+
+  <!-- Modal para agregar ejercicio -->
+  <div id="modal-overlay" class="modal-overlay hidden"></div>
+  <div id="exercise-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Agregar Ejercicio</h2>
+        <button type="button" class="modal-close" id="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label>
+          Seleccionar Ejercicio
+          <div class="exercise-selector">
+            <input id="exercise-input" type="text" placeholder="Buscar o escribir ejercicio" autocomplete="off" />
+            <div id="exercise-dropdown" class="exercise-dropdown hidden"></div>
+          </div>
+        </label>
+
+        <div id="first-serie-form" class="hidden" style="margin-top: 25px; padding-top: 25px; border-top: 1px solid #444;">
+          <h3 style="margin-top: 0;">Primera Serie</h3>
+          <label>
+            Repeticiones
+            <input type="number" id="first-reps" min="1" placeholder="Ej: 10" />
+          </label>
+          <label>
+            Peso en kg (Opcional)
+            <input type="number" id="first-weight" min="0" step="0.5" placeholder="Ej: 20" />
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="modal-cancel-btn" class="btn-secondary">Cancelar</button>
+        <button type="button" id="modal-confirm-btn" class="btn-primary" disabled>Agregar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
