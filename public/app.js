@@ -2,10 +2,19 @@ const form = document.getElementById('session-form');
 const messageDiv = document.getElementById('message');
 const exerciseInput = document.getElementById('exercise-input');
 const exerciseDropdown = document.getElementById('exercise-dropdown');
-const exerciseSelector = document.querySelector('.exercise-selector');
 const addExerciseBtn = document.getElementById('add-exercise-btn');
 const saveSessionBtn = document.getElementById('save-session-btn');
 const exercisesContainer = document.getElementById('exercises-container');
+
+// Modal elements
+const modal = document.getElementById('exercise-modal');
+const modalOverlay = document.getElementById('modal-overlay');
+const modalCloseBtn = document.getElementById('modal-close-btn');
+const modalCancelBtn = document.getElementById('modal-cancel-btn');
+const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+const firstSerieForm = document.getElementById('first-serie-form');
+const firstRepsInput = document.getElementById('first-reps');
+const firstWeightInput = document.getElementById('first-weight');
 
 const PREDEFINED_EXERCISES = [
   'Press de banca',
@@ -46,6 +55,7 @@ const PREDEFINED_EXERCISES = [
 
 let currentExercises = [];
 let availableExercises = [...PREDEFINED_EXERCISES];
+let selectedExerciseForModal = null;
 
 function showMessage(text, type = 'error') {
   messageDiv.textContent = text;
@@ -67,6 +77,39 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function openModal() {
+  modal.classList.remove('hidden');
+  modalOverlay.classList.remove('hidden');
+  exerciseInput.value = '';
+  exerciseInput.focus();
+  exerciseDropdown.classList.add('hidden');
+  firstSerieForm.classList.add('hidden');
+  selectedExerciseForModal = null;
+  firstRepsInput.value = '';
+  firstWeightInput.value = '';
+  modalConfirmBtn.disabled = true;
+}
+
+function closeModal() {
+  modal.classList.add('hidden');
+  modalOverlay.classList.add('hidden');
+  exerciseInput.value = '';
+  exerciseDropdown.classList.add('hidden');
+  firstSerieForm.classList.add('hidden');
+  selectedExerciseForModal = null;
+  firstRepsInput.value = '';
+  firstWeightInput.value = '';
+  modalConfirmBtn.disabled = true;
+}
+
+function updateModalConfirmButton() {
+  if (selectedExerciseForModal && firstRepsInput.value) {
+    modalConfirmBtn.disabled = false;
+  } else {
+    modalConfirmBtn.disabled = true;
+  }
 }
 
 function filterExercises(query) {
@@ -97,7 +140,7 @@ function filterExercises(query) {
     document.querySelectorAll('.dropdown-item').forEach(item => {
       item.addEventListener('click', (e) => {
         const exercise = e.currentTarget.dataset.exercise;
-        selectExercise(exercise);
+        selectExerciseInModal(exercise);
       });
     });
   } else {
@@ -105,29 +148,30 @@ function filterExercises(query) {
   }
 }
 
-function selectExercise(exerciseName) {
+function selectExerciseInModal(exerciseName) {
   const normalized = exerciseName.trim();
   if (!normalized) {
     showMessage('Ingresa un nombre de ejercicio válido.', 'error');
     return;
   }
 
+  // Check if already added
   const alreadyAdded = currentExercises.some(ex => ex.name.toLowerCase() === normalized.toLowerCase());
   if (alreadyAdded) {
     showMessage('Ese ejercicio ya está en la sesión.', 'error');
     return;
   }
 
+  // Add to available exercises if new
   if (!availableExercises.includes(normalized) && !availableExercises.some(ex => ex.toLowerCase() === normalized.toLowerCase())) {
     availableExercises.push(normalized);
   }
 
-  currentExercises.push({ name: normalized, series: [] });
-  renderExercises();
-  exerciseInput.value = '';
+  selectedExerciseForModal = normalized;
+  exerciseInput.value = normalized;
   exerciseDropdown.classList.add('hidden');
-  exerciseSelector.classList.add('hidden');
-  showMessage(`Ejercicio "${normalized}" agregado. Ahora agrega series.`, 'success');
+  firstSerieForm.classList.remove('hidden');
+  updateModalConfirmButton();
 }
 
 async function loadExerciseOptions() {
@@ -142,41 +186,6 @@ async function loadExerciseOptions() {
   } catch (error) {
     console.error('Error cargando ejercicios:', error);
   }
-}
-
-function addExerciseToList(exerciseName) {
-  const normalized = exerciseName.trim();
-  if (!normalized) {
-    showMessage('Ingresa un nombre de ejercicio válido.', 'error');
-    return;
-  }
-
-  const alreadyAdded = currentExercises.some(ex => ex.name.toLowerCase() === normalized.toLowerCase());
-  if (alreadyAdded) {
-    showMessage('Ese ejercicio ya está en la sesión.', 'error');
-    return;
-  }
-
-  currentExercises.push({ name: normalized, series: [] });
-  if (!availableExercises.some(ex => ex.toLowerCase() === normalized.toLowerCase())) {
-    availableExercises.push(normalized);
-    syncExerciseOptions();
-  }
-
-  renderExercises();
-  exerciseInput.value = '';
-  exerciseInput.focus();
-  showMessage(`Ejercicio "${normalized}" agregado. Ahora agrega series.`, 'success');
-}
-
-function addExerciseFromInput() {
-  const exerciseName = exerciseInput.value;
-  if (!exerciseName || !exerciseName.trim()) {
-    showMessage('Escribe o selecciona un ejercicio antes de agregar.', 'error');
-    return;
-  }
-
-  addExerciseToList(exerciseName);
 }
 
 function renderExercises() {
@@ -311,25 +320,53 @@ function repeatSerie(exerciseIdx, serieIdx) {
   showMessage('Serie repetida en ' + exercise.name, 'success');
 }
 
+// Modal event listeners
 addExerciseBtn.addEventListener('click', () => {
-  exerciseSelector.classList.remove('hidden');
-  exerciseInput.focus();
-  exerciseInput.value = '';
-  exerciseDropdown.classList.add('hidden');
+  openModal();
+});
+
+modalCloseBtn.addEventListener('click', closeModal);
+modalCancelBtn.addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', closeModal);
+
+modalConfirmBtn.addEventListener('click', () => {
+  if (!selectedExerciseForModal) {
+    showMessage('Selecciona un ejercicio.', 'error');
+    return;
+  }
+
+  const reps = parseInt(firstRepsInput.value, 10);
+  if (isNaN(reps) || reps <= 0) {
+    showMessage('Repeticiones debe ser un número positivo', 'error');
+    return;
+  }
+
+  let weight = null;
+  if (firstWeightInput.value) {
+    weight = parseFloat(firstWeightInput.value);
+    if (isNaN(weight) || weight < 0) {
+      showMessage('Peso debe ser un número positivo', 'error');
+      return;
+    }
+  }
+
+  // Add exercise with first serie
+  currentExercises.push({
+    name: selectedExerciseForModal,
+    series: [{ sets: 1, reps, weight }]
+  });
+
+  renderExercises();
+  closeModal();
+  showMessage(`Ejercicio "${selectedExerciseForModal}" agregado. Puedes agregar más series si es necesario.`, 'success');
 });
 
 exerciseInput.addEventListener('input', (e) => {
   filterExercises(e.target.value);
 });
 
-exerciseInput.addEventListener('blur', () => {
-  setTimeout(() => {
-    if (exerciseInput.value.trim() === '') {
-      exerciseSelector.classList.add('hidden');
-      exerciseDropdown.classList.add('hidden');
-    }
-  }, 250);
-});
+firstRepsInput.addEventListener('input', updateModalConfirmButton);
+firstWeightInput.addEventListener('input', updateModalConfirmButton);
 
 async function saveSession() {
   const date = document.getElementById('date').value;
@@ -405,15 +442,9 @@ async function saveSession() {
   }
 }
 
-// Agregar evento al form
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-});
-
 // Agregar evento para el botón de guardar
 saveSessionBtn.addEventListener('click', saveSession);
 
 // Inicializar
 loadExerciseOptions();
 renderExercises();
-
