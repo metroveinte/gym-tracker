@@ -137,7 +137,13 @@ function filterExercises(query) {
     return;
   }
 
-  const filtered = availableExercises.filter(ex =>
+  // Asegurar que availableExercises contiene strings, no objetos
+  const cleanExercises = availableExercises.map(ex => {
+    if (typeof ex === 'object' && ex.name) return ex.name;
+    return String(ex || '');
+  }).filter(ex => ex.trim());
+
+  const filtered = cleanExercises.filter(ex =>
     ex.toLowerCase().includes(normalized)
   );
 
@@ -146,7 +152,7 @@ function filterExercises(query) {
     html += `<div class="dropdown-item" data-exercise="${escapeHtml(ex)}">${escapeHtml(ex)}</div>`;
   });
 
-  const exactMatch = availableExercises.some(ex => ex.toLowerCase() === normalized);
+  const exactMatch = cleanExercises.some(ex => ex.toLowerCase() === normalized);
   if (!exactMatch && normalized.length > 0) {
     const capitalizedInput = query.trim().split(' ').map(word => capitalizeFirstLetter(word)).join(' ');
     html += `<div class="dropdown-item dropdown-item-new" data-exercise="${escapeHtml(capitalizedInput)}">+ Agregar nuevo: ${escapeHtml(capitalizedInput)}</div>`;
