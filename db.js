@@ -47,6 +47,9 @@ db.serialize(() => {
     )
   `);
 
+  // Migración: añadir muscle_group si la tabla ya existía sin esa columna
+  db.run(`ALTER TABLE exercises ADD COLUMN muscle_group TEXT`, () => {});
+
   db.run('CREATE INDEX IF NOT EXISTS idx_series_session_id ON series(session_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date)');
 

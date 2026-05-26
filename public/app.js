@@ -233,8 +233,13 @@ async function loadExerciseOptions() {
     const response = await fetch('/api/exercises');
     const exercises = await response.json();
     exercises.forEach(ex => {
-      if (!availableExercises.includes(ex)) {
-        availableExercises.push(ex);
+      const name = typeof ex === 'object' ? ex.name : ex;
+      const muscleGroup = typeof ex === 'object' ? ex.muscle_group : null;
+      if (name && !availableExercises.some(e => e.toLowerCase() === name.toLowerCase())) {
+        availableExercises.push(name);
+      }
+      if (name && muscleGroup) {
+        EXERCISE_MUSCLE_MAP[name] = muscleGroup;
       }
     });
   } catch (error) {
