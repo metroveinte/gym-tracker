@@ -231,15 +231,38 @@ function selectExerciseInModal(exerciseName) {
 async function loadExerciseOptions() {
   try {
     const response = await fetch('/api/exercises');
-    const exercises = await response.json();
-    exercises.forEach(ex => {
-      const name = typeof ex === 'object' ? ex.name : ex;
-      const muscleGroup = typeof ex === 'object' ? ex.muscle_group : null;
-      if (name && !availableExercises.some(e => e.toLowerCase() === name.toLowerCase())) {
-        availableExercises.push(name);
+    const data = await response.json();
+
+    if (!Array.isArray(data)) {
+      console.error('API devolvió datos inválidos:', data);
+      return;
+    }
+
+    data.forEach(item => {
+      let exerciseName = '';
+      let muscleGroup = '';
+
+      // Extraer nombre del ejercicio (puede ser string o objeto)
+      if (typeof item === 'string') {
+        exerciseName = item;
+      } else if (typeof item === 'object' && item.name) {
+        exerciseName = item.name;
+        muscleGroup = item.muscle_group || '';
       }
-      if (name && muscleGroup) {
-        EXERCISE_MUSCLE_MAP[name] = muscleGroup;
+
+      // Solo agregar si es un nombre válido y no está ya en la lista
+      if (exerciseName && exerciseName.trim()) {
+        const trimmed = exerciseName.trim();
+        const exists = availableExercises.some(e => e && e.toLowerCase() === trimmed.toLowerCase());
+
+        if (!exists) {
+          availableExercises.push(trimmed);
+        }
+
+        // Actualizar mapa de grupos musculares si existe
+        if (muscleGroup) {
+          EXERCISE_MUSCLE_MAP[trimmed] = muscleGroup;
+        }
       }
     });
   } catch (error) {
