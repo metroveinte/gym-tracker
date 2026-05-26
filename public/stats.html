@@ -45,8 +45,8 @@
           <span class="stat-value" id="total-series">-</span>
         </div>
         <div class="stat-item">
-          <span class="stat-label">Volumen (kg)</span>
-          <span class="stat-value" id="total-volume">-</span>
+          <span class="stat-label">Grupo muscular top</span>
+          <span class="stat-value" id="top-muscle">-</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">Racha de días</span>
@@ -59,7 +59,7 @@
       </div>
     </div>
 
-    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(400px, 1fr)); gap:30px;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(350px, 1fr)); gap:30px;">
       <div class="card">
         <h2>Top 5 Ejercicios</h2>
         <div class="chart-container">
@@ -77,6 +77,13 @@
         </div>
         <div class="chart-container">
           <canvas id="progressChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>% Trabajo por Grupo</h2>
+        <div class="chart-container">
+          <canvas id="muscleGroupChart"></canvas>
         </div>
       </div>
     </div>

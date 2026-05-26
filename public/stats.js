@@ -2,16 +2,68 @@ let allSessions = [];
 let currentFilter = 'all';
 let progressChart = null;
 let topExercisesChart = null;
+let muscleGroupChart = null;
+
+const EXERCISE_MUSCLE_MAP = {
+  'Press de banca': 'Pecho',
+  'Press inclinado con mancuernas': 'Pecho',
+  'Fondos en paralelas': 'Pecho',
+  'Aperturas con mancuernas': 'Pecho',
+  'Cruce de poleas': 'Pecho',
+  'Dominadas': 'Espalda',
+  'Jalón al pecho': 'Espalda',
+  'Remo con barra': 'Espalda',
+  'Remo con mancuerna': 'Espalda',
+  'Peso muerto': 'Espalda',
+  'Press militar': 'Hombros',
+  'Elevaciones laterales': 'Hombros',
+  'Pájaros': 'Hombros',
+  'Face pulls': 'Hombros',
+  'Sentadilla': 'Piernas',
+  'Prensa de piernas': 'Piernas',
+  'Peso muerto rumano': 'Piernas',
+  'Zancadas': 'Piernas',
+  'Hip thrust': 'Glúteos',
+  'Curl femoral': 'Piernas',
+  'Extensión de cuádriceps': 'Piernas',
+  'Elevación de gemelos': 'Piernas',
+  'Curl con barra': 'Bíceps',
+  'Curl martillo': 'Bíceps',
+  'Curl en banco inclinado': 'Bíceps',
+  'Curl en polea': 'Bíceps',
+  'Press francés': 'Tríceps',
+  'Extensión de tríceps en polea': 'Tríceps',
+  'Fondos para tríceps': 'Tríceps',
+  'Extensión por encima de la cabeza': 'Tríceps',
+  'Crunch abdominal': 'Core',
+  'Elevaciones de piernas': 'Core',
+  'Plancha': 'Core',
+  'Rueda abdominal': 'Core'
+};
+
+let exercisesMuscleData = {};
 
 async function loadStats() {
   try {
     allSessions = await fetch('/api/sessions').then(r => r.json());
+    const exercisesRes = await fetch('/api/exercises').then(r => r.json());
+
+    exercisesRes.forEach(ex => {
+      if (typeof ex === 'object' && ex.name && ex.muscle_group) {
+        exercisesMuscleData[ex.name] = ex.muscle_group;
+      }
+    });
+
     setupSelectors();
     loadExerciseSelect();
     updateStats();
   } catch (error) {
     console.error('Error loading stats:', error);
   }
+}
+
+function getMuscleGroup(exerciseName) {
+  return exercisesMuscleData[exerciseName] || EXERCISE_MUSCLE_MAP[exerciseName] || null;
 }
 
 function getFilteredSessions() {
@@ -140,31 +192,19 @@ function updateStats() {
   const totalSessions = filtered.length;
   const uniqueExercises = new Set(filtered.map(s => s.exercise)).size;
   const totalSeries = filtered.reduce((sum, s) => sum + (s.series ? s.series.length : 0), 0);
-  const totalVolume = calculateVolume(filtered);
   const streakDays = calculateStreak(filtered);
-  const topExercise = findTopExercise(filtered);
+  const topMuscle = findTopMuscleGroup(filtered);
 
   document.getElementById('total-sessions').textContent = totalSessions;
   document.getElementById('unique-exercises').textContent = uniqueExercises;
   document.getElementById('total-series').textContent = totalSeries;
-  document.getElementById('total-volume').textContent = totalVolume.toFixed(1);
   document.getElementById('streak-days').textContent = streakDays;
-  document.getElementById('top-exercise').textContent = topExercise || '-';
+  document.getElementById('top-muscle').textContent = topMuscle || '-';
 
   renderHistory(filtered);
   renderProgressChart(filtered);
   renderTopExercisesChart(filtered);
-}
-
-function calculateVolume(sessions) {
-  return sessions.reduce((total, session) => {
-    if (!session.series) return total;
-    return total + session.series.reduce((sum, serie) => {
-      const weight = serie.weight || 0;
-      const reps = serie.reps || 0;
-      return sum + (weight * reps);
-    }, 0);
-  }, 0);
+  renderMuscleGroupChart(filtered);
 }
 
 function calculateStreak(sessions) {
@@ -192,27 +232,30 @@ function calculateStreak(sessions) {
   return streak;
 }
 
-function findTopExercise(sessions) {
-  const exerciseCounts = new Map();
+function findTopMuscleGroup(sessions) {
+  const muscleCounts = new Map();
 
   sessions.forEach(session => {
-    const count = exerciseCounts.get(session.exercise) || 0;
-    exerciseCounts.set(session.exercise, count + 1);
+    const muscle = getMuscleGroup(session.exercise);
+    if (muscle) {
+      const count = muscleCounts.get(muscle) || 0;
+      muscleCounts.set(muscle, count + 1);
+    }
   });
 
-  if (exerciseCounts.size === 0) return null;
+  if (muscleCounts.size === 0) return null;
 
-  let topExercise = null;
+  let topMuscle = null;
   let maxCount = 0;
 
-  for (const [exercise, count] of exerciseCounts) {
+  for (const [muscle, count] of muscleCounts) {
     if (count > maxCount) {
       maxCount = count;
-      topExercise = exercise;
+      topMuscle = muscle;
     }
   }
 
-  return topExercise;
+  return topMuscle;
 }
 
 function renderHistory(sessions) {
@@ -344,6 +387,61 @@ function renderTopExercisesChart(sessions) {
             '#ff9999',
             '#ffcccc'
           ],
+          borderColor: '#2a2a2a',
+          borderWidth: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          labels: { color: '#ffffff' }
+        }
+      }
+    }
+  });
+}
+
+function renderMuscleGroupChart(sessions) {
+  const muscleCounts = new Map();
+
+  sessions.forEach(session => {
+    const muscle = getMuscleGroup(session.exercise);
+    if (muscle) {
+      const count = muscleCounts.get(muscle) || 0;
+      muscleCounts.set(muscle, count + 1);
+    }
+  });
+
+  const total = Array.from(muscleCounts.values()).reduce((a, b) => a + b, 0);
+
+  const sorted = Array.from(muscleCounts.entries())
+    .sort((a, b) => b[1] - a[1]);
+
+  const labels = sorted.map(e => `${e[0]} (${((e[1] / total) * 100).toFixed(0)}%)`);
+  const data = sorted.map(e => e[1]);
+
+  const ctx = document.getElementById('muscleGroupChart').getContext('2d');
+
+  if (muscleGroupChart) {
+    muscleGroupChart.destroy();
+  }
+
+  const colors = [
+    '#ff0000', '#ff3333', '#ff6666', '#ff9999',
+    '#ffcccc', '#cc0000', '#aa0000', '#880000'
+  ];
+
+  muscleGroupChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          data: data,
+          backgroundColor: colors.slice(0, labels.length),
           borderColor: '#2a2a2a',
           borderWidth: 2
         }

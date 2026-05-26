@@ -42,7 +42,8 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS exercises (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL COLLATE NOCASE UNIQUE
+      name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+      muscle_group TEXT
     )
   `);
 

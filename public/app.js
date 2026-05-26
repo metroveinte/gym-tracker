@@ -16,46 +16,51 @@ const firstSerieForm = document.getElementById('first-serie-form');
 const firstRepsInput = document.getElementById('first-reps');
 const firstWeightInput = document.getElementById('first-weight');
 
-const PREDEFINED_EXERCISES = [
-  'Press de banca',
-  'Press inclinado con mancuernas',
-  'Fondos en paralelas',
-  'Aperturas con mancuernas',
-  'Cruce de poleas',
-  'Dominadas',
-  'Jalón al pecho',
-  'Remo con barra',
-  'Remo con mancuerna',
-  'Peso muerto',
-  'Press militar',
-  'Elevaciones laterales',
-  'Pájaros',
-  'Face pulls',
-  'Sentadilla',
-  'Prensa de piernas',
-  'Peso muerto rumano',
-  'Zancadas',
-  'Hip thrust',
-  'Curl femoral',
-  'Extensión de cuádriceps',
-  'Elevación de gemelos',
-  'Curl con barra',
-  'Curl martillo',
-  'Curl en banco inclinado',
-  'Curl en polea',
-  'Press francés',
-  'Extensión de tríceps en polea',
-  'Fondos para tríceps',
-  'Extensión por encima de la cabeza',
-  'Crunch abdominal',
-  'Elevaciones de piernas',
-  'Plancha',
-  'Rueda abdominal'
-];
+const EXERCISE_MUSCLE_MAP = {
+  'Press de banca': 'Pecho',
+  'Press inclinado con mancuernas': 'Pecho',
+  'Fondos en paralelas': 'Pecho',
+  'Aperturas con mancuernas': 'Pecho',
+  'Cruce de poleas': 'Pecho',
+  'Dominadas': 'Espalda',
+  'Jalón al pecho': 'Espalda',
+  'Remo con barra': 'Espalda',
+  'Remo con mancuerna': 'Espalda',
+  'Peso muerto': 'Espalda',
+  'Press militar': 'Hombros',
+  'Elevaciones laterales': 'Hombros',
+  'Pájaros': 'Hombros',
+  'Face pulls': 'Hombros',
+  'Sentadilla': 'Piernas',
+  'Prensa de piernas': 'Piernas',
+  'Peso muerto rumano': 'Piernas',
+  'Zancadas': 'Piernas',
+  'Hip thrust': 'Glúteos',
+  'Curl femoral': 'Piernas',
+  'Extensión de cuádriceps': 'Piernas',
+  'Elevación de gemelos': 'Piernas',
+  'Curl con barra': 'Bíceps',
+  'Curl martillo': 'Bíceps',
+  'Curl en banco inclinado': 'Bíceps',
+  'Curl en polea': 'Bíceps',
+  'Press francés': 'Tríceps',
+  'Extensión de tríceps en polea': 'Tríceps',
+  'Fondos para tríceps': 'Tríceps',
+  'Extensión por encima de la cabeza': 'Tríceps',
+  'Crunch abdominal': 'Core',
+  'Elevaciones de piernas': 'Core',
+  'Plancha': 'Core',
+  'Rueda abdominal': 'Core'
+};
+
+const PREDEFINED_EXERCISES = Object.keys(EXERCISE_MUSCLE_MAP);
+const MUSCLE_GROUPS = ['Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps', 'Piernas', 'Glúteos', 'Core'];
 
 let currentExercises = [];
 let availableExercises = [...PREDEFINED_EXERCISES];
 let selectedExerciseForModal = null;
+let selectedMuscleGroup = null;
+let isNewExercise = false;
 
 function showMessage(text, type = 'error') {
   messageDiv.textContent = text;
@@ -92,6 +97,8 @@ function openModal() {
   exerciseDropdown.classList.add('hidden');
   firstSerieForm.classList.add('hidden');
   selectedExerciseForModal = null;
+  selectedMuscleGroup = null;
+  isNewExercise = false;
   firstRepsInput.value = '';
   firstWeightInput.value = '';
   modalConfirmBtn.disabled = true;
@@ -104,6 +111,8 @@ function closeModal() {
   exerciseDropdown.classList.add('hidden');
   firstSerieForm.classList.add('hidden');
   selectedExerciseForModal = null;
+  selectedMuscleGroup = null;
+  isNewExercise = false;
   firstRepsInput.value = '';
   firstWeightInput.value = '';
   modalConfirmBtn.disabled = true;
@@ -111,7 +120,11 @@ function closeModal() {
 
 function updateModalConfirmButton() {
   if (selectedExerciseForModal && firstRepsInput.value) {
-    modalConfirmBtn.disabled = false;
+    if (isNewExercise && !selectedMuscleGroup) {
+      modalConfirmBtn.disabled = true;
+    } else {
+      modalConfirmBtn.disabled = false;
+    }
   } else {
     modalConfirmBtn.disabled = true;
   }
@@ -166,6 +179,41 @@ function selectExerciseInModal(exerciseName) {
   if (alreadyAdded) {
     showMessage('Ese ejercicio ya está en la sesión.', 'error');
     return;
+  }
+
+  // Determine if it's a new exercise
+  isNewExercise = !EXERCISE_MUSCLE_MAP[exerciseNameTrimmed];
+
+  if (isNewExercise) {
+    // Pedir grupo muscular para nuevo ejercicio
+    const muscleSelect = document.createElement('div');
+    muscleSelect.id = 'new-muscle-group-select';
+    muscleSelect.style.marginBottom = '15px';
+    muscleSelect.innerHTML = `
+      <label for="muscle-group-select" style="display:block; margin-bottom:8px; color:#fff; font-weight:600;">Grupo muscular del nuevo ejercicio:</label>
+      <select id="muscle-group-select" style="width:100%; padding:10px; border:2px solid #444; background:#1a1a1a; color:#fff; border-radius:8px; font-family:'Oswald', sans-serif; cursor:pointer;">
+        <option value="">Seleccionar...</option>
+        ${MUSCLE_GROUPS.map(mg => `<option value="${mg}">${mg}</option>`).join('')}
+      </select>
+    `;
+
+    // Insert before firstSerieForm
+    if (document.getElementById('new-muscle-group-select')) {
+      document.getElementById('new-muscle-group-select').remove();
+    }
+    firstSerieForm.parentNode.insertBefore(muscleSelect, firstSerieForm);
+
+    const selectElem = document.getElementById('muscle-group-select');
+    selectElem.addEventListener('change', (e) => {
+      selectedMuscleGroup = e.target.value;
+      updateModalConfirmButton();
+    });
+    selectElem.focus();
+  } else {
+    selectedMuscleGroup = EXERCISE_MUSCLE_MAP[exerciseNameTrimmed] || null;
+    if (document.getElementById('new-muscle-group-select')) {
+      document.getElementById('new-muscle-group-select').remove();
+    }
   }
 
   // Add to available exercises if new
@@ -335,9 +383,14 @@ modalCloseBtn.addEventListener('click', closeModal);
 modalCancelBtn.addEventListener('click', closeModal);
 modalOverlay.addEventListener('click', closeModal);
 
-modalConfirmBtn.addEventListener('click', () => {
+modalConfirmBtn.addEventListener('click', async () => {
   if (!selectedExerciseForModal) {
     showMessage('Selecciona un ejercicio.', 'error');
+    return;
+  }
+
+  if (isNewExercise && !selectedMuscleGroup) {
+    showMessage('Selecciona un grupo muscular para el nuevo ejercicio.', 'error');
     return;
   }
 
@@ -352,6 +405,27 @@ modalConfirmBtn.addEventListener('click', () => {
     weight = parseFloat(firstWeightInput.value);
     if (isNaN(weight) || weight < 0) {
       showMessage('Peso debe ser un número positivo', 'error');
+      return;
+    }
+  }
+
+  // Si es un nuevo ejercicio, guardarlo en la BD con el grupo muscular
+  if (isNewExercise) {
+    try {
+      const exerciseRes = await fetch('/api/exercises', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: selectedExerciseForModal, muscle_group: selectedMuscleGroup })
+      });
+
+      if (!exerciseRes.ok) {
+        throw new Error('Error al guardar el ejercicio');
+      }
+
+      // Actualizar el mapeo local
+      EXERCISE_MUSCLE_MAP[selectedExerciseForModal] = selectedMuscleGroup;
+    } catch (error) {
+      showMessage('Error al guardar ejercicio: ' + error.message, 'error');
       return;
     }
   }

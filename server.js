@@ -99,26 +99,26 @@ app.post('/api/sessions', (req, res) => {
 });
 
 app.get('/api/exercises', (req, res) => {
-  db.all('SELECT name FROM exercises ORDER BY name COLLATE NOCASE ASC', [], (err, rows) => {
+  db.all('SELECT name, muscle_group FROM exercises ORDER BY name COLLATE NOCASE ASC', [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: 'Error al cargar ejercicios.' });
     }
-    res.json(rows.map(row => row.name));
+    res.json(rows);
   });
 });
 
 app.post('/api/exercises', (req, res) => {
-  const { name } = req.body;
+  const { name, muscle_group } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Nombre de ejercicio inválido.' });
   }
 
   const trimmedName = name.trim();
-  db.run('INSERT OR IGNORE INTO exercises (name) VALUES (?)', [trimmedName], function (err) {
+  db.run('INSERT OR IGNORE INTO exercises (name, muscle_group) VALUES (?, ?)', [trimmedName, muscle_group || null], function (err) {
     if (err) {
       return res.status(500).json({ error: 'Error al guardar el ejercicio.' });
     }
-    res.json({ name: trimmedName });
+    res.json({ name: trimmedName, muscle_group: muscle_group || null });
   });
 });
 
