@@ -92,6 +92,14 @@ body {
   color: #ff0000;
 }
 
+.btn-primary:disabled {
+  background: #777;
+  border-color: #777;
+  color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .hero-bg {
   position: absolute;
   top: 0;
@@ -459,6 +467,111 @@ th {
   display: none;
 }
 
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 200;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #2a2a2a;
+  border: 1px solid #444444;
+  border-radius: 15px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  z-index: 201;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid #444444;
+  flex-shrink: 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.modal-close {
+  width: auto !important;
+  margin: 0 !important;
+  padding: 8px 12px !important;
+  background: transparent !important;
+  color: #999;
+  font-size: 1.5rem;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  font-weight: 700;
+}
+
+.modal-close:hover {
+  color: #fff;
+  background: transparent !important;
+}
+
+.modal-body {
+  padding: 25px;
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.modal-body label {
+  margin-bottom: 20px;
+}
+
+.modal-body input {
+  width: 100%;
+}
+
+#first-serie-form label {
+  margin-bottom: 15px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 10px;
+  padding: 20px 25px;
+  border-top: 1px solid #444444;
+  flex-shrink: 0;
+}
+
+.modal-footer button {
+  flex: 1;
+  margin: 0 !important;
+  padding: 12px 20px !important;
+}
+
 @media (max-width: 600px) {
   .hero-buttons {
     flex-direction: column;
@@ -472,5 +585,27 @@ th {
 
   .features {
     grid-template-columns: 1fr;
+  }
+
+  .modal {
+    width: 95%;
+    max-height: 85vh;
+  }
+
+  .modal-header {
+    padding: 15px 20px;
+  }
+
+  .modal-body {
+    padding: 20px;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    padding: 15px 20px;
+  }
+
+  .modal-footer button {
+    width: 100% !important;
   }
 }
