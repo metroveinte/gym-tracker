@@ -124,15 +124,42 @@ app.post('/api/exercises', (req, res) => {
 
 app.patch('/api/exercises/:name', (req, res) => {
   const name = decodeURIComponent(req.params.name);
-  const { muscle_group } = req.body;
+  const { muscle_group, new_name } = req.body;
+
+  if (new_name && new_name.trim()) {
+    const trimmedNewName = new_name.trim();
+    db.run(
+      'UPDATE exercises SET name = ?, muscle_group = ? WHERE name = ? COLLATE NOCASE',
+      [trimmedNewName, muscle_group || null, name],
+      function (err) {
+        if (err) return res.status(500).json({ error: 'Error al actualizar el ejercicio.' });
+        if (this.changes === 0) return res.status(404).json({ error: 'Ejercicio no encontrado.' });
+        res.json({ name: trimmedNewName, muscle_group: muscle_group || null });
+      }
+    );
+  } else {
+    db.run(
+      'UPDATE exercises SET muscle_group = ? WHERE name = ? COLLATE NOCASE',
+      [muscle_group || null, name],
+      function (err) {
+        if (err) return res.status(500).json({ error: 'Error al actualizar el ejercicio.' });
+        if (this.changes === 0) return res.status(404).json({ error: 'Ejercicio no encontrado.' });
+        res.json({ name, muscle_group: muscle_group || null });
+      }
+    );
+  }
+});
+
+app.delete('/api/exercises/:name', (req, res) => {
+  const name = decodeURIComponent(req.params.name);
 
   db.run(
-    'UPDATE exercises SET muscle_group = ? WHERE name = ? COLLATE NOCASE',
-    [muscle_group || null, name],
+    'DELETE FROM exercises WHERE name = ? COLLATE NOCASE',
+    [name],
     function (err) {
-      if (err) return res.status(500).json({ error: 'Error al actualizar el ejercicio.' });
+      if (err) return res.status(500).json({ error: 'Error al eliminar el ejercicio.' });
       if (this.changes === 0) return res.status(404).json({ error: 'Ejercicio no encontrado.' });
-      res.json({ name, muscle_group: muscle_group || null });
+      res.json({ success: true, name });
     }
   );
 });

@@ -751,3 +751,32 @@ th {
   background: #cc0000;
   color: #fff;
 }
+
+.manage-exercise-name-input {
+  padding: 6px 10px !important;
+  border: 2px solid #444 !important;
+  border-radius: 6px !important;
+  background: #1a1a1a !important;
+  color: #fff !important;
+  font-family: 'Oswald', sans-serif !important;
+  width: 100% !important;
+  flex: 1;
+}
+
+.manage-exercise-name-input:focus {
+  outline: none !important;
+  border-color: #ff0000 !important;
+}
+
+.manage-delete-btn {
+  padding: 6px 10px !important;
+  margin: 0 !important;
+  width: auto !important;
+  font-size: 0.75rem !important;
+  background: #660000 !important;
+  flex-shrink: 0;
+}
+
+.manage-delete-btn:hover {
+  background: #990000 !important;
+}
