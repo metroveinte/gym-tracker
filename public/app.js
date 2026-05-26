@@ -465,14 +465,15 @@ modalConfirmBtn.addEventListener('click', async () => {
   }
 
   // Add exercise with first serie
+  const addedName = selectedExerciseForModal;
   currentExercises.push({
-    name: selectedExerciseForModal,
+    name: addedName,
     series: [{ sets: 1, reps, weight }]
   });
 
   renderExercises();
   closeModal();
-  showMessage(`Ejercicio "${selectedExerciseForModal}" agregado. Puedes agregar más series si es necesario.`, 'success');
+  showMessage(`Ejercicio "${addedName}" agregado. Puedes agregar más series si es necesario.`, 'success');
 });
 
 exerciseInput.addEventListener('input', (e) => {
