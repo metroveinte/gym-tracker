@@ -38,7 +38,10 @@
         <p style="color: #999; text-align: center;">Agrega ejercicios a continuación</p>
       </div>
 
-      <button type="button" id="add-exercise-btn" class="btn-secondary" style="margin-top: 15px;">+ AÑADIR EJERCICIO</button>
+      <div style="display:flex; gap:10px; margin-top:15px;">
+        <button type="button" id="add-exercise-btn" class="btn-secondary" style="flex:1; margin-top:0;">+ AÑADIR EJERCICIO</button>
+        <button type="button" id="manage-exercises-btn" class="btn-secondary gear-btn" title="Gestionar ejercicios">⚙</button>
+      </div>
       <button type="button" id="save-session-btn" class="btn-primary" style="margin-top: 20px; width: 100%;">GUARDAR SESIÓN</button>
     </section>
   </main>
@@ -75,6 +78,26 @@
       <div class="modal-footer">
         <button type="button" id="modal-cancel-btn" class="btn-secondary">Cancelar</button>
         <button type="button" id="modal-confirm-btn" class="btn-primary" disabled>Agregar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para gestionar ejercicios -->
+  <div id="manage-modal-overlay" class="modal-overlay hidden"></div>
+  <div id="manage-modal" class="modal hidden" style="max-width:650px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Gestionar Ejercicios</h2>
+        <button type="button" class="modal-close" id="manage-modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:20px 25px;">
+        <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+          <select id="manage-filter-group" class="period-select" style="flex:1; min-width:150px;">
+            <option value="">Todos los grupos</option>
+          </select>
+          <input id="manage-search" type="text" placeholder="Buscar ejercicio..." style="flex:2; min-width:150px; margin-top:0;" autocomplete="off" />
+        </div>
+        <div id="manage-exercises-list" style="max-height:450px; overflow-y:auto;"></div>
       </div>
     </div>
   </div>

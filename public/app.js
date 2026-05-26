@@ -559,6 +559,133 @@ async function saveSession() {
 // Agregar evento para el botón de guardar
 saveSessionBtn.addEventListener('click', saveSession);
 
+// ── Gestión de ejercicios ───────────────────────────────────────────────────
+
+const manageModalOverlay = document.getElementById('manage-modal-overlay');
+const manageModal        = document.getElementById('manage-modal');
+const manageCloseBtn     = document.getElementById('manage-modal-close-btn');
+const manageFilterGroup  = document.getElementById('manage-filter-group');
+const manageSearch       = document.getElementById('manage-search');
+const manageList         = document.getElementById('manage-exercises-list');
+
+let allExercisesData = []; // [{name, muscle_group}]
+
+function openManageModal() {
+  manageModal.classList.remove('hidden');
+  manageModalOverlay.classList.remove('hidden');
+  manageSearch.value = '';
+  manageFilterGroup.value = '';
+  loadAndRenderManageList();
+}
+
+function closeManageModal() {
+  manageModal.classList.add('hidden');
+  manageModalOverlay.classList.add('hidden');
+}
+
+async function loadAndRenderManageList() {
+  try {
+    const data = await fetch('/api/exercises').then(r => r.json());
+
+    allExercisesData = data.map(ex => ({
+      name: typeof ex === 'object' ? ex.name : ex,
+      muscle_group: typeof ex === 'object' ? (ex.muscle_group || '') : ''
+    })).filter(ex => ex.name);
+
+    // Rellenar filtro de grupos musculares
+    const groups = new Set(allExercisesData.map(ex => ex.muscle_group).filter(Boolean));
+    const currentFilter = manageFilterGroup.value;
+    manageFilterGroup.innerHTML = '<option value="">Todos los grupos</option>';
+    [...MUSCLE_GROUPS, ...Array.from(groups).filter(g => !MUSCLE_GROUPS.includes(g))].forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g;
+      opt.textContent = g;
+      manageFilterGroup.appendChild(opt);
+    });
+    manageFilterGroup.value = currentFilter;
+
+    renderManageList();
+  } catch (err) {
+    console.error('Error cargando ejercicios para gestión:', err);
+  }
+}
+
+function renderManageList() {
+  const filterGroup = manageFilterGroup.value;
+  const search = manageSearch.value.toLowerCase().trim();
+
+  const filtered = allExercisesData.filter(ex => {
+    const matchGroup = !filterGroup || ex.muscle_group === filterGroup;
+    const matchSearch = !search || ex.name.toLowerCase().includes(search);
+    return matchGroup && matchSearch;
+  });
+
+  if (filtered.length === 0) {
+    manageList.innerHTML = '<p style="color:#999; text-align:center; padding:20px 0;">No hay ejercicios que coincidan.</p>';
+    return;
+  }
+
+  manageList.innerHTML = filtered.map(ex => `
+    <div class="manage-exercise-row" data-name="${escapeHtml(ex.name)}">
+      <span class="manage-exercise-name">${escapeHtml(ex.name)}</span>
+      <select class="manage-exercise-select" data-name="${escapeHtml(ex.name)}">
+        <option value="">Sin grupo</option>
+        ${MUSCLE_GROUPS.map(g => `<option value="${g}" ${ex.muscle_group === g ? 'selected' : ''}>${g}</option>`).join('')}
+      </select>
+      <button class="manage-save-btn" data-name="${escapeHtml(ex.name)}">Guardar</button>
+    </div>
+  `).join('');
+
+  // Listeners de guardado
+  manageList.querySelectorAll('.manage-save-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const name = btn.dataset.name;
+      const select = manageList.querySelector(`.manage-exercise-select[data-name="${CSS.escape(name)}"]`);
+      const muscleGroup = select ? select.value : '';
+
+      btn.textContent = '...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`/api/exercises/${encodeURIComponent(name)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ muscle_group: muscleGroup })
+        });
+
+        if (!res.ok) throw new Error('Error en servidor');
+
+        // Actualizar datos locales
+        const ex = allExercisesData.find(e => e.name === name);
+        if (ex) ex.muscle_group = muscleGroup;
+        EXERCISE_MUSCLE_MAP[name] = muscleGroup;
+
+        btn.textContent = '✓';
+        btn.style.background = '#007700';
+        setTimeout(() => {
+          btn.textContent = 'Guardar';
+          btn.style.background = '';
+          btn.disabled = false;
+        }, 1500);
+      } catch (err) {
+        btn.textContent = 'Error';
+        btn.style.background = '#770000';
+        setTimeout(() => {
+          btn.textContent = 'Guardar';
+          btn.style.background = '';
+          btn.disabled = false;
+        }, 1500);
+      }
+    });
+  });
+}
+
+document.getElementById('manage-exercises-btn').addEventListener('click', openManageModal);
+manageCloseBtn.addEventListener('click', closeManageModal);
+manageModalOverlay.addEventListener('click', closeManageModal);
+manageFilterGroup.addEventListener('change', renderManageList);
+manageSearch.addEventListener('input', renderManageList);
+
 // Inicializar
 loadExerciseOptions();
 renderExercises();

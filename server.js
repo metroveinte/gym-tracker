@@ -122,6 +122,21 @@ app.post('/api/exercises', (req, res) => {
   });
 });
 
+app.patch('/api/exercises/:name', (req, res) => {
+  const name = decodeURIComponent(req.params.name);
+  const { muscle_group } = req.body;
+
+  db.run(
+    'UPDATE exercises SET muscle_group = ? WHERE name = ? COLLATE NOCASE',
+    [muscle_group || null, name],
+    function (err) {
+      if (err) return res.status(500).json({ error: 'Error al actualizar el ejercicio.' });
+      if (this.changes === 0) return res.status(404).json({ error: 'Ejercicio no encontrado.' });
+      res.json({ name, muscle_group: muscle_group || null });
+    }
+  );
+});
+
 app.post('/api/sessions/:id/series', (req, res) => {
   const { id } = req.params;
   const { sets, reps, weight } = req.body;
