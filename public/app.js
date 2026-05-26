@@ -79,6 +79,11 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function capitalizeFirstLetter(string) {
+  if (!string) return '';
+  return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+}
+
 function openModal() {
   modal.classList.remove('hidden');
   modalOverlay.classList.remove('hidden');
@@ -130,7 +135,8 @@ function filterExercises(query) {
 
   const exactMatch = availableExercises.some(ex => ex.toLowerCase() === normalized);
   if (!exactMatch && normalized.length > 0) {
-    html += `<div class="dropdown-item dropdown-item-new" data-exercise="${escapeHtml(normalized)}">+ Agregar nuevo: ${escapeHtml(normalized)}</div>`;
+    const capitalizedInput = query.trim().split(' ').map(word => capitalizeFirstLetter(word)).join(' ');
+    html += `<div class="dropdown-item dropdown-item-new" data-exercise="${escapeHtml(capitalizedInput)}">+ Agregar nuevo: ${escapeHtml(capitalizedInput)}</div>`;
   }
 
   if (html) {
@@ -149,26 +155,26 @@ function filterExercises(query) {
 }
 
 function selectExerciseInModal(exerciseName) {
-  const normalized = exerciseName.trim();
-  if (!normalized) {
+  const exerciseNameTrimmed = exerciseName.trim();
+  if (!exerciseNameTrimmed) {
     showMessage('Ingresa un nombre de ejercicio válido.', 'error');
     return;
   }
 
   // Check if already added
-  const alreadyAdded = currentExercises.some(ex => ex.name.toLowerCase() === normalized.toLowerCase());
+  const alreadyAdded = currentExercises.some(ex => ex.name.toLowerCase() === exerciseNameTrimmed.toLowerCase());
   if (alreadyAdded) {
     showMessage('Ese ejercicio ya está en la sesión.', 'error');
     return;
   }
 
   // Add to available exercises if new
-  if (!availableExercises.includes(normalized) && !availableExercises.some(ex => ex.toLowerCase() === normalized.toLowerCase())) {
-    availableExercises.push(normalized);
+  if (!availableExercises.includes(exerciseNameTrimmed) && !availableExercises.some(ex => ex.toLowerCase() === exerciseNameTrimmed.toLowerCase())) {
+    availableExercises.push(exerciseNameTrimmed);
   }
 
-  selectedExerciseForModal = normalized;
-  exerciseInput.value = normalized;
+  selectedExerciseForModal = exerciseNameTrimmed;
+  exerciseInput.value = exerciseNameTrimmed;
   exerciseDropdown.classList.add('hidden');
   firstSerieForm.classList.remove('hidden');
   updateModalConfirmButton();
