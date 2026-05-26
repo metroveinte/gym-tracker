@@ -1,13 +1,12 @@
 let allSessions = [];
 let currentFilter = 'all';
-let sessionsChart = null;
 let progressChart = null;
 let topExercisesChart = null;
 
 async function loadStats() {
   try {
     allSessions = await fetch('/api/sessions').then(r => r.json());
-    setupFilterButtons();
+    setupSelectors();
     loadExerciseSelect();
     updateStats();
   } catch (error) {
@@ -57,20 +56,11 @@ function getFilteredSessions() {
   });
 }
 
-function setupFilterButtons() {
-  const filterButtons = document.querySelectorAll('.filter-btn');
-  filterButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentFilter = btn.dataset.filter;
-      updateStats();
-    });
-  });
+function setupSelectors() {
+  const periodSelect = document.getElementById('period-select');
+  const periodSelectHistory = document.getElementById('period-select-history');
 
-  const monthSelect = document.getElementById('month-select');
   const monthsMap = new Map();
-
   allSessions.forEach(session => {
     const date = new Date(session.date);
     const key = `${date.getFullYear()}-${date.getMonth()}`;
@@ -86,20 +76,39 @@ function setupFilterButtons() {
   const sortedMonths = Array.from(monthsMap.values())
     .sort((a, b) => b.year - a.year || b.month - a.month);
 
-  sortedMonths.forEach(m => {
-    const option = document.createElement('option');
-    option.value = `month-${m.year}-${m.month}`;
-    option.textContent = m.label.charAt(0).toUpperCase() + m.label.slice(1);
-    monthSelect.appendChild(option);
+  const baseOptions = [
+    { value: 'all', label: 'Todos' },
+    { value: 'current-week', label: 'Semana Actual' },
+    { value: 'last-week', label: 'Última Semana' },
+    { value: 'last-month', label: 'Último Mes' }
+  ];
+
+  const monthOptions = sortedMonths.map(m => ({
+    value: `month-${m.year}-${m.month}`,
+    label: m.label.charAt(0).toUpperCase() + m.label.slice(1)
+  }));
+
+  const allOptions = [...baseOptions, ...monthOptions];
+
+  [periodSelect, periodSelectHistory].forEach(select => {
+    select.innerHTML = '';
+    allOptions.forEach(opt => {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.label;
+      select.appendChild(option);
+    });
   });
 
-  monthSelect.addEventListener('change', () => {
-    if (monthSelect.value) {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      currentFilter = monthSelect.value;
-      updateStats();
-    }
-  });
+  const updateBoth = (value) => {
+    currentFilter = value;
+    periodSelect.value = value;
+    periodSelectHistory.value = value;
+    updateStats();
+  };
+
+  periodSelect.addEventListener('change', (e) => updateBoth(e.target.value));
+  periodSelectHistory.addEventListener('change', (e) => updateBoth(e.target.value));
 }
 
 function loadExerciseSelect() {
@@ -143,7 +152,6 @@ function updateStats() {
   document.getElementById('top-exercise').textContent = topExercise || '-';
 
   renderHistory(filtered);
-  renderSessionsChart(filtered);
   renderProgressChart(filtered);
   renderTopExercisesChart(filtered);
 }
@@ -234,67 +242,6 @@ function renderHistory(sessions) {
       </tr>
     `;
   }).join('');
-}
-
-function renderSessionsChart(sessions) {
-  const ctx = document.getElementById('sessionsChart').getContext('2d');
-
-  const weeksMap = new Map();
-  sessions.forEach(session => {
-    const date = new Date(session.date);
-    const weekStart = new Date(date);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
-    const weekKey = weekStart.toISOString().split('T')[0];
-
-    weeksMap.set(weekKey, (weeksMap.get(weekKey) || 0) + 1);
-  });
-
-  const sortedWeeks = Array.from(weeksMap.keys()).sort();
-  const labels = sortedWeeks.map(week => {
-    const date = new Date(week);
-    return date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
-  });
-  const data = sortedWeeks.map(week => weeksMap.get(week));
-
-  if (sessionsChart) {
-    sessionsChart.destroy();
-  }
-
-  sessionsChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Sesiones',
-          data: data,
-          backgroundColor: '#ff0000',
-          borderColor: '#cc0000',
-          borderWidth: 2
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: {
-          labels: { color: '#ffffff' }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: { color: '#ffffff' },
-          grid: { color: '#444444' }
-        },
-        x: {
-          ticks: { color: '#ffffff' },
-          grid: { color: '#444444' }
-        }
-      }
-    }
-  });
 }
 
 function renderProgressChart(sessions = null) {
@@ -445,7 +392,7 @@ function downloadCsv(sessions) {
     ]);
   });
 
-  const csvContent = [header, ...rows].map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const csvContent = [header, ...rows].map(row => row.map(value => `"${String(value).replace(/"/g, '""')}`).join(',')).join('\r\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

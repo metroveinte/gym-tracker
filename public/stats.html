@@ -22,20 +22,15 @@
     <h1>Estadísticas de Entrenamiento</h1>
 
     <div class="card">
-      <h2>Filtrar por Período</h2>
-      <div class="filter-buttons">
-        <button class="filter-btn active" data-filter="all">Todos</button>
-        <button class="filter-btn" data-filter="current-week">Semana Actual</button>
-        <button class="filter-btn" data-filter="last-week">Última Semana</button>
-        <button class="filter-btn" data-filter="last-month">Último Mes</button>
-        <select id="month-select" style="display:none;">
-          <option value="">Seleccionar mes...</option>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+        <h2>Resumen</h2>
+        <select id="period-select" class="period-select">
+          <option value="all">Todos</option>
+          <option value="current-week">Semana Actual</option>
+          <option value="last-week">Última Semana</option>
+          <option value="last-month">Último Mes</option>
         </select>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>Resumen</h2>
       <div class="stats-grid">
         <div class="stat-item">
           <span class="stat-label">Sesiones</span>
@@ -64,37 +59,40 @@
       </div>
     </div>
 
-    <div class="card">
-      <h2>Sesiones por Semana</h2>
-      <div class="chart-container">
-        <canvas id="sessionsChart"></canvas>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(400px, 1fr)); gap:30px;">
+      <div class="card">
+        <h2>Top 5 Ejercicios</h2>
+        <div class="chart-container">
+          <canvas id="topExercisesChart"></canvas>
+        </div>
       </div>
-    </div>
 
-    <div class="card">
-      <h2>Progresión de Peso</h2>
-      <div style="margin-bottom: 20px;">
-        <label for="exercise-select">Seleccionar ejercicio:</label>
-        <select id="exercise-select" style="max-width: 300px; margin-top: 8px;">
-          <option value="">Cargando...</option>
-        </select>
-      </div>
-      <div class="chart-container">
-        <canvas id="progressChart"></canvas>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Top 5 Ejercicios</h2>
-      <div class="chart-container">
-        <canvas id="topExercisesChart"></canvas>
+      <div class="card">
+        <h2>Progresión de Peso</h2>
+        <div style="margin-bottom: 20px;">
+          <label for="exercise-select">Seleccionar ejercicio:</label>
+          <select id="exercise-select" style="max-width: 100%; margin-top: 8px;">
+            <option value="">Cargando...</option>
+          </select>
+        </div>
+        <div class="chart-container">
+          <canvas id="progressChart"></canvas>
+        </div>
       </div>
     </div>
 
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
         <h2>Historial</h2>
-        <button id="export-button" class="secondary">Exportar CSV</button>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <select id="period-select-history" class="period-select">
+            <option value="all">Todos</option>
+            <option value="current-week">Semana Actual</option>
+            <option value="last-week">Última Semana</option>
+            <option value="last-month">Último Mes</option>
+          </select>
+          <button id="export-button" class="secondary">Exportar CSV</button>
+        </div>
       </div>
 
       <div class="table-wrapper">
