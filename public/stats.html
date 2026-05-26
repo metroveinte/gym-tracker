@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <header class="header">
@@ -19,16 +20,80 @@
   </header>
   <main class="container">
     <h1>Estadísticas de Entrenamiento</h1>
+
+    <div class="card">
+      <h2>Filtrar por Período</h2>
+      <div class="filter-buttons">
+        <button class="filter-btn active" data-filter="all">Todos</button>
+        <button class="filter-btn" data-filter="current-week">Semana Actual</button>
+        <button class="filter-btn" data-filter="last-week">Última Semana</button>
+        <button class="filter-btn" data-filter="last-month">Último Mes</button>
+        <select id="month-select" style="display:none;">
+          <option value="">Seleccionar mes...</option>
+        </select>
+      </div>
+    </div>
+
     <div class="card">
       <h2>Resumen</h2>
-      <p>Total de sesiones: <span id="total-sessions">-</span></p>
-      <p>Ejercicios únicos: <span id="unique-exercises">-</span></p>
-      <p>Total de series: <span id="total-series">-</span></p>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-label">Sesiones</span>
+          <span class="stat-value" id="total-sessions">-</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Ejercicios únicos</span>
+          <span class="stat-value" id="unique-exercises">-</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Series</span>
+          <span class="stat-value" id="total-series">-</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Volumen (kg)</span>
+          <span class="stat-value" id="total-volume">-</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Racha de días</span>
+          <span class="stat-value" id="streak-days">-</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Ejercicio top</span>
+          <span class="stat-value" id="top-exercise">-</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Sesiones por Semana</h2>
+      <div class="chart-container">
+        <canvas id="sessionsChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Progresión de Peso</h2>
+      <div style="margin-bottom: 20px;">
+        <label for="exercise-select">Seleccionar ejercicio:</label>
+        <select id="exercise-select" style="max-width: 300px; margin-top: 8px;">
+          <option value="">Cargando...</option>
+        </select>
+      </div>
+      <div class="chart-container">
+        <canvas id="progressChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Top 5 Ejercicios</h2>
+      <div class="chart-container">
+        <canvas id="topExercisesChart"></canvas>
+      </div>
     </div>
 
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-        <h2>Historial completo</h2>
+        <h2>Historial</h2>
         <button id="export-button" class="secondary">Exportar CSV</button>
       </div>
 
@@ -46,7 +111,7 @@
           </thead>
           <tbody id="sessions-body"></tbody>
         </table>
-        <p id="no-records" style="display:none; color:#999; margin-top: 15px;">No hay sesiones registradas aún.</p>
+        <p id="no-records" style="display:none; color:#999; margin-top: 15px;">No hay sesiones registradas en este período.</p>
       </div>
     </div>
   </main>
