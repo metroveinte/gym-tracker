@@ -58,6 +58,7 @@ const MUSCLE_GROUPS = ['Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps', 'Pi
 
 let currentExercises = [];
 let availableExercises = [...PREDEFINED_EXERCISES];
+let exercisesFromAPI = {}; // {name: {muscle_group, is_predefined}}
 let selectedExerciseForModal = null;
 let selectedMuscleGroup = null;
 let isNewExercise = false;
@@ -187,8 +188,9 @@ function selectExerciseInModal(exerciseName) {
     return;
   }
 
-  // Determine if it's a new exercise
-  isNewExercise = !EXERCISE_MUSCLE_MAP[exerciseNameTrimmed];
+  // Determine if it's a new exercise: not in API data with is_predefined=1
+  const apiData = exercisesFromAPI[exerciseNameTrimmed];
+  isNewExercise = !apiData || !apiData.is_predefined;
 
   if (isNewExercise) {
     // Pedir grupo muscular para nuevo ejercicio
@@ -244,9 +246,11 @@ async function loadExerciseOptions() {
       return;
     }
 
+    exercisesFromAPI = {}; // Reiniciar el registro
     data.forEach(item => {
       let exerciseName = '';
       let muscleGroup = '';
+      let isPredefined = 0;
 
       // Extraer nombre del ejercicio (puede ser string o objeto)
       if (typeof item === 'string') {
@@ -254,11 +258,14 @@ async function loadExerciseOptions() {
       } else if (typeof item === 'object' && item.name) {
         exerciseName = item.name;
         muscleGroup = item.muscle_group || '';
+        isPredefined = item.is_predefined || 0;
       }
 
       // Solo agregar si es un nombre válido y no está ya en la lista
       if (exerciseName && exerciseName.trim()) {
         const trimmed = exerciseName.trim();
+        exercisesFromAPI[trimmed] = { muscle_group: muscleGroup, is_predefined: isPredefined };
+
         const exists = availableExercises.some(e => e && e.toLowerCase() === trimmed.toLowerCase());
 
         if (!exists) {
@@ -595,10 +602,11 @@ async function loadAndRenderManageList() {
 
     // Rellenar filtro de grupos musculares
     const groups = new Set(allExercisesData.map(ex => ex.muscle_group).filter(Boolean));
-    const hasNoGroupExercises = allExercisesData.some(ex => !ex.muscle_group);
+    const hasCustomExercises = allExercisesData.some(ex => !ex.is_predefined);
     const currentFilter = manageFilterGroup.value;
     manageFilterGroup.innerHTML = '<option value="">Todos los grupos</option>';
-    if (hasNoGroupExercises) {
+    // Mostrar "Sin grupo" si hay custom exercises (que pueden no tener grupo)
+    if (hasCustomExercises) {
       const opt = document.createElement('option');
       opt.value = 'no-group';
       opt.textContent = 'Sin grupo';
