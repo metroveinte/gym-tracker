@@ -652,7 +652,6 @@ function renderManageList() {
     <div class="manage-exercise-row">
       <input type="text" class="manage-exercise-name-input" value="${escapeHtml(ex.name)}" data-original="${escapeHtml(ex.name)}" />
       <select class="manage-exercise-select">
-        <option value="">Sin grupo</option>
         ${MUSCLE_GROUPS.map(g => `<option value="${g}" ${ex.muscle_group === g ? 'selected' : ''}>${g}</option>`).join('')}
       </select>
       <button class="manage-save-btn" title="Guardar cambios">Guardar</button>
@@ -671,6 +670,11 @@ function renderManageList() {
 
       if (!newName) {
         alert('El nombre no puede estar vacío');
+        return;
+      }
+
+      if (!muscleGroup) {
+        alert('Todos los ejercicios deben tener un grupo muscular asignado');
         return;
       }
 

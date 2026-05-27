@@ -101,13 +101,17 @@ app.post('/api/exercises', (req, res) => {
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Nombre de ejercicio inválido.' });
   }
+  if (!muscle_group || !muscle_group.trim()) {
+    return res.status(400).json({ error: 'Grupo muscular es obligatorio.' });
+  }
 
   const trimmedName = name.trim();
-  db.run('INSERT OR IGNORE INTO exercises (name, muscle_group, is_predefined) VALUES (?, ?, 0)', [trimmedName, muscle_group || null], function (err) {
+  const trimmedGroup = muscle_group.trim();
+  db.run('INSERT OR IGNORE INTO exercises (name, muscle_group, is_predefined) VALUES (?, ?, 0)', [trimmedName, trimmedGroup], function (err) {
     if (err) {
       return res.status(500).json({ error: 'Error al guardar el ejercicio.' });
     }
-    res.json({ name: trimmedName, muscle_group: muscle_group || null, is_predefined: 0 });
+    res.json({ name: trimmedName, muscle_group: trimmedGroup, is_predefined: 0 });
   });
 });
 
@@ -152,25 +156,31 @@ app.patch('/api/exercises/:name', (req, res) => {
   const name = decodeURIComponent(req.params.name);
   const { muscle_group, new_name } = req.body;
 
+  if (!muscle_group || !muscle_group.trim()) {
+    return res.status(400).json({ error: 'Grupo muscular es obligatorio.' });
+  }
+
+  const trimmedGroup = muscle_group.trim();
+
   if (new_name && new_name.trim()) {
     const trimmedNewName = new_name.trim();
     db.run(
       'UPDATE exercises SET name = ?, muscle_group = ? WHERE name = ? COLLATE NOCASE',
-      [trimmedNewName, muscle_group || null, name],
+      [trimmedNewName, trimmedGroup, name],
       function (err) {
         if (err) return res.status(500).json({ error: 'Error al actualizar el ejercicio.' });
         if (this.changes === 0) return res.status(404).json({ error: 'Ejercicio no encontrado.' });
-        res.json({ name: trimmedNewName, muscle_group: muscle_group || null });
+        res.json({ name: trimmedNewName, muscle_group: trimmedGroup });
       }
     );
   } else {
     db.run(
       'UPDATE exercises SET muscle_group = ? WHERE name = ? COLLATE NOCASE',
-      [muscle_group || null, name],
+      [trimmedGroup, name],
       function (err) {
         if (err) return res.status(500).json({ error: 'Error al actualizar el ejercicio.' });
         if (this.changes === 0) return res.status(404).json({ error: 'Ejercicio no encontrado.' });
-        res.json({ name, muscle_group: muscle_group || null });
+        res.json({ name, muscle_group: trimmedGroup });
       }
     );
   }
