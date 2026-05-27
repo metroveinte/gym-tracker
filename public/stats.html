@@ -90,18 +90,20 @@
 
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-        <h2>Historial</h2>
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <select id="period-select-history" class="period-select">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <h2 style="margin:0;">Historial</h2>
+          <select id="period-select-history" class="period-select" style="margin:0;">
             <option value="all">Todos</option>
             <option value="current-week">Semana Actual</option>
             <option value="last-week">Última Semana</option>
             <option value="last-month">Último Mes</option>
           </select>
-          <button id="export-button" class="secondary">Exportar CSV</button>
-          <button id="edit-selected-btn" class="secondary" style="display:none;">✎ Editar seleccionado</button>
-          <button id="delete-selected-btn" class="secondary" style="display:none; background:#660000;">🗑 Borrar seleccionado</button>
-          <button id="delete-all-btn" class="secondary" style="background:#880000;">⚠ Borrado completo</button>
+        </div>
+        <div class="history-actions">
+          <button id="export-button" class="btn-action">CSV</button>
+          <button id="edit-selected-btn" class="btn-action" style="display:none;">✎ Editar</button>
+          <button id="delete-selected-btn" class="btn-action btn-action-danger" style="display:none;">🗑 Borrar</button>
+          <button id="delete-all-btn" class="btn-action btn-action-danger">⚠ Limpiar</button>
         </div>
       </div>
 
@@ -109,13 +111,12 @@
         <table class="stats-table">
           <thead>
             <tr>
-              <th style="width:30px;"><input type="checkbox" id="select-all-checkbox" title="Seleccionar todo"></th>
+              <th style="width:32px;"><input type="checkbox" id="select-all-checkbox" title="Seleccionar todo"></th>
               <th>Fecha</th>
-              <th>Ejercicio</th>
-              <th>Series</th>
-              <th>Reps</th>
-              <th>Peso</th>
-              <th>Notas</th>
+              <th>Grupos musculares</th>
+              <th style="text-align:center;">Ejercicios</th>
+              <th style="text-align:center;">Series</th>
+              <th style="width:100px;"></th>
             </tr>
           </thead>
           <tbody id="sessions-body"></tbody>
@@ -124,6 +125,18 @@
       </div>
     </div>
   </main>
+
+  <!-- Modal Ver Entreno -->
+  <div id="workout-modal-overlay" class="modal-overlay hidden"></div>
+  <div id="workout-modal" class="modal hidden" style="max-width:560px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="workout-modal-date"></h2>
+        <button type="button" class="modal-close" id="workout-modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="workout-modal-body" style="max-height:500px; overflow-y:auto; padding:20px 25px;"></div>
+    </div>
+  </div>
   <script src="stats.js"></script>
 </body>
 </html>

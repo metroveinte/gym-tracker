@@ -258,6 +258,22 @@ function findTopMuscleGroup(sessions) {
   return topMuscle;
 }
 
+function muscleGroupToClass(mg) {
+  const map = { 'Pecho':'pecho','Espalda':'espalda','Hombros':'hombros','Bíceps':'biceps','Tríceps':'triceps','Piernas':'piernas','Glúteos':'gluteos','Core':'core' };
+  return map[mg] || 'other';
+}
+
+function groupSessionsByDate(sessions) {
+  const groups = new Map();
+  sessions.forEach(session => {
+    if (!groups.has(session.date)) groups.set(session.date, []);
+    groups.get(session.date).push(session);
+  });
+  return Array.from(groups.entries())
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([date, daySessions]) => ({ date, daySessions }));
+}
+
 function renderHistory(sessions) {
   const body = document.getElementById('sessions-body');
   const noRecords = document.getElementById('no-records');
@@ -265,39 +281,89 @@ function renderHistory(sessions) {
   if (!sessions || sessions.length === 0) {
     body.innerHTML = '';
     noRecords.style.display = 'block';
+    updateSelectionUI();
     return;
   }
 
   noRecords.style.display = 'none';
-  body.innerHTML = sessions.map((session, idx) => {
-    const seriesCount = session.series ? session.series.length : 0;
-    const reps = session.series ? session.series.map(s => s.reps).join(', ') : '-';
-    const weights = session.series ? session.series.map(s => formatValue(s.weight)).join(', ') : '-';
+  const groups = groupSessionsByDate(sessions);
+
+  body.innerHTML = groups.map(({ date, daySessions }) => {
+    const muscleGroups = [...new Set(daySessions.map(s => getMuscleGroup(s.exercise)).filter(Boolean))];
+    const exerciseCount = daySessions.length;
+    const totalSeries = daySessions.reduce((sum, s) => sum + (s.series ? s.series.length : 0), 0);
+    const sessionIds = daySessions.map(s => s.id).join(',');
+    const [year, month, day] = date.split('-');
+    const displayDate = `${day}/${month}/${year}`;
+    const badges = muscleGroups.map(mg =>
+      `<span class="muscle-badge muscle-${muscleGroupToClass(mg)}">${escapeHtml(mg)}</span>`
+    ).join('');
 
     return `
-      <tr data-session-id="${session.id}" data-index="${idx}">
-        <td style="width:30px;"><input type="checkbox" class="session-checkbox" title="Seleccionar"></td>
-        <td>${escapeHtml(session.date)}</td>
-        <td>${escapeHtml(session.exercise)}</td>
-        <td>${escapeHtml(seriesCount)}</td>
-        <td>${escapeHtml(reps)}</td>
-        <td>${escapeHtml(weights)}</td>
-        <td>${escapeHtml(formatValue(session.notes))}</td>
+      <tr data-date="${escapeHtml(date)}" data-session-ids="${escapeHtml(sessionIds)}">
+        <td><input type="checkbox" class="session-checkbox" title="Seleccionar"></td>
+        <td>${displayDate}</td>
+        <td>${badges}</td>
+        <td style="text-align:center;">${exerciseCount}</td>
+        <td style="text-align:center;">${totalSeries}</td>
+        <td><button class="btn-ver-entreno" data-date="${escapeHtml(date)}">Ver entreno</button></td>
       </tr>
     `;
   }).join('');
 
-  // Agregar event listeners a los checkboxes
-  document.querySelectorAll('.session-checkbox').forEach(checkbox => {
-    checkbox.addEventListener('change', updateSelectionUI);
+  document.querySelectorAll('.session-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateSelectionUI);
   });
 
   document.getElementById('select-all-checkbox').addEventListener('change', (e) => {
-    document.querySelectorAll('.session-checkbox').forEach(checkbox => {
-      checkbox.checked = e.target.checked;
-    });
+    document.querySelectorAll('.session-checkbox').forEach(cb => { cb.checked = e.target.checked; });
     updateSelectionUI();
   });
+
+  document.querySelectorAll('.btn-ver-entreno').forEach(btn => {
+    btn.addEventListener('click', () => openWorkoutModal(btn.dataset.date, sessions));
+  });
+}
+
+function openWorkoutModal(date, sessions) {
+  const daySessions = sessions.filter(s => s.date === date);
+  const [year, month, day] = date.split('-');
+  document.getElementById('workout-modal-date').textContent = `Entreno ${day}/${month}/${year}`;
+
+  const body = document.getElementById('workout-modal-body');
+  body.innerHTML = daySessions.map(session => {
+    const seriesRows = session.series && session.series.length > 0
+      ? session.series.map((s, i) => `
+          <tr>
+            <td style="color:#aaa; font-size:0.85rem;">Serie ${i + 1}</td>
+            <td>${s.reps} reps</td>
+            <td>${s.weight != null ? s.weight + ' kg' : '-'}</td>
+          </tr>`).join('')
+      : '<tr><td colspan="3" style="color:#666;">Sin series registradas</td></tr>';
+
+    const muscle = getMuscleGroup(session.exercise);
+    const badge = muscle ? `<span class="muscle-badge muscle-${muscleGroupToClass(muscle)}" style="font-size:0.75rem;">${escapeHtml(muscle)}</span>` : '';
+    const notes = session.notes ? `<p style="color:#aaa; font-size:0.82rem; margin:4px 0 8px;">${escapeHtml(session.notes)}</p>` : '';
+
+    return `
+      <div style="margin-bottom:20px; padding-bottom:18px; border-bottom:1px solid #333;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+          <strong style="color:#fff;">${escapeHtml(session.exercise)}</strong>${badge}
+        </div>
+        ${notes}
+        <table style="width:100%; border-collapse:collapse;">
+          <tbody>${seriesRows}</tbody>
+        </table>
+      </div>`;
+  }).join('');
+
+  document.getElementById('workout-modal-overlay').classList.remove('hidden');
+  document.getElementById('workout-modal').classList.remove('hidden');
+}
+
+function closeWorkoutModal() {
+  document.getElementById('workout-modal-overlay').classList.add('hidden');
+  document.getElementById('workout-modal').classList.add('hidden');
 }
 
 function renderProgressChart(sessions = null) {
@@ -525,79 +591,55 @@ document.getElementById('export-button').addEventListener('click', async () => {
   }
 });
 
+function getSelectedDates() {
+  return Array.from(document.querySelectorAll('.session-checkbox:checked'))
+    .map(cb => cb.closest('tr').dataset.date);
+}
+
 function getSelectedSessionIds() {
-  const checked = document.querySelectorAll('.session-checkbox:checked');
-  return Array.from(checked).map(cb => parseInt(cb.closest('tr').dataset.sessionId));
+  return Array.from(document.querySelectorAll('.session-checkbox:checked'))
+    .flatMap(cb => cb.closest('tr').dataset.sessionIds.split(',').map(Number));
 }
 
 function updateSelectionUI() {
-  const selectedCount = getSelectedSessionIds().length;
-  const editBtn = document.getElementById('edit-selected-btn');
-  const deleteBtn = document.getElementById('delete-selected-btn');
-
-  if (selectedCount > 0) {
-    editBtn.style.display = 'inline-block';
-    deleteBtn.style.display = 'inline-block';
-  } else {
-    editBtn.style.display = 'none';
-    deleteBtn.style.display = 'none';
-  }
+  const selected = getSelectedDates().length;
+  document.getElementById('edit-selected-btn').style.display = selected > 0 ? 'inline-block' : 'none';
+  document.getElementById('delete-selected-btn').style.display = selected > 0 ? 'inline-block' : 'none';
 }
 
 document.getElementById('edit-selected-btn').addEventListener('click', async () => {
-  const sessionIds = getSelectedSessionIds();
-  if (sessionIds.length === 0) {
-    alert('Selecciona al menos una sesión');
-    return;
-  }
+  const dates = getSelectedDates();
+  if (dates.length === 0) return;
+  if (dates.length > 1) { alert('Solo puedes editar una fecha a la vez'); return; }
 
-  if (sessionIds.length > 1) {
-    alert('Solo puedes editar una sesión a la vez');
-    return;
-  }
-
-  const sessionId = sessionIds[0];
-  const session = allSessions.find(s => s.id === sessionId);
-  if (!session) return;
-
-  const newDate = prompt('Nueva fecha (YYYY-MM-DD):', session.date);
+  const date = dates[0];
+  const newDate = prompt('Nueva fecha (YYYY-MM-DD):', date);
   if (!newDate) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) { alert('Formato inválido. Usa YYYY-MM-DD'); return; }
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
-    alert('Formato inválido. Usa YYYY-MM-DD');
-    return;
-  }
-
+  const daySessions = allSessions.filter(s => s.date === date);
   try {
-    // Primero borrar la sesión antigua con todas sus series
-    const deleteRes = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
-    if (!deleteRes.ok) throw new Error('Error al borrar sesión antigua');
+    for (const session of daySessions) {
+      const del = await fetch(`/api/sessions/${session.id}`, { method: 'DELETE' });
+      if (!del.ok) throw new Error('Error al borrar sesión');
 
-    // Crear nueva sesión con la misma info pero nueva fecha
-    const createRes = await fetch('/api/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        date: newDate,
-        exercise: session.exercise,
-        notes: session.notes || ''
-      })
-    });
-
-    if (!createRes.ok) throw new Error('Error al crear sesión nueva');
-    const newSession = await createRes.json();
-
-    // Recrear todas las series
-    for (const serie of session.series) {
-      const serieRes = await fetch(`/api/sessions/${newSession.id}/series`, {
+      const create = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(serie)
+        body: JSON.stringify({ date: newDate, exercise: session.exercise, notes: session.notes || '' })
       });
-      if (!serieRes.ok) throw new Error('Error al crear serie');
-    }
+      if (!create.ok) throw new Error('Error al crear sesión');
+      const newSession = await create.json();
 
-    alert('✓ Sesión editada correctamente');
+      for (const serie of session.series) {
+        await fetch(`/api/sessions/${newSession.id}/series`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(serie)
+        });
+      }
+    }
+    alert('✓ Fecha editada correctamente');
     loadStats();
   } catch (error) {
     alert('Error: ' + error.message);
@@ -605,24 +647,25 @@ document.getElementById('edit-selected-btn').addEventListener('click', async () 
 });
 
 document.getElementById('delete-selected-btn').addEventListener('click', async () => {
-  const sessionIds = getSelectedSessionIds();
-  if (sessionIds.length === 0) return;
-
-  const count = sessionIds.length;
-  const ok = confirm(`¿Borrar ${count} sesión(es)?`);
+  const dates = getSelectedDates();
+  if (dates.length === 0) return;
+  const ids = getSelectedSessionIds();
+  const ok = confirm(`¿Borrar el entreno de ${dates.length} día(s)? Se eliminarán ${ids.length} ejercicio(s).`);
   if (!ok) return;
-
   try {
-    for (const id of sessionIds) {
+    for (const id of ids) {
       const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Error al borrar');
     }
-    alert(`✓ ${count} sesión(es) borrada(s)`);
+    alert('✓ Entreno(s) borrado(s)');
     loadStats();
   } catch (error) {
     alert('Error: ' + error.message);
   }
 });
+
+document.getElementById('workout-modal-close').addEventListener('click', closeWorkoutModal);
+document.getElementById('workout-modal-overlay').addEventListener('click', closeWorkoutModal);
 
 document.getElementById('delete-all-btn').addEventListener('click', async () => {
   const first = confirm(
