@@ -1,6 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
+const PREDEFINED_EXERCISES = require('./predefined-exercises');
 
 const dataDir = path.join(__dirname, 'data');
 const dbPath = path.join(dataDir, 'gym-tracker.db');
@@ -43,20 +44,28 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS exercises (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL COLLATE NOCASE UNIQUE,
-      muscle_group TEXT
+      muscle_group TEXT,
+      is_predefined INTEGER DEFAULT 0
     )
   `);
 
-  // Migración: añadir muscle_group si la tabla ya existía sin esa columna
+  // Migraciones para bases de datos existentes
   db.run(`ALTER TABLE exercises ADD COLUMN muscle_group TEXT`, () => {});
+  db.run(`ALTER TABLE exercises ADD COLUMN is_predefined INTEGER DEFAULT 0`, () => {});
 
   db.run('CREATE INDEX IF NOT EXISTS idx_series_session_id ON series(session_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date)');
 
-  db.run(`
-    INSERT OR IGNORE INTO exercises (name)
-    SELECT DISTINCT exercise FROM sessions WHERE exercise IS NOT NULL
-  `);
+  // Insertar predefinidos y marcar los que ya existían sin la bandera
+  const stmt = db.prepare(`INSERT OR IGNORE INTO exercises (name, muscle_group, is_predefined) VALUES (?, ?, 1)`);
+  for (const [name, muscleGroup] of Object.entries(PREDEFINED_EXERCISES)) {
+    stmt.run(name, muscleGroup);
+  }
+  stmt.finalize();
+
+  for (const name of Object.keys(PREDEFINED_EXERCISES)) {
+    db.run(`UPDATE exercises SET is_predefined = 1 WHERE name = ? COLLATE NOCASE AND is_predefined = 0`, [name]);
+  }
 });
 
 module.exports = db;

@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const db = require('./db');
+const PREDEFINED_EXERCISES = require('./predefined-exercises');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -76,30 +77,18 @@ app.post('/api/sessions', (req, res) => {
     return res.status(400).json({ error: 'Fecha y ejercicio son obligatorios.' });
   }
 
-  db.run(
-    'INSERT OR IGNORE INTO exercises (name) VALUES (?)',
-    [exercise],
-    (err) => {
-      if (err) {
-        return res.status(500).json({ error: 'Error al guardar el ejercicio.' });
-      }
-
-      const stmt = db.prepare(
-        'INSERT INTO sessions (date, exercise, notes) VALUES (?, ?, ?)'
-      );
-      stmt.run(date, exercise, notes || '', function (err) {
-        if (err) {
-          return res.status(500).json({ error: 'Error al guardar la sesión.' });
-        }
-        res.json({ id: this.lastID, date, exercise, notes: notes || '', series: [] });
-      });
-      stmt.finalize();
+  const stmt = db.prepare('INSERT INTO sessions (date, exercise, notes) VALUES (?, ?, ?)');
+  stmt.run(date, exercise, notes || '', function (err) {
+    if (err) {
+      return res.status(500).json({ error: 'Error al guardar la sesión.' });
     }
-  );
+    res.json({ id: this.lastID, date, exercise, notes: notes || '', series: [] });
+  });
+  stmt.finalize();
 });
 
 app.get('/api/exercises', (req, res) => {
-  db.all('SELECT name, muscle_group FROM exercises ORDER BY name COLLATE NOCASE ASC', [], (err, rows) => {
+  db.all('SELECT name, muscle_group, is_predefined FROM exercises ORDER BY name COLLATE NOCASE ASC', [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: 'Error al cargar ejercicios.' });
     }
@@ -114,11 +103,48 @@ app.post('/api/exercises', (req, res) => {
   }
 
   const trimmedName = name.trim();
-  db.run('INSERT OR IGNORE INTO exercises (name, muscle_group) VALUES (?, ?)', [trimmedName, muscle_group || null], function (err) {
+  db.run('INSERT OR IGNORE INTO exercises (name, muscle_group, is_predefined) VALUES (?, ?, 0)', [trimmedName, muscle_group || null], function (err) {
     if (err) {
       return res.status(500).json({ error: 'Error al guardar el ejercicio.' });
     }
-    res.json({ name: trimmedName, muscle_group: muscle_group || null });
+    res.json({ name: trimmedName, muscle_group: muscle_group || null, is_predefined: 0 });
+  });
+});
+
+// Estos endpoints deben ir ANTES de /:name para evitar conflictos de rutas
+app.post('/api/exercises/restore', (req, res) => {
+  db.serialize(() => {
+    db.run('DELETE FROM exercises', [], (err) => {
+      if (err) return res.status(500).json({ error: 'Error al restaurar ejercicios.' });
+
+      const stmt = db.prepare('INSERT INTO exercises (name, muscle_group, is_predefined) VALUES (?, ?, 1)');
+      for (const [name, muscleGroup] of Object.entries(PREDEFINED_EXERCISES)) {
+        stmt.run(name, muscleGroup);
+      }
+      stmt.finalize((err) => {
+        if (err) return res.status(500).json({ error: 'Error al insertar ejercicios predefinidos.' });
+        res.json({ success: true, count: Object.keys(PREDEFINED_EXERCISES).length });
+      });
+    });
+  });
+});
+
+app.post('/api/exercises/repair', (req, res) => {
+  db.serialize(() => {
+    const stmt = db.prepare('INSERT OR IGNORE INTO exercises (name, muscle_group, is_predefined) VALUES (?, ?, 1)');
+    for (const [name, muscleGroup] of Object.entries(PREDEFINED_EXERCISES)) {
+      stmt.run(name, muscleGroup);
+    }
+    stmt.finalize();
+
+    const upd = db.prepare('UPDATE exercises SET muscle_group = ?, is_predefined = 1 WHERE name = ? COLLATE NOCASE');
+    for (const [name, muscleGroup] of Object.entries(PREDEFINED_EXERCISES)) {
+      upd.run(muscleGroup, name);
+    }
+    upd.finalize((err) => {
+      if (err) return res.status(500).json({ error: 'Error al reparar ejercicios.' });
+      res.json({ success: true, count: Object.keys(PREDEFINED_EXERCISES).length });
+    });
   });
 });
 
@@ -152,30 +178,13 @@ app.patch('/api/exercises/:name', (req, res) => {
 
 app.delete('/api/exercises/:name', (req, res) => {
   const name = decodeURIComponent(req.params.name);
-
-  // Verificar si hay sesiones usando este ejercicio
-  db.get(
-    'SELECT COUNT(*) as count FROM sessions WHERE exercise = ? COLLATE NOCASE',
+  db.run(
+    'DELETE FROM exercises WHERE name = ? COLLATE NOCASE',
     [name],
-    (err, row) => {
-      if (err) return res.status(500).json({ error: 'Error al verificar ejercicio.' });
-
-      if (row.count > 0) {
-        return res.status(409).json({
-          error: `No se puede eliminar. Hay ${row.count} sesión(es) usando este ejercicio.`,
-          usageCount: row.count
-        });
-      }
-
-      db.run(
-        'DELETE FROM exercises WHERE name = ? COLLATE NOCASE',
-        [name],
-        function (err) {
-          if (err) return res.status(500).json({ error: 'Error al eliminar el ejercicio.' });
-          if (this.changes === 0) return res.status(404).json({ error: 'Ejercicio no encontrado.' });
-          res.json({ success: true, name });
-        }
-      );
+    function (err) {
+      if (err) return res.status(500).json({ error: 'Error al eliminar el ejercicio.' });
+      if (this.changes === 0) return res.status(404).json({ error: 'Ejercicio no encontrado.' });
+      res.json({ success: true, name });
     }
   );
 });
@@ -184,11 +193,10 @@ app.post('/api/sessions/:id/series', (req, res) => {
   const { id } = req.params;
   const { sets, reps, weight } = req.body;
   const idNum = parseInt(id, 10);
-  
+
   if (isNaN(idNum) || idNum <= 0) {
     return res.status(400).json({ error: 'ID de sesión inválido.' });
   }
-  // 'sets' is optional for individual series (default 1). 'reps' is required.
   if (reps === undefined) {
     return res.status(400).json({ error: 'Repeticiones son obligatorias.' });
   }
@@ -199,11 +207,9 @@ app.post('/api/sessions/:id/series', (req, res) => {
   if (weight !== undefined && (typeof weight !== 'number' || weight < 0)) {
     return res.status(400).json({ error: 'Peso debe ser un número positivo o nulo.' });
   }
-  
+
   const weightValue = (weight === undefined || weight === null) ? null : weight;
-  const stmt = db.prepare(
-    'INSERT INTO series (session_id, sets, reps, weight) VALUES (?, ?, ?, ?)'
-  );
+  const stmt = db.prepare('INSERT INTO series (session_id, sets, reps, weight) VALUES (?, ?, ?, ?)');
   stmt.run(idNum, setsNum, reps, weightValue, function (err) {
     if (err) {
       return res.status(500).json({ error: 'Error al guardar la serie.' });
@@ -235,10 +241,10 @@ app.get('/api/export/csv', (req, res) => {
     if (err) {
       return res.status(500).send('Error al generar CSV.');
     }
-    
+
     const header = ['Fecha', 'Ejercicio', 'Series', 'Reps', 'Peso', 'Notas'];
     const csvRows = [header.join(',')];
-    
+
     let completed = 0;
     sessions.forEach((session) => {
       db.all('SELECT * FROM series WHERE session_id = ? ORDER BY id ASC', [session.id], (err, series) => {
@@ -265,7 +271,7 @@ app.get('/api/export/csv', (req, res) => {
           ];
           csvRows.push(values.join(','));
         }
-        
+
         completed++;
         if (completed === sessions.length) {
           const csv = csvRows.join('\r\n');
@@ -275,7 +281,7 @@ app.get('/api/export/csv', (req, res) => {
         }
       });
     });
-    
+
     if (sessions.length === 0) {
       const csv = header.join(',');
       res.setHeader('Content-Type', 'text/csv');

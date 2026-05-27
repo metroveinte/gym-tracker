@@ -765,6 +765,56 @@ manageModalOverlay.addEventListener('click', closeManageModal);
 manageFilterGroup.addEventListener('change', renderManageList);
 manageSearch.addEventListener('input', renderManageList);
 
+document.getElementById('repair-db-btn').addEventListener('click', async () => {
+  const ok = confirm(
+    '🔧 REPARAR BASE DE DATOS\n\n' +
+    'Esta acción restaurará el nombre y grupo muscular de los 34 ejercicios predefinidos a su estado original.\n\n' +
+    'Los ejercicios personalizados que hayas creado se mantendrán sin cambios.\n\n' +
+    'Los registros de tus sesiones NO se verán afectados.\n\n' +
+    '¿Continuar?'
+  );
+  if (!ok) return;
+
+  try {
+    const res = await fetch('/api/exercises/repair', { method: 'POST' });
+    if (!res.ok) throw new Error('Error en servidor');
+    availableExercises = [...PREDEFINED_EXERCISES];
+    await loadExerciseOptions();
+    await loadAndRenderManageList();
+    alert('✓ Base de datos reparada correctamente.');
+  } catch (err) {
+    alert('Error al reparar: ' + err.message);
+  }
+});
+
+document.getElementById('restore-db-btn').addEventListener('click', async () => {
+  const first = confirm(
+    '⚠ RESTAURAR BASE DE DATOS\n\n' +
+    'Esta acción eliminará TODOS los ejercicios, incluyendo los personalizados, y restaurará únicamente los 34 ejercicios predefinidos con su grupo muscular original.\n\n' +
+    'Los registros de tus sesiones NO se verán afectados.\n\n' +
+    '¿Estás seguro de continuar?'
+  );
+  if (!first) return;
+
+  const second = confirm(
+    '⚠ CONFIRMACIÓN FINAL\n\n' +
+    'Todos los ejercicios personalizados serán eliminados de forma permanente. Esta acción no se puede deshacer.\n\n' +
+    '¿Confirmar restauración completa?'
+  );
+  if (!second) return;
+
+  try {
+    const res = await fetch('/api/exercises/restore', { method: 'POST' });
+    if (!res.ok) throw new Error('Error en servidor');
+    availableExercises = [...PREDEFINED_EXERCISES];
+    await loadExerciseOptions();
+    await loadAndRenderManageList();
+    alert('✓ Base de datos restaurada correctamente.');
+  } catch (err) {
+    alert('Error al restaurar: ' + err.message);
+  }
+});
+
 // Inicializar
 loadExerciseOptions();
 renderExercises();

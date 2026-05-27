@@ -780,3 +780,47 @@ th {
 .manage-delete-btn:hover {
   background: #990000 !important;
 }
+
+.manage-modal-footer {
+  padding: 15px 25px;
+  border-top: 1px solid #333;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-repair {
+  padding: 8px 16px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #7a5c00;
+  color: #fff;
+  transition: background 0.2s;
+}
+
+.btn-repair:hover {
+  background: #a07800;
+}
+
+.btn-restore {
+  padding: 8px 16px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #5c0000;
+  color: #fff;
+  transition: background 0.2s;
+}
+
+.btn-restore:hover {
+  background: #880000;
+}
