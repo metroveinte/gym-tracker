@@ -153,13 +153,29 @@ app.patch('/api/exercises/:name', (req, res) => {
 app.delete('/api/exercises/:name', (req, res) => {
   const name = decodeURIComponent(req.params.name);
 
-  db.run(
-    'DELETE FROM exercises WHERE name = ? COLLATE NOCASE',
+  // Verificar si hay sesiones usando este ejercicio
+  db.get(
+    'SELECT COUNT(*) as count FROM sessions WHERE exercise = ? COLLATE NOCASE',
     [name],
-    function (err) {
-      if (err) return res.status(500).json({ error: 'Error al eliminar el ejercicio.' });
-      if (this.changes === 0) return res.status(404).json({ error: 'Ejercicio no encontrado.' });
-      res.json({ success: true, name });
+    (err, row) => {
+      if (err) return res.status(500).json({ error: 'Error al verificar ejercicio.' });
+
+      if (row.count > 0) {
+        return res.status(409).json({
+          error: `No se puede eliminar. Hay ${row.count} sesión(es) usando este ejercicio.`,
+          usageCount: row.count
+        });
+      }
+
+      db.run(
+        'DELETE FROM exercises WHERE name = ? COLLATE NOCASE',
+        [name],
+        function (err) {
+          if (err) return res.status(500).json({ error: 'Error al eliminar el ejercicio.' });
+          if (this.changes === 0) return res.status(404).json({ error: 'Ejercicio no encontrado.' });
+          res.json({ success: true, name });
+        }
+      );
     }
   );
 });

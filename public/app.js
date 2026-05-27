@@ -595,8 +595,15 @@ async function loadAndRenderManageList() {
 
     // Rellenar filtro de grupos musculares
     const groups = new Set(allExercisesData.map(ex => ex.muscle_group).filter(Boolean));
+    const hasNoGroupExercises = allExercisesData.some(ex => !ex.muscle_group);
     const currentFilter = manageFilterGroup.value;
     manageFilterGroup.innerHTML = '<option value="">Todos los grupos</option>';
+    if (hasNoGroupExercises) {
+      const opt = document.createElement('option');
+      opt.value = 'no-group';
+      opt.textContent = 'Sin grupo';
+      manageFilterGroup.appendChild(opt);
+    }
     [...MUSCLE_GROUPS, ...Array.from(groups).filter(g => !MUSCLE_GROUPS.includes(g))].forEach(g => {
       const opt = document.createElement('option');
       opt.value = g;
@@ -616,7 +623,14 @@ function renderManageList() {
   const search = manageSearch.value.toLowerCase().trim();
 
   const filtered = allExercisesData.filter(ex => {
-    const matchGroup = !filterGroup || ex.muscle_group === filterGroup;
+    let matchGroup;
+    if (!filterGroup) {
+      matchGroup = true;
+    } else if (filterGroup === 'no-group') {
+      matchGroup = !ex.muscle_group;
+    } else {
+      matchGroup = ex.muscle_group === filterGroup;
+    }
     const matchSearch = !search || ex.name.toLowerCase().includes(search);
     return matchGroup && matchSearch;
   });
