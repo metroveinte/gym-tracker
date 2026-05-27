@@ -583,6 +583,18 @@ function openManageModal() {
   manageModalOverlay.classList.remove('hidden');
   manageSearch.value = '';
   manageFilterGroup.value = '';
+
+  // Rellenar el select de grupo muscular del formulario de nuevo ejercicio
+  const newGroupSelect = document.getElementById('new-exercise-group');
+  newGroupSelect.innerHTML = '<option value="">Grupo muscular...</option>';
+  MUSCLE_GROUPS.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g;
+    opt.textContent = g;
+    newGroupSelect.appendChild(opt);
+  });
+  document.getElementById('new-exercise-name').value = '';
+
   loadAndRenderManageList();
 }
 
@@ -776,6 +788,47 @@ manageCloseBtn.addEventListener('click', closeManageModal);
 manageModalOverlay.addEventListener('click', closeManageModal);
 manageFilterGroup.addEventListener('change', renderManageList);
 manageSearch.addEventListener('input', renderManageList);
+
+document.getElementById('new-exercise-save-btn').addEventListener('click', async () => {
+  const nameInput = document.getElementById('new-exercise-name');
+  const groupSelect = document.getElementById('new-exercise-group');
+  const name = nameInput.value.trim();
+  const muscleGroup = groupSelect.value;
+
+  if (!name) { alert('Escribe el nombre del ejercicio'); return; }
+  if (!muscleGroup) { alert('Selecciona un grupo muscular'); return; }
+
+  const btn = document.getElementById('new-exercise-save-btn');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    const res = await fetch('/api/exercises', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, muscle_group: muscleGroup })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Error en servidor');
+    }
+
+    EXERCISE_MUSCLE_MAP[name] = muscleGroup;
+    if (!availableExercises.some(e => e.toLowerCase() === name.toLowerCase())) {
+      availableExercises.push(name);
+    }
+
+    nameInput.value = '';
+    groupSelect.value = '';
+    await loadAndRenderManageList();
+  } catch (err) {
+    alert('Error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '+ Añadir';
+  }
+});
 
 document.getElementById('repair-db-btn').addEventListener('click', async () => {
   const ok = confirm(
