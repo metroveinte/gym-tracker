@@ -99,6 +99,9 @@
             <option value="last-month">Último Mes</option>
           </select>
           <button id="export-button" class="secondary">Exportar CSV</button>
+          <button id="edit-selected-btn" class="secondary" style="display:none;">✎ Editar seleccionado</button>
+          <button id="delete-selected-btn" class="secondary" style="display:none; background:#660000;">🗑 Borrar seleccionado</button>
+          <button id="delete-all-btn" class="secondary" style="background:#880000;">⚠ Borrado completo</button>
         </div>
       </div>
 
@@ -106,6 +109,7 @@
         <table class="stats-table">
           <thead>
             <tr>
+              <th style="width:30px;"><input type="checkbox" id="select-all-checkbox" title="Seleccionar todo"></th>
               <th>Fecha</th>
               <th>Ejercicio</th>
               <th>Series</th>

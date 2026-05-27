@@ -269,13 +269,14 @@ function renderHistory(sessions) {
   }
 
   noRecords.style.display = 'none';
-  body.innerHTML = sessions.map(session => {
+  body.innerHTML = sessions.map((session, idx) => {
     const seriesCount = session.series ? session.series.length : 0;
     const reps = session.series ? session.series.map(s => s.reps).join(', ') : '-';
     const weights = session.series ? session.series.map(s => formatValue(s.weight)).join(', ') : '-';
 
     return `
-      <tr>
+      <tr data-session-id="${session.id}" data-index="${idx}">
+        <td style="width:30px;"><input type="checkbox" class="session-checkbox" title="Seleccionar"></td>
         <td>${escapeHtml(session.date)}</td>
         <td>${escapeHtml(session.exercise)}</td>
         <td>${escapeHtml(seriesCount)}</td>
@@ -285,6 +286,18 @@ function renderHistory(sessions) {
       </tr>
     `;
   }).join('');
+
+  // Agregar event listeners a los checkboxes
+  document.querySelectorAll('.session-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelectionUI);
+  });
+
+  document.getElementById('select-all-checkbox').addEventListener('change', (e) => {
+    document.querySelectorAll('.session-checkbox').forEach(checkbox => {
+      checkbox.checked = e.target.checked;
+    });
+    updateSelectionUI();
+  });
 }
 
 function renderProgressChart(sessions = null) {
@@ -509,6 +522,133 @@ document.getElementById('export-button').addEventListener('click', async () => {
     downloadCsv(filtered);
   } catch (error) {
     console.error('Error exporting CSV:', error);
+  }
+});
+
+function getSelectedSessionIds() {
+  const checked = document.querySelectorAll('.session-checkbox:checked');
+  return Array.from(checked).map(cb => parseInt(cb.closest('tr').dataset.sessionId));
+}
+
+function updateSelectionUI() {
+  const selectedCount = getSelectedSessionIds().length;
+  const editBtn = document.getElementById('edit-selected-btn');
+  const deleteBtn = document.getElementById('delete-selected-btn');
+
+  if (selectedCount > 0) {
+    editBtn.style.display = 'inline-block';
+    deleteBtn.style.display = 'inline-block';
+  } else {
+    editBtn.style.display = 'none';
+    deleteBtn.style.display = 'none';
+  }
+}
+
+document.getElementById('edit-selected-btn').addEventListener('click', async () => {
+  const sessionIds = getSelectedSessionIds();
+  if (sessionIds.length === 0) {
+    alert('Selecciona al menos una sesión');
+    return;
+  }
+
+  if (sessionIds.length > 1) {
+    alert('Solo puedes editar una sesión a la vez');
+    return;
+  }
+
+  const sessionId = sessionIds[0];
+  const session = allSessions.find(s => s.id === sessionId);
+  if (!session) return;
+
+  const newDate = prompt('Nueva fecha (YYYY-MM-DD):', session.date);
+  if (!newDate) return;
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+    alert('Formato inválido. Usa YYYY-MM-DD');
+    return;
+  }
+
+  try {
+    // Primero borrar la sesión antigua con todas sus series
+    const deleteRes = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+    if (!deleteRes.ok) throw new Error('Error al borrar sesión antigua');
+
+    // Crear nueva sesión con la misma info pero nueva fecha
+    const createRes = await fetch('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        date: newDate,
+        exercise: session.exercise,
+        notes: session.notes || ''
+      })
+    });
+
+    if (!createRes.ok) throw new Error('Error al crear sesión nueva');
+    const newSession = await createRes.json();
+
+    // Recrear todas las series
+    for (const serie of session.series) {
+      const serieRes = await fetch(`/api/sessions/${newSession.id}/series`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(serie)
+      });
+      if (!serieRes.ok) throw new Error('Error al crear serie');
+    }
+
+    alert('✓ Sesión editada correctamente');
+    loadStats();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  }
+});
+
+document.getElementById('delete-selected-btn').addEventListener('click', async () => {
+  const sessionIds = getSelectedSessionIds();
+  if (sessionIds.length === 0) return;
+
+  const count = sessionIds.length;
+  const ok = confirm(`¿Borrar ${count} sesión(es)?`);
+  if (!ok) return;
+
+  try {
+    for (const id of sessionIds) {
+      const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Error al borrar');
+    }
+    alert(`✓ ${count} sesión(es) borrada(s)`);
+    loadStats();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  }
+});
+
+document.getElementById('delete-all-btn').addEventListener('click', async () => {
+  const first = confirm(
+    '⚠ BORRADO COMPLETO\n\n' +
+    'Esta acción eliminará TODAS las sesiones registradas.\n\n' +
+    'Los ejercicios no se verán afectados.\n\n' +
+    '¿Estás seguro de continuar?'
+  );
+  if (!first) return;
+
+  const second = confirm(
+    '⚠ CONFIRMACIÓN FINAL\n\n' +
+    'Todos los registros de sesiones serán eliminados permanentemente. Esta acción no se puede deshacer.\n\n' +
+    '¿Confirmar borrado completo?'
+  );
+  if (!second) return;
+
+  try {
+    for (const session of allSessions) {
+      const res = await fetch(`/api/sessions/${session.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Error al borrar');
+    }
+    alert('✓ Historial completamente limpio');
+    loadStats();
+  } catch (error) {
+    alert('Error: ' + error.message);
   }
 });
 
