@@ -627,25 +627,25 @@ function renderManageList() {
   }
 
   manageList.innerHTML = filtered.map(ex => `
-    <div class="manage-exercise-row" data-name="${escapeHtml(ex.name)}">
-      <input type="text" class="manage-exercise-name-input" data-name="${escapeHtml(ex.name)}" value="${escapeHtml(ex.name)}" />
-      <select class="manage-exercise-select" data-name="${escapeHtml(ex.name)}">
+    <div class="manage-exercise-row">
+      <input type="text" class="manage-exercise-name-input" value="${escapeHtml(ex.name)}" data-original="${escapeHtml(ex.name)}" />
+      <select class="manage-exercise-select">
         <option value="">Sin grupo</option>
         ${MUSCLE_GROUPS.map(g => `<option value="${g}" ${ex.muscle_group === g ? 'selected' : ''}>${g}</option>`).join('')}
       </select>
-      <button class="manage-save-btn" data-name="${escapeHtml(ex.name)}" title="Guardar cambios">Guardar</button>
-      <button class="manage-delete-btn" data-name="${escapeHtml(ex.name)}" title="Eliminar ejercicio">🗑</button>
+      <button class="manage-save-btn" title="Guardar cambios">Guardar</button>
+      <button class="manage-delete-btn" title="Eliminar ejercicio">🗑</button>
     </div>
   `).join('');
 
-  // Listeners de guardado
   manageList.querySelectorAll('.manage-save-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const originalName = btn.dataset.name;
-      const nameInput = manageList.querySelector(`.manage-exercise-name-input[data-name="${CSS.escape(originalName)}"]`);
-      const newName = nameInput ? nameInput.value.trim() : originalName;
-      const select = manageList.querySelector(`.manage-exercise-select[data-name="${CSS.escape(originalName)}"]`);
-      const muscleGroup = select ? select.value : '';
+      const row = btn.closest('.manage-exercise-row');
+      const nameInput = row.querySelector('.manage-exercise-name-input');
+      const select = row.querySelector('.manage-exercise-select');
+      const originalName = nameInput.dataset.original;
+      const newName = nameInput.value.trim();
+      const muscleGroup = select.value;
 
       if (!newName) {
         alert('El nombre no puede estar vacío');
@@ -656,27 +656,35 @@ function renderManageList() {
       btn.disabled = true;
 
       try {
+        const body = { muscle_group: muscleGroup };
+        if (newName !== originalName) body.new_name = newName;
+
         const res = await fetch(`/api/exercises/${encodeURIComponent(originalName)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            new_name: newName !== originalName ? newName : undefined,
-            muscle_group: muscleGroup
-          })
+          body: JSON.stringify(body)
         });
 
-        if (!res.ok) throw new Error('Error en servidor');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Error en servidor');
+        }
 
         // Actualizar datos locales
         const exIdx = allExercisesData.findIndex(e => e.name === originalName);
         if (exIdx !== -1) {
-          if (newName !== originalName) {
-            allExercisesData[exIdx].name = newName;
-            EXERCISE_MUSCLE_MAP[newName] = muscleGroup;
-            delete EXERCISE_MUSCLE_MAP[originalName];
-          }
+          allExercisesData[exIdx].name = newName;
           allExercisesData[exIdx].muscle_group = muscleGroup;
         }
+        if (newName !== originalName) {
+          EXERCISE_MUSCLE_MAP[newName] = muscleGroup;
+          delete EXERCISE_MUSCLE_MAP[originalName];
+        } else {
+          EXERCISE_MUSCLE_MAP[newName] = muscleGroup;
+        }
+
+        // Actualizar el data-original en el input para reflejar el nuevo nombre
+        nameInput.dataset.original = newName;
 
         btn.textContent = '✓';
         btn.style.background = '#007700';
@@ -684,9 +692,9 @@ function renderManageList() {
           btn.textContent = 'Guardar';
           btn.style.background = '';
           btn.disabled = false;
-          renderManageList();
         }, 1500);
       } catch (err) {
+        console.error('Error al guardar ejercicio:', err);
         btn.textContent = 'Error';
         btn.style.background = '#770000';
         setTimeout(() => {
@@ -698,10 +706,11 @@ function renderManageList() {
     });
   });
 
-  // Listeners de eliminación
   manageList.querySelectorAll('.manage-delete-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const name = btn.dataset.name;
+      const row = btn.closest('.manage-exercise-row');
+      const nameInput = row.querySelector('.manage-exercise-name-input');
+      const name = nameInput.dataset.original;
 
       if (!confirm(`¿Eliminar ejercicio "${name}"?\n\nEsta acción NO eliminará los registros de sesiones que lo usan.`)) {
         return;
@@ -716,19 +725,21 @@ function renderManageList() {
           headers: { 'Content-Type': 'application/json' }
         });
 
-        if (!res.ok) throw new Error('Error en servidor');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Error en servidor');
+        }
 
-        // Eliminar de datos locales
         allExercisesData = allExercisesData.filter(e => e.name !== name);
+        availableExercises = availableExercises.filter(e => e !== name);
         delete EXERCISE_MUSCLE_MAP[name];
-        delete availableExercises[availableExercises.indexOf(name)];
-        availableExercises = availableExercises.filter(e => e);
 
-        renderManageList();
+        row.remove();
       } catch (err) {
+        console.error('Error al eliminar ejercicio:', err);
         btn.textContent = '🗑';
         btn.disabled = false;
-        alert('Error al eliminar el ejercicio');
+        alert('Error al eliminar el ejercicio: ' + err.message);
       }
     });
   });
