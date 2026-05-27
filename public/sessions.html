@@ -91,18 +91,22 @@
         <button type="button" class="modal-close" id="manage-modal-close-btn">&times;</button>
       </div>
       <div class="modal-body" style="padding:20px 25px;">
-        <div style="display:flex; gap:8px; margin-bottom:18px; padding-bottom:18px; border-bottom:1px solid #333; flex-wrap:wrap;">
-          <input id="new-exercise-name" type="text" placeholder="Nombre del nuevo ejercicio..." style="flex:2; min-width:160px; margin-top:0;" autocomplete="off" />
-          <select id="new-exercise-group" style="flex:1; min-width:130px; padding:10px; border:2px solid #444; background:#1a1a1a; color:#fff; border-radius:8px; font-family:'Oswald',sans-serif; cursor:pointer;">
+        <div style="position:relative; margin-bottom:12px;">
+          <input id="manage-search" type="text" placeholder="Buscar o añadir ejercicio..." style="width:100%; margin-top:0;" autocomplete="off" />
+          <div id="manage-add-dropdown" class="exercise-dropdown hidden"></div>
+        </div>
+        <div id="manage-add-group-row" style="display:none; gap:8px; margin-bottom:14px; align-items:center; flex-wrap:wrap; padding:12px; background:#222; border-radius:8px; border:1px solid #444;">
+          <span id="manage-add-name-label" style="color:#fff; font-size:0.9rem; font-weight:600; flex:1 1 100%;"></span>
+          <select id="manage-add-group-select" style="flex:1; min-width:150px; padding:8px 10px; border:2px solid #444; background:#1a1a1a; color:#fff; border-radius:8px; font-family:'Oswald',sans-serif; cursor:pointer; margin-top:0;">
             <option value="">Grupo muscular...</option>
           </select>
-          <button type="button" id="new-exercise-save-btn" class="btn-primary" style="margin:0; padding:10px 16px; width:auto;">+ Añadir</button>
+          <button type="button" id="manage-add-confirm-btn" class="btn-primary" style="margin:0; padding:8px 16px; width:auto;">Guardar</button>
+          <button type="button" id="manage-add-cancel-btn" class="btn-secondary" style="margin:0; padding:8px 14px; width:auto;">Cancelar</button>
         </div>
-        <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
-          <select id="manage-filter-group" class="period-select" style="flex:1; min-width:150px;">
+        <div style="margin-bottom:16px;">
+          <select id="manage-filter-group" class="period-select" style="width:100%; margin:0;">
             <option value="">Todos los grupos</option>
           </select>
-          <input id="manage-search" type="text" placeholder="Buscar ejercicio..." style="flex:2; min-width:150px; margin-top:0;" autocomplete="off" />
         </div>
         <div id="manage-exercises-list" style="max-height:300px; overflow-y:auto;"></div>
       </div>

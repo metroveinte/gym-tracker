@@ -583,18 +583,7 @@ function openManageModal() {
   manageModalOverlay.classList.remove('hidden');
   manageSearch.value = '';
   manageFilterGroup.value = '';
-
-  // Rellenar el select de grupo muscular del formulario de nuevo ejercicio
-  const newGroupSelect = document.getElementById('new-exercise-group');
-  newGroupSelect.innerHTML = '<option value="">Grupo muscular...</option>';
-  MUSCLE_GROUPS.forEach(g => {
-    const opt = document.createElement('option');
-    opt.value = g;
-    opt.textContent = g;
-    newGroupSelect.appendChild(opt);
-  });
-  document.getElementById('new-exercise-name').value = '';
-
+  hideManageAddRow();
   loadAndRenderManageList();
 }
 
@@ -787,48 +776,107 @@ document.getElementById('manage-exercises-btn').addEventListener('click', openMa
 manageCloseBtn.addEventListener('click', closeManageModal);
 manageModalOverlay.addEventListener('click', closeManageModal);
 manageFilterGroup.addEventListener('change', renderManageList);
-manageSearch.addEventListener('input', renderManageList);
 
-document.getElementById('new-exercise-save-btn').addEventListener('click', async () => {
-  const nameInput = document.getElementById('new-exercise-name');
-  const groupSelect = document.getElementById('new-exercise-group');
-  const name = nameInput.value.trim();
-  const muscleGroup = groupSelect.value;
+// ── Autocomplete de búsqueda/añadir en el gestor ────────────────────────────
 
-  if (!name) { alert('Escribe el nombre del ejercicio'); return; }
+const manageAddDropdown = document.getElementById('manage-add-dropdown');
+let pendingAddName = '';
+
+function hideManageAddRow() {
+  document.getElementById('manage-add-group-row').style.display = 'none';
+  pendingAddName = '';
+}
+
+function showManageAddRow(name) {
+  pendingAddName = name;
+  document.getElementById('manage-add-name-label').textContent = `Añadir: "${name}"`;
+  const groupSelect = document.getElementById('manage-add-group-select');
+  groupSelect.innerHTML = '<option value="">Grupo muscular...</option>';
+  MUSCLE_GROUPS.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g; opt.textContent = g;
+    groupSelect.appendChild(opt);
+  });
+  document.getElementById('manage-add-group-row').style.display = 'flex';
+  groupSelect.focus();
+}
+
+manageSearch.addEventListener('input', () => {
+  renderManageList();
+  const query = manageSearch.value.trim();
+  if (!query) { manageAddDropdown.classList.add('hidden'); return; }
+
+  const matches = allExercisesData.filter(ex =>
+    ex.name.toLowerCase().includes(query.toLowerCase())
+  );
+  const exactMatch = allExercisesData.some(ex => ex.name.toLowerCase() === query.toLowerCase());
+
+  let html = matches.map(ex =>
+    `<div class="dropdown-item" data-name="${escapeHtml(ex.name)}">${escapeHtml(ex.name)}</div>`
+  ).join('');
+
+  if (!exactMatch) {
+    const capitalized = query.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    html += `<div class="dropdown-item dropdown-item-new" data-name="${escapeHtml(capitalized)}">+ Añadir nuevo: ${escapeHtml(capitalized)}</div>`;
+  }
+
+  if (html) {
+    manageAddDropdown.innerHTML = html;
+    manageAddDropdown.classList.remove('hidden');
+    manageAddDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        manageAddDropdown.classList.add('hidden');
+        if (item.classList.contains('dropdown-item-new')) {
+          manageSearch.value = '';
+          renderManageList();
+          showManageAddRow(item.dataset.name);
+        } else {
+          manageSearch.value = item.dataset.name;
+          renderManageList();
+        }
+      });
+    });
+  } else {
+    manageAddDropdown.classList.add('hidden');
+  }
+});
+
+manageSearch.addEventListener('blur', () => {
+  setTimeout(() => manageAddDropdown.classList.add('hidden'), 150);
+});
+
+document.getElementById('manage-add-confirm-btn').addEventListener('click', async () => {
+  const muscleGroup = document.getElementById('manage-add-group-select').value;
   if (!muscleGroup) { alert('Selecciona un grupo muscular'); return; }
 
-  const btn = document.getElementById('new-exercise-save-btn');
-  btn.disabled = true;
-  btn.textContent = '...';
+  const btn = document.getElementById('manage-add-confirm-btn');
+  btn.disabled = true; btn.textContent = '...';
 
   try {
     const res = await fetch('/api/exercises', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, muscle_group: muscleGroup })
+      body: JSON.stringify({ name: pendingAddName, muscle_group: muscleGroup })
     });
-
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Error en servidor');
     }
-
-    EXERCISE_MUSCLE_MAP[name] = muscleGroup;
-    if (!availableExercises.some(e => e.toLowerCase() === name.toLowerCase())) {
-      availableExercises.push(name);
+    EXERCISE_MUSCLE_MAP[pendingAddName] = muscleGroup;
+    if (!availableExercises.some(e => e.toLowerCase() === pendingAddName.toLowerCase())) {
+      availableExercises.push(pendingAddName);
     }
-
-    nameInput.value = '';
-    groupSelect.value = '';
+    hideManageAddRow();
     await loadAndRenderManageList();
   } catch (err) {
     alert('Error: ' + err.message);
   } finally {
-    btn.disabled = false;
-    btn.textContent = '+ Añadir';
+    btn.disabled = false; btn.textContent = 'Guardar';
   }
 });
+
+document.getElementById('manage-add-cancel-btn').addEventListener('click', hideManageAddRow);
 
 document.getElementById('repair-db-btn').addEventListener('click', async () => {
   const ok = confirm(
