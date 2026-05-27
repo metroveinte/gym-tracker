@@ -598,7 +598,8 @@ async function loadAndRenderManageList() {
 
     allExercisesData = data.map(ex => ({
       name: typeof ex === 'object' ? ex.name : ex,
-      muscle_group: typeof ex === 'object' ? (ex.muscle_group || '') : ''
+      muscle_group: typeof ex === 'object' ? (ex.muscle_group || '') : '',
+      is_predefined: typeof ex === 'object' ? (ex.is_predefined || 0) : 0
     })).filter(ex => ex.name);
 
     // Rellenar filtro de grupos musculares
@@ -780,7 +781,21 @@ manageFilterGroup.addEventListener('change', renderManageList);
 // ── Autocomplete de búsqueda/añadir en el gestor ────────────────────────────
 
 const manageAddDropdown = document.getElementById('manage-add-dropdown');
+document.body.appendChild(manageAddDropdown); // Move outside modal to avoid overflow clipping
 let pendingAddName = '';
+
+function positionManageDropdown() {
+  const rect = manageSearch.getBoundingClientRect();
+  Object.assign(manageAddDropdown.style, {
+    position: 'fixed',
+    top: rect.bottom + 'px',
+    left: rect.left + 'px',
+    width: rect.width + 'px',
+    right: 'auto',
+    zIndex: '9999',
+    borderTop: '2px solid #ff0000'
+  });
+}
 
 function hideManageAddRow() {
   document.getElementById('manage-add-group-row').style.display = 'none';
@@ -823,6 +838,7 @@ manageSearch.addEventListener('input', () => {
   if (html) {
     manageAddDropdown.innerHTML = html;
     manageAddDropdown.classList.remove('hidden');
+    positionManageDropdown();
     manageAddDropdown.querySelectorAll('.dropdown-item').forEach(item => {
       item.addEventListener('mousedown', (e) => {
         e.preventDefault();
