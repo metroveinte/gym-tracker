@@ -204,7 +204,7 @@ function loadExerciseSelect() {
 function updateStats() {
   const filtered = getFilteredSessions();
 
-  const totalSessions = new Set(filtered.map(s => s.date)).size;
+  const totalSessions = new Set(filtered.map(s => s.batch_id || `${s.date}-${s.id}`)).size;
   const uniqueExercises = new Set(filtered.map(s => s.exercise)).size;
   const totalSeries = filtered.reduce((sum, s) => sum + (s.series ? s.series.length : 0), 0);
   const streakDays = calculateStreak(filtered);
