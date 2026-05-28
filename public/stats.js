@@ -627,14 +627,20 @@ function updateSelectionUI() {
 document.getElementById('edit-selected-btn').addEventListener('click', async () => {
   const dates = getSelectedDates();
   if (dates.length === 0) return;
-  if (dates.length > 1) { alert('Solo puedes editar una fecha a la vez'); return; }
+  if (dates.length > 1) { await showAlert('Editar fecha', 'Solo puedes editar una sesión a la vez'); return; }
 
   const date = dates[0];
-  const newDate = prompt('Nueva fecha (YYYY-MM-DD):', date);
+  const newDate = await showInput({
+    title: 'Editar fecha',
+    body: 'Selecciona la nueva fecha:',
+    inputType: 'date',
+    defaultValue: date,
+    okText: 'Guardar'
+  });
   if (!newDate) return;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) { alert('Formato inválido. Usa YYYY-MM-DD'); return; }
 
-  const daySessions = allSessions.filter(s => s.date === date);
+  const ids = getSelectedSessionIds();
+  const daySessions = allSessions.filter(s => ids.includes(s.id));
   try {
     for (const session of daySessions) {
       const del = await fetch(`/api/sessions/${session.id}`, { method: 'DELETE' });
@@ -643,7 +649,7 @@ document.getElementById('edit-selected-btn').addEventListener('click', async () 
       const create = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: newDate, exercise: session.exercise, notes: session.notes || '' })
+        body: JSON.stringify({ date: newDate, exercise: session.exercise, notes: session.notes || '', batch_id: session.batch_id })
       });
       if (!create.ok) throw new Error('Error al crear sesión');
       const newSession = await create.json();
@@ -656,28 +662,30 @@ document.getElementById('edit-selected-btn').addEventListener('click', async () 
         });
       }
     }
-    alert('✓ Fecha editada correctamente');
     loadStats();
   } catch (error) {
-    alert('Error: ' + error.message);
+    showAlert('Error', error.message);
   }
 });
 
 document.getElementById('delete-selected-btn').addEventListener('click', async () => {
-  const dates = getSelectedDates();
-  if (dates.length === 0) return;
   const ids = getSelectedSessionIds();
-  const ok = confirm(`¿Borrar el entreno de ${dates.length} día(s)? Se eliminarán ${ids.length} ejercicio(s).`);
+  if (ids.length === 0) return;
+  const ok = await showConfirm({
+    title: 'Borrar sesión',
+    body: `<p style="color:#ccc;">Se eliminarán <strong>${ids.length} registro(s)</strong> de ejercicio. Esta acción no se puede deshacer.</p>`,
+    okText: 'Borrar',
+    danger: true
+  });
   if (!ok) return;
   try {
     for (const id of ids) {
       const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Error al borrar');
     }
-    alert('✓ Entreno(s) borrado(s)');
     loadStats();
   } catch (error) {
-    alert('Error: ' + error.message);
+    showAlert('Error', error.message);
   }
 });
 
@@ -685,19 +693,20 @@ document.getElementById('workout-modal-close').addEventListener('click', closeWo
 document.getElementById('workout-modal-overlay').addEventListener('click', closeWorkoutModal);
 
 document.getElementById('delete-all-btn').addEventListener('click', async () => {
-  const first = confirm(
-    '⚠ BORRADO COMPLETO\n\n' +
-    'Esta acción eliminará TODAS las sesiones registradas.\n\n' +
-    'Los ejercicios no se verán afectados.\n\n' +
-    '¿Estás seguro de continuar?'
-  );
+  const first = await showConfirm({
+    title: 'Limpiar historial',
+    body: `<p style="color:#ccc; line-height:1.6;">Esta acción eliminará <strong>todas las sesiones</strong> registradas.<br><br>Los ejercicios de la biblioteca no se verán afectados.</p>`,
+    okText: 'Continuar',
+    danger: true
+  });
   if (!first) return;
 
-  const second = confirm(
-    '⚠ CONFIRMACIÓN FINAL\n\n' +
-    'Todos los registros de sesiones serán eliminados permanentemente. Esta acción no se puede deshacer.\n\n' +
-    '¿Confirmar borrado completo?'
-  );
+  const second = await showConfirm({
+    title: 'Confirmación final',
+    body: `<p style="color:#ccc; line-height:1.6;">Todos los registros serán eliminados de forma <strong>permanente</strong>. Esta acción no se puede deshacer.</p>`,
+    okText: 'Limpiar todo',
+    danger: true
+  });
   if (!second) return;
 
   try {
@@ -705,10 +714,9 @@ document.getElementById('delete-all-btn').addEventListener('click', async () => 
       const res = await fetch(`/api/sessions/${session.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Error al borrar');
     }
-    alert('✓ Historial completamente limpio');
     loadStats();
   } catch (error) {
-    alert('Error: ' + error.message);
+    showAlert('Error', error.message);
   }
 });
 

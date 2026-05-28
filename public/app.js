@@ -410,28 +410,22 @@ function renderExercises() {
   });
 }
 
-function addSerieToExercise(exerciseIdx) {
+async function addSerieToExercise(exerciseIdx) {
   const exercise = currentExercises[exerciseIdx];
-  const reps = prompt('Repeticiones de la SERIE ' + (exercise.series.length + 1) + ':');
-  if (reps === null) return;
+  const result = await showSerieForm(exercise.series.length + 1);
+  if (!result) return;
 
-  const repsNum = parseInt(reps, 10);
-  if (isNaN(repsNum) || repsNum <= 0) {
+  const { reps, weight } = result;
+  if (isNaN(reps) || reps <= 0) {
     showMessage('Repeticiones debe ser un número positivo', 'error');
     return;
   }
-
-  const weight = prompt('Peso en kg de la SERIE ' + (exercise.series.length + 1) + ' (Opcional):');
-  let weightNum = null;
-  if (weight) {
-    weightNum = parseFloat(weight);
-    if (isNaN(weightNum) || weightNum < 0) {
-      showMessage('Peso debe ser un número positivo o nulo', 'error');
-      return;
-    }
+  if (weight !== null && (isNaN(weight) || weight < 0)) {
+    showMessage('Peso debe ser un número positivo o nulo', 'error');
+    return;
   }
 
-  exercise.series.push({ sets: 1, reps: repsNum, weight: weightNum });
+  exercise.series.push({ sets: 1, reps, weight });
   renderExercises();
   showMessage('Serie agregada a ' + exercise.name, 'success');
 }
@@ -557,14 +551,15 @@ async function saveSession() {
     }
   }
 
-  // Preparar resumen para confirmación
-  const summary = currentExercises.map(ex => 
-    `${ex.name} (${ex.series.length} serie${ex.series.length > 1 ? 's' : ''})`
-  ).join('\n');
-
-  const confirmMessage = `Confirmar registro:\n\nFecha: ${date}\nEjercicios:\n${summary}\n\n¿Todo es correcto?`;
-  
-  if (!confirm(confirmMessage)) {
+  const summary = currentExercises.map(ex =>
+    `<li>${escapeHtml(ex.name)} — ${ex.series.length} serie${ex.series.length !== 1 ? 's' : ''}</li>`
+  ).join('');
+  const confirmed = await showConfirm({
+    title: 'Confirmar sesión',
+    body: `<p style="color:#ccc; margin-bottom:10px;">Fecha: <strong>${date}</strong></p><ul style="color:#ccc; padding-left:18px; margin:0;">${summary}</ul>`,
+    okText: 'Guardar'
+  });
+  if (!confirmed) {
     showMessage('Guardado cancelado', 'error');
     return;
   }
@@ -719,12 +714,12 @@ function renderManageList() {
       const muscleGroup = select.value;
 
       if (!newName) {
-        alert('El nombre no puede estar vacío');
+        await showAlert('Error', 'El nombre no puede estar vacío');
         return;
       }
 
       if (!muscleGroup) {
-        alert('Todos los ejercicios deben tener un grupo muscular asignado');
+        await showAlert('Error', 'Todos los ejercicios deben tener un grupo muscular asignado');
         return;
       }
 
@@ -788,9 +783,13 @@ function renderManageList() {
       const nameInput = row.querySelector('.manage-exercise-name-input');
       const name = nameInput.dataset.original;
 
-      if (!confirm(`¿Eliminar ejercicio "${name}"?\n\nEsta acción NO eliminará los registros de sesiones que lo usan.`)) {
-        return;
-      }
+      const ok = await showConfirm({
+        title: 'Eliminar ejercicio',
+        body: `¿Eliminar <strong>${escapeHtml(name)}</strong>?<br><br><span style="color:#aaa; font-size:0.9rem;">Los registros de sesiones que lo usan no se verán afectados.</span>`,
+        okText: 'Eliminar',
+        danger: true
+      });
+      if (!ok) return;
 
       btn.textContent = '...';
       btn.disabled = true;
@@ -815,7 +814,7 @@ function renderManageList() {
         console.error('Error al eliminar ejercicio:', err);
         btn.textContent = '🗑';
         btn.disabled = false;
-        alert('Error al eliminar el ejercicio: ' + err.message);
+        showAlert('Error', 'Error al eliminar el ejercicio: ' + err.message);
       }
     });
   });
@@ -912,7 +911,7 @@ manageSearch.addEventListener('blur', () => {
 
 document.getElementById('manage-add-confirm-btn').addEventListener('click', async () => {
   const muscleGroup = document.getElementById('manage-add-group-select').value;
-  if (!muscleGroup) { alert('Selecciona un grupo muscular'); return; }
+  if (!muscleGroup) { await showAlert('Error', 'Selecciona un grupo muscular'); return; }
 
   const btn = document.getElementById('manage-add-confirm-btn');
   btn.disabled = true; btn.textContent = '...';
@@ -934,7 +933,7 @@ document.getElementById('manage-add-confirm-btn').addEventListener('click', asyn
     hideManageAddRow();
     await loadAndRenderManageList();
   } catch (err) {
-    alert('Error: ' + err.message);
+    showAlert('Error', err.message);
   } finally {
     btn.disabled = false; btn.textContent = 'Guardar';
   }
@@ -943,13 +942,11 @@ document.getElementById('manage-add-confirm-btn').addEventListener('click', asyn
 document.getElementById('manage-add-cancel-btn').addEventListener('click', hideManageAddRow);
 
 document.getElementById('repair-db-btn').addEventListener('click', async () => {
-  const ok = confirm(
-    '🔧 REPARAR BASE DE DATOS\n\n' +
-    'Esta acción restaurará el nombre y grupo muscular de los 34 ejercicios predefinidos a su estado original.\n\n' +
-    'Los ejercicios personalizados que hayas creado se mantendrán sin cambios.\n\n' +
-    'Los registros de tus sesiones NO se verán afectados.\n\n' +
-    '¿Continuar?'
-  );
+  const ok = await showConfirm({
+    title: 'Reparar Base de Datos',
+    body: `<p style="color:#ccc; line-height:1.6;">Restaurará el nombre y grupo muscular de los <strong>34 ejercicios predefinidos</strong> a su estado original.<br><br>Los ejercicios personalizados y los registros de sesiones <strong>no se verán afectados</strong>.</p>`,
+    okText: 'Reparar'
+  });
   if (!ok) return;
 
   try {
@@ -958,26 +955,27 @@ document.getElementById('repair-db-btn').addEventListener('click', async () => {
     availableExercises = [...PREDEFINED_EXERCISES];
     await loadExerciseOptions();
     await loadAndRenderManageList();
-    alert('✓ Base de datos reparada correctamente.');
+    showAlert('Reparación completada', 'Los ejercicios predefinidos han sido restaurados correctamente.');
   } catch (err) {
-    alert('Error al reparar: ' + err.message);
+    showAlert('Error', 'Error al reparar: ' + err.message);
   }
 });
 
 document.getElementById('restore-db-btn').addEventListener('click', async () => {
-  const first = confirm(
-    '⚠ RESTAURAR BASE DE DATOS\n\n' +
-    'Esta acción eliminará TODOS los ejercicios, incluyendo los personalizados, y restaurará únicamente los 34 ejercicios predefinidos con su grupo muscular original.\n\n' +
-    'Los registros de tus sesiones NO se verán afectados.\n\n' +
-    '¿Estás seguro de continuar?'
-  );
+  const first = await showConfirm({
+    title: 'Restaurar Base de Datos',
+    body: `<p style="color:#ccc; line-height:1.6;">Esta acción eliminará <strong>todos los ejercicios</strong>, incluidos los personalizados, y restaurará únicamente los 34 predefinidos.<br><br>Los registros de sesiones no se verán afectados.</p>`,
+    okText: 'Continuar',
+    danger: true
+  });
   if (!first) return;
 
-  const second = confirm(
-    '⚠ CONFIRMACIÓN FINAL\n\n' +
-    'Todos los ejercicios personalizados serán eliminados de forma permanente. Esta acción no se puede deshacer.\n\n' +
-    '¿Confirmar restauración completa?'
-  );
+  const second = await showConfirm({
+    title: 'Confirmación final',
+    body: `<p style="color:#ccc; line-height:1.6;">Los ejercicios personalizados serán eliminados de forma <strong>permanente</strong>. Esta acción no se puede deshacer.</p>`,
+    okText: 'Restaurar todo',
+    danger: true
+  });
   if (!second) return;
 
   try {
@@ -986,9 +984,9 @@ document.getElementById('restore-db-btn').addEventListener('click', async () => 
     availableExercises = [...PREDEFINED_EXERCISES];
     await loadExerciseOptions();
     await loadAndRenderManageList();
-    alert('✓ Base de datos restaurada correctamente.');
+    showAlert('Restauración completada', 'La base de datos ha sido restaurada a los 34 ejercicios predefinidos.');
   } catch (err) {
-    alert('Error al restaurar: ' + err.message);
+    showAlert('Error', 'Error al restaurar: ' + err.message);
   }
 });
 
