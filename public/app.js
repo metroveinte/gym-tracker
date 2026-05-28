@@ -103,6 +103,8 @@ function openModal() {
   firstRepsInput.value = '';
   firstWeightInput.value = '';
   modalConfirmBtn.disabled = true;
+  const existingMg = document.getElementById('new-muscle-group-select');
+  if (existingMg) existingMg.remove();
 }
 
 function closeModal() {
@@ -117,6 +119,8 @@ function closeModal() {
   firstRepsInput.value = '';
   firstWeightInput.value = '';
   modalConfirmBtn.disabled = true;
+  const existingMg = document.getElementById('new-muscle-group-select');
+  if (existingMg) existingMg.remove();
 }
 
 function updateModalConfirmButton() {
@@ -484,6 +488,16 @@ modalConfirmBtn.addEventListener('click', async () => {
 });
 
 exerciseInput.addEventListener('input', (e) => {
+  // Reset selection state whenever user modifies the input
+  selectedExerciseForModal = null;
+  selectedMuscleGroup = null;
+  isNewExercise = false;
+  firstSerieForm.classList.add('hidden');
+  firstRepsInput.value = '';
+  firstWeightInput.value = '';
+  modalConfirmBtn.disabled = true;
+  const existingMg = document.getElementById('new-muscle-group-select');
+  if (existingMg) existingMg.remove();
   filterExercises(e.target.value);
 });
 
