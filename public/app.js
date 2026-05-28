@@ -810,6 +810,8 @@ function renderManageList() {
         delete EXERCISE_MUSCLE_MAP[name];
 
         row.remove();
+        manageSearch.value = '';
+        renderManageList();
       } catch (err) {
         console.error('Error al eliminar ejercicio:', err);
         btn.textContent = '🗑';
