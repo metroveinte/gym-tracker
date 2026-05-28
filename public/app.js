@@ -188,9 +188,9 @@ function selectExerciseInModal(exerciseName) {
     return;
   }
 
-  // Determine if it's a new exercise: not in API data with is_predefined=1
+  // Determine if exercise needs a muscle group: either doesn't exist in API or has no muscle group assigned
   const apiData = exercisesFromAPI[exerciseNameTrimmed];
-  isNewExercise = !apiData || !apiData.is_predefined;
+  isNewExercise = !apiData || !apiData.muscle_group;
 
   if (isNewExercise) {
     // Pedir grupo muscular para nuevo ejercicio
@@ -218,7 +218,7 @@ function selectExerciseInModal(exerciseName) {
     });
     selectElem.focus();
   } else {
-    selectedMuscleGroup = EXERCISE_MUSCLE_MAP[exerciseNameTrimmed] || null;
+    selectedMuscleGroup = apiData.muscle_group || null;
     if (document.getElementById('new-muscle-group-select')) {
       document.getElementById('new-muscle-group-select').remove();
     }
