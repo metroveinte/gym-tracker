@@ -33,13 +33,14 @@ app.get('/api/sessions', (req, res) => {
       s.date        AS date,
       s.exercise    AS exercise,
       s.notes       AS notes,
+      s.batch_id    AS batch_id,
       se.id         AS serie_id,
       se.sets       AS sets,
       se.reps       AS reps,
       se.weight     AS weight
     FROM sessions s
     LEFT JOIN series se ON se.session_id = s.id
-    ORDER BY s.date DESC, s.id DESC, se.id ASC
+    ORDER BY s.batch_id DESC, s.date DESC, s.id DESC, se.id ASC
   `;
   db.all(sql, [], (err, rows) => {
     if (err) {
@@ -54,6 +55,7 @@ app.get('/api/sessions', (req, res) => {
           date: row.date,
           exercise: row.exercise,
           notes: row.notes,
+          batch_id: row.batch_id,
           series: []
         };
         byId.set(row.session_id, session);
