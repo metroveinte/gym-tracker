@@ -315,6 +315,7 @@ function renderHistory(sessions) {
   const groups = groupSessionsByDate(sessions);
 
   body.innerHTML = groups.map(({ date, daySessions }) => {
+    const batchId = daySessions[0].batch_id || `${date}-${daySessions[0].id}`;
     const muscleGroups = [...new Set(daySessions.map(s => getMuscleGroup(s.exercise)).filter(Boolean))];
     const exerciseCount = daySessions.length;
     const totalSeries = daySessions.reduce((sum, s) => sum + (s.series ? s.series.length : 0), 0);
@@ -326,13 +327,13 @@ function renderHistory(sessions) {
     ).join('');
 
     return `
-      <tr data-date="${escapeHtml(date)}" data-session-ids="${escapeHtml(sessionIds)}">
+      <tr data-date="${escapeHtml(date)}" data-batch-id="${escapeHtml(batchId)}" data-session-ids="${escapeHtml(sessionIds)}">
         <td><input type="checkbox" class="session-checkbox" title="Seleccionar"></td>
         <td>${displayDate}</td>
         <td>${badges}</td>
         <td style="text-align:center;">${exerciseCount}</td>
         <td style="text-align:center;">${totalSeries}</td>
-        <td><button class="btn-ver-entreno" data-date="${escapeHtml(date)}">Ver entreno</button></td>
+        <td><button class="btn-ver-entreno" data-date="${escapeHtml(date)}" data-batch-id="${escapeHtml(batchId)}">Ver entreno</button></td>
       </tr>
     `;
   }).join('');
@@ -347,12 +348,12 @@ function renderHistory(sessions) {
   });
 
   document.querySelectorAll('.btn-ver-entreno').forEach(btn => {
-    btn.addEventListener('click', () => openWorkoutModal(btn.dataset.date, sessions));
+    btn.addEventListener('click', () => openWorkoutModal(btn.dataset.date, btn.dataset.batchId, sessions));
   });
 }
 
-function openWorkoutModal(date, sessions) {
-  const daySessions = sessions.filter(s => s.date === date);
+function openWorkoutModal(date, batchId, sessions) {
+  const daySessions = sessions.filter(s => s.date === date && (s.batch_id || `${s.date}-${s.id}`) === batchId);
   const [year, month, day] = date.split('-');
   document.getElementById('workout-modal-date').textContent = `Entreno ${day}/${month}/${year}`;
 
