@@ -280,13 +280,24 @@ function muscleGroupToClass(mg) {
 
 function groupSessionsByDate(sessions) {
   const groups = new Map();
+
+  // Agrupar por batch_id si existe, si no usar date + id
   sessions.forEach(session => {
-    if (!groups.has(session.date)) groups.set(session.date, []);
-    groups.get(session.date).push(session);
+    const groupKey = session.batch_id || `${session.date}-${session.id}`;
+    if (!groups.has(groupKey)) groups.set(groupKey, []);
+    groups.get(groupKey).push(session);
   });
+
+  // Ordenar por fecha y batch_id descendente para mantener orden cronológico
   return Array.from(groups.entries())
-    .sort((a, b) => b[0].localeCompare(a[0]))
-    .map(([date, daySessions]) => ({ date, daySessions }));
+    .sort((a, b) => {
+      const dateA = a[1][0].date;
+      const dateB = b[1][0].date;
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
+      // Si mismo día, ordenar por batch_id o id descendente
+      return (b[1][0].batch_id || b[1][0].id).toString().localeCompare((a[1][0].batch_id || a[1][0].id).toString());
+    })
+    .map(([groupKey, daySessions]) => ({ date: daySessions[0].date, daySessions }));
 }
 
 function renderHistory(sessions) {

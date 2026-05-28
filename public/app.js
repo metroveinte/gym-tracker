@@ -570,12 +570,15 @@ async function saveSession() {
   }
 
   try {
+    // Generar batch_id único para esta sesión guardada
+    const batchId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
     // Guardar una sesión por cada ejercicio
     for (const exercise of currentExercises) {
       const sessionRes = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, exercise: exercise.name, notes }),
+        body: JSON.stringify({ date, exercise: exercise.name, notes, batch_id: batchId }),
       });
 
       if (!sessionRes.ok) {

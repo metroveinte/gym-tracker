@@ -52,6 +52,7 @@ db.serialize(() => {
   // Migraciones para bases de datos existentes
   db.run(`ALTER TABLE exercises ADD COLUMN muscle_group TEXT`, () => {});
   db.run(`ALTER TABLE exercises ADD COLUMN is_predefined INTEGER DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE sessions ADD COLUMN batch_id TEXT`, () => {});
 
   db.run('CREATE INDEX IF NOT EXISTS idx_series_session_id ON series(session_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date)');

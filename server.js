@@ -72,17 +72,17 @@ app.get('/api/sessions', (req, res) => {
 });
 
 app.post('/api/sessions', (req, res) => {
-  const { date, exercise, notes } = req.body;
+  const { date, exercise, notes, batch_id } = req.body;
   if (!date || !exercise) {
     return res.status(400).json({ error: 'Fecha y ejercicio son obligatorios.' });
   }
 
-  const stmt = db.prepare('INSERT INTO sessions (date, exercise, notes) VALUES (?, ?, ?)');
-  stmt.run(date, exercise, notes || '', function (err) {
+  const stmt = db.prepare('INSERT INTO sessions (date, exercise, notes, batch_id) VALUES (?, ?, ?, ?)');
+  stmt.run(date, exercise, notes || '', batch_id || null, function (err) {
     if (err) {
       return res.status(500).json({ error: 'Error al guardar la sesión.' });
     }
-    res.json({ id: this.lastID, date, exercise, notes: notes || '', series: [] });
+    res.json({ id: this.lastID, date, exercise, notes: notes || '', batch_id: batch_id || null, series: [] });
   });
   stmt.finalize();
 });
