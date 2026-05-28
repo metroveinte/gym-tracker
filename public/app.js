@@ -364,6 +364,9 @@ function renderExercises() {
     html += `
           </tbody>
         </table>
+        <label style="display:block; margin-top:8px;">
+          <textarea class="exercise-notes" data-idx="${exIdx}" rows="2" placeholder="Notas del ejercicio (opcional)" style="width:100%; resize:vertical; font-size:0.85rem; color:#ccc; background:#111; border:1px solid #333; border-radius:6px; padding:7px 10px; font-family:'Oswald',sans-serif; box-sizing:border-box;">${escapeHtml(exercise.notes || '')}</textarea>
+        </label>
       </div>
     `;
   });
@@ -406,6 +409,13 @@ function renderExercises() {
       const exIdx = parseInt(e.currentTarget.dataset.ex);
       const serIdx = parseInt(e.currentTarget.dataset.ser);
       repeatSerie(exIdx, serIdx);
+    });
+  });
+
+  document.querySelectorAll('.exercise-notes').forEach(textarea => {
+    textarea.addEventListener('input', (e) => {
+      const idx = parseInt(e.target.dataset.idx);
+      currentExercises[idx].notes = e.target.value;
     });
   });
 }
@@ -503,7 +513,8 @@ modalConfirmBtn.addEventListener('click', async () => {
   const addedName = selectedExerciseForModal;
   currentExercises.push({
     name: addedName,
-    series: [{ sets: 1, reps, weight }]
+    series: [{ sets: 1, reps, weight }],
+    notes: ''
   });
 
   renderExercises();
@@ -531,7 +542,6 @@ firstWeightInput.addEventListener('input', updateModalConfirmButton);
 
 async function saveSession() {
   const date = document.getElementById('date').value;
-  const notes = document.getElementById('notes').value.trim();
 
   if (!date) {
     showMessage('Completa la fecha antes de guardar.');
@@ -573,7 +583,7 @@ async function saveSession() {
       const sessionRes = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, exercise: exercise.name, notes, batch_id: batchId }),
+        body: JSON.stringify({ date, exercise: exercise.name, notes: exercise.notes || '', batch_id: batchId }),
       });
 
       if (!sessionRes.ok) {
