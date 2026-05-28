@@ -4,6 +4,21 @@ let progressChart = null;
 let topExercisesChart = null;
 let muscleGroupChart = null;
 
+const MUSCLE_COLORS = {
+  'Pecho':   '#c0392b',
+  'Espalda': '#2471a3',
+  'Hombros': '#7d3c98',
+  'Bíceps':  '#1e8449',
+  'Tríceps': '#148f77',
+  'Piernas': '#ca6f1e',
+  'Glúteos': '#d35400',
+  'Core':    '#616a6b'
+};
+
+function muscleGroupColor(mg) {
+  return MUSCLE_COLORS[mg] || '#555555';
+}
+
 const EXERCISE_MUSCLE_MAP = {
   'Press de banca': 'Pecho',
   'Press inclinado con mancuernas': 'Pecho',
@@ -189,7 +204,7 @@ function loadExerciseSelect() {
 function updateStats() {
   const filtered = getFilteredSessions();
 
-  const totalSessions = filtered.length;
+  const totalSessions = new Set(filtered.map(s => s.date)).size;
   const uniqueExercises = new Set(filtered.map(s => s.exercise)).size;
   const totalSeries = filtered.reduce((sum, s) => sum + (s.series ? s.series.length : 0), 0);
   const streakDays = calculateStreak(filtered);
@@ -445,6 +460,7 @@ function renderTopExercisesChart(sessions) {
 
   const labels = sorted.map(e => e[0]);
   const data = sorted.map(e => e[1]);
+  const backgroundColors = sorted.map(e => muscleGroupColor(getMuscleGroup(e[0])));
 
   const ctx = document.getElementById('topExercisesChart').getContext('2d');
 
@@ -459,13 +475,7 @@ function renderTopExercisesChart(sessions) {
       datasets: [
         {
           data: data,
-          backgroundColor: [
-            '#ff0000',
-            '#ff3333',
-            '#ff6666',
-            '#ff9999',
-            '#ffcccc'
-          ],
+          backgroundColor: backgroundColors,
           borderColor: '#2a2a2a',
           borderWidth: 2
         }
@@ -501,17 +511,13 @@ function renderMuscleGroupChart(sessions) {
 
   const labels = sorted.map(e => `${e[0]} (${((e[1] / total) * 100).toFixed(0)}%)`);
   const data = sorted.map(e => e[1]);
+  const backgroundColors = sorted.map(e => muscleGroupColor(e[0]));
 
   const ctx = document.getElementById('muscleGroupChart').getContext('2d');
 
   if (muscleGroupChart) {
     muscleGroupChart.destroy();
   }
-
-  const colors = [
-    '#ff0000', '#ff3333', '#ff6666', '#ff9999',
-    '#ffcccc', '#cc0000', '#aa0000', '#880000'
-  ];
 
   muscleGroupChart = new Chart(ctx, {
     type: 'doughnut',
@@ -520,7 +526,7 @@ function renderMuscleGroupChart(sessions) {
       datasets: [
         {
           data: data,
-          backgroundColor: colors.slice(0, labels.length),
+          backgroundColor: backgroundColors,
           borderColor: '#2a2a2a',
           borderWidth: 2
         }
