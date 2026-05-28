@@ -90,6 +90,32 @@ function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 }
 
+function muscleGroupToClass(mg) {
+  const map = { 'Pecho':'pecho','Espalda':'espalda','Hombros':'hombros','Bíceps':'biceps','Tríceps':'triceps','Piernas':'piernas','Glúteos':'gluteos','Core':'core' };
+  return map[mg] || 'other';
+}
+
+function showMuscleGroupBadge(muscleGroup) {
+  let badgeContainer = document.getElementById('exercise-muscle-badge');
+  if (!badgeContainer) {
+    badgeContainer = document.createElement('div');
+    badgeContainer.id = 'exercise-muscle-badge';
+    badgeContainer.style.marginTop = '8px';
+    exerciseInput.parentNode.appendChild(badgeContainer);
+  }
+  if (muscleGroup) {
+    badgeContainer.innerHTML = `<span class="muscle-badge muscle-${muscleGroupToClass(muscleGroup)}">${escapeHtml(muscleGroup)}</span>`;
+    badgeContainer.style.display = 'block';
+  } else {
+    badgeContainer.style.display = 'none';
+  }
+}
+
+function hideMuscleGroupBadge() {
+  const badgeContainer = document.getElementById('exercise-muscle-badge');
+  if (badgeContainer) badgeContainer.style.display = 'none';
+}
+
 function openModal() {
   modal.classList.remove('hidden');
   modalOverlay.classList.remove('hidden');
@@ -105,6 +131,7 @@ function openModal() {
   modalConfirmBtn.disabled = true;
   const existingMg = document.getElementById('new-muscle-group-select');
   if (existingMg) existingMg.remove();
+  hideMuscleGroupBadge();
 }
 
 function closeModal() {
@@ -121,6 +148,7 @@ function closeModal() {
   modalConfirmBtn.disabled = true;
   const existingMg = document.getElementById('new-muscle-group-select');
   if (existingMg) existingMg.remove();
+  hideMuscleGroupBadge();
 }
 
 function updateModalConfirmButton() {
@@ -226,6 +254,8 @@ function selectExerciseInModal(exerciseName) {
     if (document.getElementById('new-muscle-group-select')) {
       document.getElementById('new-muscle-group-select').remove();
     }
+    // Show muscle group badge for exercises that already have one
+    showMuscleGroupBadge(apiData.muscle_group);
   }
 
   // Add to available exercises if new
@@ -498,6 +528,7 @@ exerciseInput.addEventListener('input', (e) => {
   modalConfirmBtn.disabled = true;
   const existingMg = document.getElementById('new-muscle-group-select');
   if (existingMg) existingMg.remove();
+  hideMuscleGroupBadge();
   filterExercises(e.target.value);
 });
 
