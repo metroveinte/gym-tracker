@@ -329,9 +329,9 @@ function renderExercises() {
       <div style="margin-bottom: 25px; padding: 15px; background: #1a1a1a; border-radius: 8px; border-left: 3px solid #d32f2f;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
           <h4 style="margin: 0; color: #fff;">${escapeHtml(exercise.name)}</h4>
-          <div style="display: flex; gap: 10px;">
-            <button class="add-serie-to-exercise" data-idx="${exIdx}" style="padding: 8px 12px; font-size: 0.9rem;">+ Agregar Serie</button>
-            <button class="delete-exercise-btn" data-idx="${exIdx}" style="padding: 5px 10px; font-size: 0.85rem;">Eliminar Ejercicio</button>
+          <div style="display: flex; gap: 8px;">
+            <button class="add-serie-to-exercise" data-idx="${exIdx}" style="font-size:0.8rem; padding:4px 10px;">+ Serie</button>
+            <button class="delete-exercise-btn" data-idx="${exIdx}" style="font-size:0.8rem; padding:4px 8px;" title="Eliminar ejercicio">🗑</button>
           </div>
         </div>
 
@@ -354,8 +354,8 @@ function renderExercises() {
           <td>${escapeHtml(serie.reps)}</td>
           <td>${escapeHtml(formatValue(serie.weight))}</td>
           <td class="row-actions">
-            <button type="button" class="icon-btn repeat-serie-btn" data-ex="${exIdx}" data-ser="${serieIdx}" title="Repetir esta serie" aria-label="Repetir esta serie">🔁 Repetir</button>
-            <button type="button" class="icon-btn icon-btn-danger delete-serie-btn" data-ex="${exIdx}" data-ser="${serieIdx}" title="Eliminar esta serie" aria-label="Eliminar esta serie">🗑 Eliminar</button>
+            <button type="button" class="icon-btn repeat-serie-btn" data-ex="${exIdx}" data-ser="${serieIdx}" title="Repetir serie">🔁</button>
+            <button type="button" class="icon-btn icon-btn-danger delete-serie-btn" data-ex="${exIdx}" data-ser="${serieIdx}" title="Eliminar serie">🗑</button>
           </td>
         </tr>
       `;

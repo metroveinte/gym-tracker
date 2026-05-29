@@ -742,7 +742,8 @@ function renderEditExercises() {
         <td>${s.reps}</td>
         <td>${s.weight != null ? s.weight : '-'}</td>
         <td class="row-actions">
-          <button type="button" class="icon-btn icon-btn-danger edit-delete-serie" data-ex="${exIdx}" data-ser="${sIdx}">🗑</button>
+          <button type="button" class="icon-btn edit-repeat-serie" data-ex="${exIdx}" data-ser="${sIdx}" title="Repetir serie">🔁</button>
+          <button type="button" class="icon-btn icon-btn-danger edit-delete-serie" data-ex="${exIdx}" data-ser="${sIdx}" title="Eliminar serie">🗑</button>
         </td>
       </tr>
     `).join('');
@@ -772,6 +773,15 @@ function renderEditExercises() {
   container.querySelectorAll('.edit-delete-exercise').forEach(btn => {
     btn.addEventListener('click', () => {
       editingExercises.splice(parseInt(btn.dataset.ex), 1);
+      renderEditExercises();
+    });
+  });
+
+  container.querySelectorAll('.edit-repeat-serie').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ex = editingExercises[parseInt(btn.dataset.ex)];
+      const src = ex.series[parseInt(btn.dataset.ser)];
+      ex.series.push({ sets: src.sets, reps: src.reps, weight: src.weight });
       renderEditExercises();
     });
   });
