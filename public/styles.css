@@ -698,13 +698,19 @@ th {
   /* History header actions: full width, wrap */
   .history-actions {
     max-width: 100%;
-    flex-wrap: wrap;
-    gap: 4px;
+    flex-wrap: nowrap;
+    gap: 6px;
   }
 
   .btn-action {
-    padding: 5px 8px;
-    font-size: 0.72rem;
+    padding: 10px 12px;
+    font-size: 1rem;
+    min-width: 40px;
+    text-align: center;
+  }
+
+  .btn-action .btn-label {
+    display: none;
   }
 
   /* Stats table: hide exercise count and series count columns */

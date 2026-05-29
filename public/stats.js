@@ -350,6 +350,8 @@ function renderHistory(sessions) {
   document.querySelectorAll('.btn-ver-entreno').forEach(btn => {
     btn.addEventListener('click', () => openWorkoutModal(btn.dataset.date, btn.dataset.batchId, sessions));
   });
+
+  updateSelectionUI();
 }
 
 function openWorkoutModal(date, batchId, sessions) {
