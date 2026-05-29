@@ -4,6 +4,15 @@ let progressChart = null;
 let topExercisesChart = null;
 let muscleGroupChart = null;
 
+function updateButtonMode() {
+  const isMobile = window.innerWidth <= 768;
+  document.getElementById('edit-selected-btn').textContent   = isMobile ? '✎'  : '✎ Editar';
+  document.getElementById('delete-selected-btn').textContent = isMobile ? '🗑' : '🗑 Borrar';
+  document.getElementById('delete-all-btn').textContent      = isMobile ? '⚠'  : '⚠ Limpiar';
+}
+updateButtonMode();
+window.addEventListener('resize', updateButtonMode);
+
 const MUSCLE_COLORS = {
   'Pecho':   '#c0392b',
   'Espalda': '#2471a3',

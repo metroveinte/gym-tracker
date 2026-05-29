@@ -695,7 +695,7 @@ th {
     padding: 6px 8px !important;
   }
 
-  /* History header actions: full width, wrap */
+  /* History header actions */
   .history-actions {
     max-width: 100%;
     flex-wrap: nowrap;
@@ -703,14 +703,10 @@ th {
   }
 
   .btn-action {
-    padding: 10px 12px;
-    font-size: 1rem;
-    min-width: 40px;
+    padding: 10px 14px;
+    font-size: 1.1rem;
+    min-width: 44px;
     text-align: center;
-  }
-
-  .btn-action .btn-label {
-    display: none;
   }
 
   /* Stats table: hide exercise count and series count columns */
