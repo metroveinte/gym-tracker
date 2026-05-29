@@ -626,47 +626,16 @@ function updateSelectionUI() {
 }
 
 document.getElementById('edit-selected-btn').addEventListener('click', async () => {
-  const dates = getSelectedDates();
-  if (dates.length === 0) return;
-  if (dates.length > 1) { await showAlert('Editar fecha', 'Solo puedes editar una sesión a la vez'); return; }
+  const rows = Array.from(document.querySelectorAll('.session-checkbox:checked')).map(cb => cb.closest('tr'));
+  if (rows.length === 0) return;
+  if (rows.length > 1) { await showAlert('Editar entreno', 'Solo puedes editar un entreno a la vez'); return; }
 
-  const date = dates[0];
-  const newDate = await showInput({
-    title: 'Editar fecha',
-    body: 'Selecciona la nueva fecha:',
-    inputType: 'date',
-    defaultValue: date,
-    okText: 'Guardar'
-  });
-  if (!newDate) return;
-
-  const ids = getSelectedSessionIds();
-  const daySessions = allSessions.filter(s => ids.includes(s.id));
-  try {
-    for (const session of daySessions) {
-      const del = await fetch(`/api/sessions/${session.id}`, { method: 'DELETE' });
-      if (!del.ok) throw new Error('Error al borrar sesión');
-
-      const create = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: newDate, exercise: session.exercise, notes: session.notes || '', batch_id: session.batch_id })
-      });
-      if (!create.ok) throw new Error('Error al crear sesión');
-      const newSession = await create.json();
-
-      for (const serie of session.series) {
-        await fetch(`/api/sessions/${newSession.id}/series`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(serie)
-        });
-      }
-    }
-    loadStats();
-  } catch (error) {
-    showAlert('Error', error.message);
-  }
+  const row = rows[0];
+  const date = row.dataset.date;
+  const batchId = row.dataset.batchId;
+  const ids = row.dataset.sessionIds.split(',').map(Number);
+  const batchSessions = allSessions.filter(s => ids.includes(s.id));
+  openEditModal(date, batchId, batchSessions);
 });
 
 document.getElementById('delete-selected-btn').addEventListener('click', async () => {
@@ -718,6 +687,225 @@ document.getElementById('delete-all-btn').addEventListener('click', async () => 
     loadStats();
   } catch (error) {
     showAlert('Error', error.message);
+  }
+});
+
+// ── Edición completa de entreno ──────────────────────────────────────────────
+
+let editingBatchId = null;
+let editingExercises = [];
+let editExerciseOptions = [];
+
+const editModal        = document.getElementById('edit-modal');
+const editModalOverlay = document.getElementById('edit-modal-overlay');
+const editExerciseInput    = document.getElementById('edit-exercise-input');
+const editExerciseDropdown = document.getElementById('edit-exercise-dropdown');
+document.body.appendChild(editExerciseDropdown);
+
+function openEditModal(date, batchId, batchSessions) {
+  editingBatchId = batchId;
+  editingExercises = batchSessions.map(s => ({
+    name: s.exercise,
+    series: (s.series || []).map(sr => ({ sets: sr.sets || 1, reps: sr.reps, weight: sr.weight })),
+    notes: s.notes || ''
+  }));
+
+  document.getElementById('edit-session-date').value = date;
+  renderEditExercises();
+
+  fetch('/api/exercises').then(r => r.json()).then(data => {
+    editExerciseOptions = data.map(ex => typeof ex === 'object' ? ex.name : ex).filter(Boolean);
+  });
+
+  editModal.classList.remove('hidden');
+  editModalOverlay.classList.remove('hidden');
+}
+
+function closeEditModal() {
+  editModal.classList.add('hidden');
+  editModalOverlay.classList.add('hidden');
+  editExerciseInput.value = '';
+  editExerciseDropdown.classList.add('hidden');
+}
+
+function renderEditExercises() {
+  const container = document.getElementById('edit-exercises-container');
+  if (editingExercises.length === 0) {
+    container.innerHTML = '<p style="color:#999; text-align:center; margin-bottom:15px;">No hay ejercicios</p>';
+    return;
+  }
+
+  container.innerHTML = editingExercises.map((ex, exIdx) => {
+    const seriesRows = ex.series.map((s, sIdx) => `
+      <tr>
+        <td style="color:#aaa; font-size:0.85rem;">Serie ${sIdx + 1}</td>
+        <td>${s.reps}</td>
+        <td>${s.weight != null ? s.weight : '-'}</td>
+        <td class="row-actions">
+          <button type="button" class="icon-btn icon-btn-danger edit-delete-serie" data-ex="${exIdx}" data-ser="${sIdx}">🗑</button>
+        </td>
+      </tr>
+    `).join('');
+
+    const emptyRow = ex.series.length === 0
+      ? `<tr><td colspan="4" style="color:#666; font-size:0.82rem; text-align:center;">Sin series</td></tr>`
+      : '';
+
+    return `
+      <div style="margin-bottom:20px; padding:14px; background:#1a1a1a; border-radius:8px; border-left:3px solid #d32f2f;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h4 style="margin:0; color:#fff; font-size:1rem;">${escapeHtml(ex.name)}</h4>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="icon-btn edit-add-serie" data-ex="${exIdx}" style="font-size:0.8rem; padding:4px 10px;">+ Serie</button>
+            <button type="button" class="icon-btn icon-btn-danger edit-delete-exercise" data-ex="${exIdx}" style="font-size:0.8rem; padding:4px 8px;">🗑</button>
+          </div>
+        </div>
+        <table style="width:100%; margin-bottom:8px; font-size:0.85rem;">
+          <thead><tr><th>Serie</th><th>Reps</th><th>Peso</th><th></th></tr></thead>
+          <tbody>${seriesRows}${emptyRow}</tbody>
+        </table>
+        <textarea class="edit-exercise-notes" data-ex="${exIdx}" rows="2" placeholder="Notas (opcional)" style="width:100%; resize:vertical; font-size:0.82rem; color:#ccc; background:#111; border:1px solid #333; border-radius:6px; padding:6px 9px; font-family:'Oswald',sans-serif; box-sizing:border-box;">${escapeHtml(ex.notes)}</textarea>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.edit-delete-exercise').forEach(btn => {
+    btn.addEventListener('click', () => {
+      editingExercises.splice(parseInt(btn.dataset.ex), 1);
+      renderEditExercises();
+    });
+  });
+
+  container.querySelectorAll('.edit-delete-serie').forEach(btn => {
+    btn.addEventListener('click', () => {
+      editingExercises[parseInt(btn.dataset.ex)].series.splice(parseInt(btn.dataset.ser), 1);
+      renderEditExercises();
+    });
+  });
+
+  container.querySelectorAll('.edit-add-serie').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const exIdx = parseInt(btn.dataset.ex);
+      const result = await showSerieForm(editingExercises[exIdx].series.length + 1);
+      if (!result) return;
+      if (isNaN(result.reps) || result.reps <= 0) { showAlert('Error', 'Repeticiones inválidas'); return; }
+      editingExercises[exIdx].series.push({ sets: 1, reps: result.reps, weight: result.weight });
+      renderEditExercises();
+    });
+  });
+
+  container.querySelectorAll('.edit-exercise-notes').forEach(ta => {
+    ta.addEventListener('input', () => {
+      editingExercises[parseInt(ta.dataset.ex)].notes = ta.value;
+    });
+  });
+}
+
+function positionEditDropdown() {
+  const rect = editExerciseInput.getBoundingClientRect();
+  Object.assign(editExerciseDropdown.style, {
+    position: 'fixed',
+    top: rect.bottom + 'px',
+    left: rect.left + 'px',
+    width: rect.width + 'px',
+    right: 'auto',
+    zIndex: '9999',
+    borderTop: '2px solid #ff0000'
+  });
+}
+
+editExerciseInput.addEventListener('input', () => {
+  const query = editExerciseInput.value.trim();
+  if (!query) { editExerciseDropdown.classList.add('hidden'); return; }
+
+  const lower = query.toLowerCase();
+  const matches = editExerciseOptions.filter(n => n.toLowerCase().includes(lower));
+  const exactMatch = editExerciseOptions.some(n => n.toLowerCase() === lower);
+
+  let html = matches.map(n =>
+    `<div class="dropdown-item" data-name="${escapeHtml(n)}">${escapeHtml(n)}</div>`
+  ).join('');
+  if (!exactMatch) {
+    const cap = query.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    html += `<div class="dropdown-item dropdown-item-new" data-name="${escapeHtml(cap)}">+ Añadir: ${escapeHtml(cap)}</div>`;
+  }
+
+  if (html) {
+    editExerciseDropdown.innerHTML = html;
+    editExerciseDropdown.classList.remove('hidden');
+    positionEditDropdown();
+    editExerciseDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('mousedown', async (e) => {
+        e.preventDefault();
+        const name = item.dataset.name;
+        editExerciseDropdown.classList.add('hidden');
+        editExerciseInput.value = '';
+
+        if (editingExercises.some(ex => ex.name.toLowerCase() === name.toLowerCase())) {
+          await showAlert('Duplicado', `"${name}" ya está en este entreno`);
+          return;
+        }
+
+        const result = await showSerieForm(1);
+        if (!result) return;
+        editingExercises.push({ name, series: [{ sets: 1, reps: result.reps, weight: result.weight }], notes: '' });
+        renderEditExercises();
+      });
+    });
+  } else {
+    editExerciseDropdown.classList.add('hidden');
+  }
+});
+
+editExerciseInput.addEventListener('blur', () => {
+  setTimeout(() => editExerciseDropdown.classList.add('hidden'), 150);
+});
+
+document.getElementById('edit-modal-close').addEventListener('click', closeEditModal);
+document.getElementById('edit-modal-cancel').addEventListener('click', closeEditModal);
+editModalOverlay.addEventListener('click', closeEditModal);
+
+document.getElementById('edit-modal-save').addEventListener('click', async () => {
+  const newDate = document.getElementById('edit-session-date').value;
+  if (!newDate) { await showAlert('Error', 'Selecciona una fecha'); return; }
+  if (editingExercises.length === 0) { await showAlert('Error', 'El entreno debe tener al menos un ejercicio'); return; }
+
+  const withoutSeries = editingExercises.find(ex => ex.series.length === 0);
+  if (withoutSeries) { await showAlert('Error', `"${withoutSeries.name}" no tiene series`); return; }
+
+  const saveBtn = document.getElementById('edit-modal-save');
+  saveBtn.disabled = true; saveBtn.textContent = 'Guardando...';
+
+  try {
+    const ids = allSessions.filter(s => (s.batch_id || `${s.date}-${s.id}`) === editingBatchId).map(s => s.id);
+    for (const id of ids) {
+      await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+    }
+
+    for (const exercise of editingExercises) {
+      const sessionRes = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: newDate, exercise: exercise.name, notes: exercise.notes || '', batch_id: editingBatchId })
+      });
+      if (!sessionRes.ok) throw new Error('Error al guardar ejercicio');
+      const newSession = await sessionRes.json();
+
+      for (const serie of exercise.series) {
+        await fetch(`/api/sessions/${newSession.id}/series`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(serie)
+        });
+      }
+    }
+
+    closeEditModal();
+    loadStats();
+  } catch (err) {
+    showAlert('Error', err.message);
+  } finally {
+    saveBtn.disabled = false; saveBtn.textContent = 'Guardar cambios';
   }
 });
 
