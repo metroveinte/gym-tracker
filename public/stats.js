@@ -459,16 +459,16 @@ function renderProgressChart(sessions = null) {
 }
 
 function renderTopExercisesChart(sessions) {
-  const exerciseCounts = new Map();
+  const exerciseSeries = new Map();
 
   sessions.forEach(session => {
-    const count = exerciseCounts.get(session.exercise) || 0;
-    exerciseCounts.set(session.exercise, count + 1);
+    const seriesCount = session.series ? session.series.length : 0;
+    exerciseSeries.set(session.exercise, (exerciseSeries.get(session.exercise) || 0) + seriesCount);
   });
 
-  const sorted = Array.from(exerciseCounts.entries())
+  const sorted = Array.from(exerciseSeries.entries())
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+    .slice(0, 10);
 
   const labels = sorted.map(e => e[0]);
   const data = sorted.map(e => e[1]);
@@ -511,8 +511,8 @@ function renderMuscleGroupChart(sessions) {
   sessions.forEach(session => {
     const muscle = getMuscleGroup(session.exercise);
     if (muscle) {
-      const count = muscleCounts.get(muscle) || 0;
-      muscleCounts.set(muscle, count + 1);
+      const seriesCount = session.series ? session.series.length : 0;
+      muscleCounts.set(muscle, (muscleCounts.get(muscle) || 0) + seriesCount);
     }
   });
 
