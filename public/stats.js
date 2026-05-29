@@ -481,7 +481,7 @@ function renderTopExercisesChart(sessions) {
   }
 
   topExercisesChart = new Chart(ctx, {
-    type: 'doughnut',
+    type: 'bar',
     data: {
       labels: labels,
       datasets: [
@@ -489,16 +489,30 @@ function renderTopExercisesChart(sessions) {
           data: data,
           backgroundColor: backgroundColors,
           borderColor: '#2a2a2a',
-          borderWidth: 2
+          borderWidth: 1
         }
       ]
     },
     options: {
+      indexAxis: 'y',
       responsive: true,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false,
       plugins: {
-        legend: {
-          labels: { color: '#ffffff' }
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${ctx.parsed.x} series`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#aaaaaa', precision: 0 },
+          grid: { color: '#333333' }
+        },
+        y: {
+          ticks: { color: '#ffffff', font: { size: 11 } },
+          grid: { display: false }
         }
       }
     }
@@ -546,7 +560,7 @@ function renderMuscleGroupChart(sessions) {
     },
     options: {
       responsive: true,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: {
           labels: { color: '#ffffff' }

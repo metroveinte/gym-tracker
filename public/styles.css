@@ -233,6 +233,8 @@ input,
 textarea,
 button {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   font: inherit;
 }
 
@@ -685,7 +687,7 @@ th {
   .charts-grid { gap: 12px !important; }
 
   /* Charts height */
-  .chart-container { height: 240px; }
+  .chart-container { height: 320px; }
 
   /* Period select */
   .period-select {
