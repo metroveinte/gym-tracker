@@ -1056,3 +1056,18 @@ input[type="checkbox"]:disabled {
   background: #555;
   color: #fff;
 }
+
+/* ── Utility ─────────────────────────────────────────────────────────────── */
+.hidden {
+  display: none !important;
+}
+
+/* ── Nutrition hub cards ─────────────────────────────────────────────────── */
+.nutrition-hub-card {
+  cursor: pointer;
+  color: inherit;
+}
+
+.nutrition-hub-card:hover {
+  transform: translateY(-5px);
+}
