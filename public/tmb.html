@@ -36,14 +36,18 @@
           <h2 style="margin:0;">Resultado</h2>
           <button id="recalc-btn" class="btn-secondary" style="width:auto; margin:0; padding:8px 18px;">Recalcular</button>
         </div>
-        <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px,1fr));">
           <div class="stat-item">
             <span class="stat-label">TMB (Basal)</span>
             <span class="stat-value" id="result-bmr">-</span>
           </div>
           <div class="stat-item">
-            <span class="stat-label">TDEE (con actividad)</span>
-            <span class="stat-value" id="result-tdee" style="color:#ff0000;">-</span>
+            <span class="stat-label">TDEE (mantenimiento)</span>
+            <span class="stat-value" id="result-tdee">-</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Calorías objetivo</span>
+            <span class="stat-value" id="result-target" style="color:#ff0000;">-</span>
           </div>
         </div>
         <p style="color:#888; font-size:0.8rem; margin-top:16px; margin-bottom:0;">kcal/día · Fórmula Mifflin-St. Jeor</p>
@@ -57,6 +61,7 @@
           <div class="stat-item"><span class="stat-label">Altura</span><span class="stat-value" id="data-height">-</span></div>
           <div class="stat-item"><span class="stat-label">Peso</span><span class="stat-value" id="data-weight">-</span></div>
           <div class="stat-item"><span class="stat-label">Nivel de actividad</span><span class="stat-value" id="data-activity">-</span></div>
+          <div class="stat-item"><span class="stat-label">Objetivo</span><span class="stat-value" id="data-goal">-</span></div>
         </div>
       </div>
     </div>
@@ -98,6 +103,15 @@
             <option value="1.55" selected>Moderadamente activo — ejercicio 3-5 días/semana</option>
             <option value="1.725">Muy activo — ejercicio intenso 6-7 días/semana</option>
             <option value="1.9">Extremadamente activo — trabajo físico muy duro o 2 entrenos/día</option>
+          </select>
+        </label>
+        <label>
+          Objetivo
+          <select id="tmb-goal" style="margin-top:8px;">
+            <option value="deficit">Pérdida de grasa (-20%)</option>
+            <option value="recomp" selected>Recomposición corporal (mantenimiento)</option>
+            <option value="gain">Ganancia muscular (+10%)</option>
+            <option value="bulk">Volumen muscular (+15%)</option>
           </select>
         </label>
       </div>

@@ -6,6 +6,20 @@ const ACTIVITY_LABELS = {
   '1.9':   'Extremadamente activo — trabajo físico muy duro o 2 entrenos/día'
 };
 
+const GOAL_LABELS = {
+  'deficit': 'Pérdida de grasa (-20%)',
+  'recomp':  'Recomposición corporal (mantenimiento)',
+  'gain':    'Ganancia muscular (+10%)',
+  'bulk':    'Volumen muscular (+15%)'
+};
+
+const GOAL_FACTORS = {
+  'deficit': 0.80,
+  'recomp':  1.00,
+  'gain':    1.10,
+  'bulk':    1.15
+};
+
 function openTmbModal() {
   document.getElementById('tmb-modal-overlay').classList.remove('hidden');
   document.getElementById('tmb-modal').classList.remove('hidden');
@@ -19,13 +33,17 @@ function closeTmbModal() {
 function displayProfile(profile) {
   document.getElementById('tmb-empty').classList.add('hidden');
   document.getElementById('tmb-result').classList.remove('hidden');
-  document.getElementById('result-bmr').textContent = Math.round(profile.bmr) + ' kcal';
-  document.getElementById('result-tdee').textContent = Math.round(profile.tdee) + ' kcal';
-  document.getElementById('data-gender').textContent = profile.gender === 'male' ? 'Hombre' : 'Mujer';
-  document.getElementById('data-age').textContent = profile.age + ' años';
-  document.getElementById('data-height').textContent = profile.height_cm + ' cm';
-  document.getElementById('data-weight').textContent = profile.weight_kg + ' kg';
+  document.getElementById('result-bmr').textContent    = Math.round(profile.bmr) + ' kcal';
+  document.getElementById('result-tdee').textContent   = Math.round(profile.tdee) + ' kcal';
+  document.getElementById('result-target').textContent = profile.target_calories
+    ? Math.round(profile.target_calories) + ' kcal'
+    : Math.round(profile.tdee) + ' kcal';
+  document.getElementById('data-gender').textContent   = profile.gender === 'male' ? 'Hombre' : 'Mujer';
+  document.getElementById('data-age').textContent      = profile.age + ' años';
+  document.getElementById('data-height').textContent   = profile.height_cm + ' cm';
+  document.getElementById('data-weight').textContent   = profile.weight_kg + ' kg';
   document.getElementById('data-activity').textContent = ACTIVITY_LABELS[String(profile.activity_factor)] || profile.activity_factor;
+  document.getElementById('data-goal').textContent     = GOAL_LABELS[profile.goal] || profile.goal || '—';
 }
 
 async function loadProfile() {
@@ -33,11 +51,9 @@ async function loadProfile() {
     const res = await fetch('/api/tdee');
     if (!res.ok) throw new Error();
     const profile = await res.json();
-    if (profile) {
-      displayProfile(profile);
-    }
+    if (profile) displayProfile(profile);
   } catch (e) {
-    // No profile saved yet — keep empty state
+    // No profile yet — keep empty state
   }
 }
 
@@ -45,14 +61,17 @@ document.getElementById('calc-btn-empty').addEventListener('click', openTmbModal
 document.getElementById('recalc-btn').addEventListener('click', openTmbModal);
 document.getElementById('tmb-modal-close').addEventListener('click', closeTmbModal);
 document.getElementById('tmb-modal-cancel').addEventListener('click', closeTmbModal);
-document.getElementById('tmb-modal-overlay').addEventListener('click', (e) => { if (e.target === document.getElementById('tmb-modal-overlay')) closeTmbModal(); });
+document.getElementById('tmb-modal-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('tmb-modal-overlay')) closeTmbModal();
+});
 
 document.getElementById('tmb-modal-save').addEventListener('click', async () => {
-  const gender = document.getElementById('tmb-gender').value;
-  const age = parseInt(document.getElementById('tmb-age').value, 10);
-  const height_cm = parseFloat(document.getElementById('tmb-height').value);
-  const weight_kg = parseFloat(document.getElementById('tmb-weight').value);
+  const gender          = document.getElementById('tmb-gender').value;
+  const age             = parseInt(document.getElementById('tmb-age').value, 10);
+  const height_cm       = parseFloat(document.getElementById('tmb-height').value);
+  const weight_kg       = parseFloat(document.getElementById('tmb-weight').value);
   const activity_factor = parseFloat(document.getElementById('tmb-activity').value);
+  const goal            = document.getElementById('tmb-goal').value;
 
   if (!age || !height_cm || !weight_kg || isNaN(age) || isNaN(height_cm) || isNaN(weight_kg)) {
     await showAlert('Datos incompletos', '<p style="color:#ccc;">Por favor, rellena todos los campos correctamente.</p>');
@@ -63,17 +82,18 @@ document.getElementById('tmb-modal-save').addEventListener('click', async () => 
   const bmr = gender === 'male'
     ? (10 * weight_kg) + (6.25 * height_cm) - (5 * age) + 5
     : (10 * weight_kg) + (6.25 * height_cm) - (5 * age) - 161;
-  const tdee = bmr * activity_factor;
+  const tdee             = bmr * activity_factor;
+  const target_calories  = tdee * (GOAL_FACTORS[goal] ?? 1.0);
 
   try {
     const res = await fetch('/api/tdee', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gender, age, height_cm, weight_kg, activity_factor, bmr, tdee })
+      body: JSON.stringify({ gender, age, height_cm, weight_kg, activity_factor, bmr, tdee, goal, target_calories })
     });
     if (!res.ok) throw new Error('Error al guardar');
     closeTmbModal();
-    displayProfile({ gender, age, height_cm, weight_kg, activity_factor, bmr, tdee });
+    displayProfile({ gender, age, height_cm, weight_kg, activity_factor, bmr, tdee, goal, target_calories });
   } catch (e) {
     await showAlert('Error', '<p style="color:#ccc;">No se pudo guardar el cálculo. Inténtalo de nuevo.</p>');
   }

@@ -328,18 +328,19 @@ app.get('/api/tdee', (req, res) => {
 });
 
 app.post('/api/tdee', (req, res) => {
-  const { gender, age, height_cm, weight_kg, activity_factor, bmr, tdee } = req.body;
+  const { gender, age, height_cm, weight_kg, activity_factor, bmr, tdee, goal, target_calories } = req.body;
   if (!gender || !age || !height_cm || !weight_kg || !activity_factor || !bmr || !tdee) {
     return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
   }
   db.run(
-    `INSERT INTO tdee_profile (id, gender, age, height_cm, weight_kg, activity_factor, bmr, tdee, updated_at)
-     VALUES (1, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `INSERT INTO tdee_profile (id, gender, age, height_cm, weight_kg, activity_factor, bmr, tdee, goal, target_calories, updated_at)
+     VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
      ON CONFLICT(id) DO UPDATE SET
        gender = excluded.gender, age = excluded.age, height_cm = excluded.height_cm,
        weight_kg = excluded.weight_kg, activity_factor = excluded.activity_factor,
-       bmr = excluded.bmr, tdee = excluded.tdee, updated_at = CURRENT_TIMESTAMP`,
-    [gender, age, height_cm, weight_kg, activity_factor, bmr, tdee],
+       bmr = excluded.bmr, tdee = excluded.tdee, goal = excluded.goal,
+       target_calories = excluded.target_calories, updated_at = CURRENT_TIMESTAMP`,
+    [gender, age, height_cm, weight_kg, activity_factor, bmr, tdee, goal || null, target_calories || null],
     function (err) {
       if (err) return res.status(500).json({ error: 'Error al guardar el perfil.' });
       res.json({ success: true, tdee });

@@ -92,6 +92,9 @@ db.serialize(() => {
     )
   `);
   db.run('CREATE INDEX IF NOT EXISTS idx_weight_log_date ON weight_log(date)');
+
+  db.run(`ALTER TABLE tdee_profile ADD COLUMN goal TEXT`, () => {});
+  db.run(`ALTER TABLE tdee_profile ADD COLUMN target_calories REAL`, () => {});
 });
 
 module.exports = db;
