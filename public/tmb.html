@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TMB - Gym Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <nav>
+      <a href="/" class="nav-link">Inicio</a>
+      <a href="/sessions" class="nav-link">Sesiones</a>
+      <a href="/stats" class="nav-link">Estadísticas</a>
+      <a href="/nutrition" class="nav-link active">Nutrición</a>
+    </nav>
+  </header>
+  <main class="container">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
+      <a href="/nutrition" style="color:#888; text-decoration:none; font-size:0.85rem;">← Nutrición</a>
+    </div>
+    <h1>Cálculo TMB</h1>
+
+    <div id="tmb-empty" class="card" style="text-align:center; padding:40px 20px;">
+      <div style="font-size:3rem; margin-bottom:16px;">🔥</div>
+      <p style="color:#999; margin-bottom:24px;">Aún no has calculado tu TMB. Introduce tus datos para obtener tus necesidades calóricas diarias.</p>
+      <button id="calc-btn-empty" class="btn-primary" style="width:auto; padding:12px 32px;">Calcular TMB</button>
+    </div>
+
+    <div id="tmb-result" class="hidden">
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:20px;">
+          <h2 style="margin:0;">Resultado</h2>
+          <button id="recalc-btn" class="btn-secondary" style="width:auto; margin:0; padding:8px 18px;">Recalcular</button>
+        </div>
+        <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+          <div class="stat-item">
+            <span class="stat-label">TMB (Basal)</span>
+            <span class="stat-value" id="result-bmr">-</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">TDEE (con actividad)</span>
+            <span class="stat-value" id="result-tdee" style="color:#ff0000;">-</span>
+          </div>
+        </div>
+        <p style="color:#888; font-size:0.8rem; margin-top:16px; margin-bottom:0;">kcal/día · Fórmula Mifflin-St. Jeor</p>
+      </div>
+
+      <div class="card">
+        <h2>Tus datos</h2>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap:12px;">
+          <div class="stat-item"><span class="stat-label">Género</span><span class="stat-value" id="data-gender" style="font-size:1rem;">-</span></div>
+          <div class="stat-item"><span class="stat-label">Edad</span><span class="stat-value" id="data-age" style="font-size:1rem;">-</span></div>
+          <div class="stat-item"><span class="stat-label">Altura</span><span class="stat-value" id="data-height" style="font-size:1rem;">-</span></div>
+          <div class="stat-item"><span class="stat-label">Peso</span><span class="stat-value" id="data-weight" style="font-size:1rem;">-</span></div>
+          <div class="stat-item" style="grid-column: 1 / -1;"><span class="stat-label">Nivel de actividad</span><span class="stat-value" id="data-activity" style="font-size:0.95rem;">-</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- TMB Modal -->
+  <div id="tmb-modal-overlay" class="modal-overlay hidden"></div>
+  <div id="tmb-modal" class="modal hidden" style="max-width:500px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Calcular TMB</h2>
+        <button type="button" class="modal-close" id="tmb-modal-close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:20px 25px;">
+        <label>
+          Género
+          <select id="tmb-gender" style="margin-top:8px;">
+            <option value="male">Hombre</option>
+            <option value="female">Mujer</option>
+          </select>
+        </label>
+        <label>
+          Edad (años)
+          <input type="number" id="tmb-age" min="10" max="120" placeholder="Ej: 30" />
+        </label>
+        <label>
+          Altura (cm)
+          <input type="number" id="tmb-height" min="100" max="250" placeholder="Ej: 175" />
+        </label>
+        <label>
+          Peso actual (kg)
+          <input type="number" id="tmb-weight" min="30" max="300" step="0.1" placeholder="Ej: 75" />
+        </label>
+        <label>
+          Nivel de actividad
+          <select id="tmb-activity" style="margin-top:8px;">
+            <option value="1.2">Sedentario — sin ejercicio o muy poco</option>
+            <option value="1.375">Ligeramente activo — ejercicio 1-3 días/semana</option>
+            <option value="1.55" selected>Moderadamente activo — ejercicio 3-5 días/semana</option>
+            <option value="1.725">Muy activo — ejercicio intenso 6-7 días/semana</option>
+            <option value="1.9">Extremadamente activo — trabajo físico muy duro o 2 entrenos/día</option>
+          </select>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="tmb-modal-cancel" class="btn-secondary">Cancelar</button>
+        <button type="button" id="tmb-modal-save" class="btn-primary">Calcular y guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>Inicio</span>
+    </a>
+    <a href="/sessions" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></svg>
+      <span>Sesiones</span>
+    </a>
+    <a href="/stats" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zM16.2 13h2.8v6h-2.8v-6z"/></svg>
+      <span>Stats</span>
+    </a>
+    <a href="/nutrition" class="bottom-nav-item active">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg>
+      <span>Nutri</span>
+    </a>
+  </nav>
+  <script src="dialog.js"></script>
+  <script src="tmb.js"></script>
+</body>
+</html>

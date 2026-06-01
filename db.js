@@ -67,6 +67,31 @@ db.serialize(() => {
   for (const name of Object.keys(PREDEFINED_EXERCISES)) {
     db.run(`UPDATE exercises SET is_predefined = 1 WHERE name = ? COLLATE NOCASE AND is_predefined = 0`, [name]);
   }
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS tdee_profile (
+      id INTEGER PRIMARY KEY,
+      gender TEXT NOT NULL,
+      age INTEGER NOT NULL,
+      height_cm REAL NOT NULL,
+      weight_kg REAL NOT NULL,
+      activity_factor REAL NOT NULL,
+      bmr REAL NOT NULL,
+      tdee REAL NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS weight_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      weight_kg REAL NOT NULL,
+      comments TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  db.run('CREATE INDEX IF NOT EXISTS idx_weight_log_date ON weight_log(date)');
 });
 
 module.exports = db;

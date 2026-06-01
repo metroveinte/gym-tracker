@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro de Peso - Gym Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="header">
+    <nav>
+      <a href="/" class="nav-link">Inicio</a>
+      <a href="/sessions" class="nav-link">Sesiones</a>
+      <a href="/stats" class="nav-link">Estadísticas</a>
+      <a href="/nutrition" class="nav-link active">Nutrición</a>
+    </nav>
+  </header>
+  <main class="container">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
+      <a href="/nutrition" style="color:#888; text-decoration:none; font-size:0.85rem;">← Nutrición</a>
+    </div>
+    <h1>Registro de Peso</h1>
+
+    <div class="card">
+      <h2>Evolución</h2>
+      <div class="chart-container" style="height:280px;">
+        <canvas id="weightChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">Historial</h2>
+        <button id="add-weight-btn" class="btn-primary" style="width:auto; margin:0; padding:10px 20px;">+ Añadir</button>
+      </div>
+      <div class="table-wrapper">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th style="text-align:center;">Peso (kg)</th>
+              <th style="text-align:center;">Cambio</th>
+              <th>Comentarios</th>
+              <th style="width:50px;"></th>
+            </tr>
+          </thead>
+          <tbody id="weight-body"></tbody>
+        </table>
+        <p id="no-weight-records" style="display:none; color:#999; margin-top:15px;">No hay registros de peso aún.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add weight modal -->
+  <div id="weight-modal-overlay" class="modal-overlay hidden"></div>
+  <div id="weight-modal" class="modal hidden" style="max-width:460px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Añadir registro de peso</h2>
+        <button type="button" class="modal-close" id="weight-modal-close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:20px 25px;">
+        <label>
+          Fecha
+          <input type="date" id="weight-date" />
+        </label>
+        <label>
+          Peso (kg)
+          <input type="number" id="weight-value" min="20" max="300" step="0.1" placeholder="Ej: 75.5" />
+        </label>
+        <label>
+          Comentarios <span style="color:#888; font-weight:400;">(Opcional)</span>
+          <textarea id="weight-comments" rows="2" placeholder="Ej: después de dormir, en ayunas..." style="resize:vertical;"></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="weight-modal-cancel" class="btn-secondary">Cancelar</button>
+        <button type="button" id="weight-modal-save" class="btn-primary">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>Inicio</span>
+    </a>
+    <a href="/sessions" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></svg>
+      <span>Sesiones</span>
+    </a>
+    <a href="/stats" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zM16.2 13h2.8v6h-2.8v-6z"/></svg>
+      <span>Stats</span>
+    </a>
+    <a href="/nutrition" class="bottom-nav-item active">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg>
+      <span>Nutri</span>
+    </a>
+  </nav>
+  <script src="dialog.js"></script>
+  <script src="weight.js"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nutrición - Gym Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <nav>
+      <a href="/" class="nav-link">Inicio</a>
+      <a href="/sessions" class="nav-link">Sesiones</a>
+      <a href="/stats" class="nav-link">Estadísticas</a>
+      <a href="/nutrition" class="nav-link active">Nutrición</a>
+    </nav>
+  </header>
+  <main class="container">
+    <h1>Nutrición</h1>
+    <div class="features" style="grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); margin-top: 0;">
+      <a href="/tmb" class="feature-card nutrition-hub-card" style="text-decoration:none; display:block;">
+        <div class="feature-icon">🔥</div>
+        <h3>CÁLCULO TMB</h3>
+        <p>Calcula tu Tasa Metabólica Basal y necesidades calóricas diarias con la fórmula Mifflin-St. Jeor.</p>
+      </a>
+      <a href="/weight-log" class="feature-card nutrition-hub-card" style="text-decoration:none; display:block;">
+        <div class="feature-icon">⚖️</div>
+        <h3>REGISTRO DE PESO</h3>
+        <p>Registra tu evolución de peso con historial, gráficos y comentarios.</p>
+      </a>
+    </div>
+  </main>
+  <nav class="bottom-nav">
+    <a href="/" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>Inicio</span>
+    </a>
+    <a href="/sessions" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></svg>
+      <span>Sesiones</span>
+    </a>
+    <a href="/stats" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zM16.2 13h2.8v6h-2.8v-6z"/></svg>
+      <span>Stats</span>
+    </a>
+    <a href="/nutrition" class="bottom-nav-item active">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg>
+      <span>Nutri</span>
+    </a>
+  </nav>
+</body>
+</html>

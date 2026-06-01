@@ -315,6 +315,71 @@ app.get('/stats', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'stats.html'));
 });
 
+app.get('/nutrition', (req, res) => res.sendFile(path.join(__dirname, 'public', 'nutrition.html')));
+app.get('/tmb', (req, res) => res.sendFile(path.join(__dirname, 'public', 'tmb.html')));
+app.get('/weight-log', (req, res) => res.sendFile(path.join(__dirname, 'public', 'weight.html')));
+
+// TDEE profile (single row, id=1)
+app.get('/api/tdee', (req, res) => {
+  db.get('SELECT * FROM tdee_profile WHERE id = 1', [], (err, row) => {
+    if (err) return res.status(500).json({ error: 'Error al leer el perfil.' });
+    res.json(row || null);
+  });
+});
+
+app.post('/api/tdee', (req, res) => {
+  const { gender, age, height_cm, weight_kg, activity_factor, bmr, tdee } = req.body;
+  if (!gender || !age || !height_cm || !weight_kg || !activity_factor || !bmr || !tdee) {
+    return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
+  }
+  db.run(
+    `INSERT INTO tdee_profile (id, gender, age, height_cm, weight_kg, activity_factor, bmr, tdee, updated_at)
+     VALUES (1, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+     ON CONFLICT(id) DO UPDATE SET
+       gender = excluded.gender, age = excluded.age, height_cm = excluded.height_cm,
+       weight_kg = excluded.weight_kg, activity_factor = excluded.activity_factor,
+       bmr = excluded.bmr, tdee = excluded.tdee, updated_at = CURRENT_TIMESTAMP`,
+    [gender, age, height_cm, weight_kg, activity_factor, bmr, tdee],
+    function (err) {
+      if (err) return res.status(500).json({ error: 'Error al guardar el perfil.' });
+      res.json({ success: true, tdee });
+    }
+  );
+});
+
+// Weight log
+app.get('/api/weight', (req, res) => {
+  db.all('SELECT * FROM weight_log ORDER BY date ASC, id ASC', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Error al leer el registro de pesos.' });
+    res.json(rows);
+  });
+});
+
+app.post('/api/weight', (req, res) => {
+  const { date, weight_kg, comments } = req.body;
+  if (!date || weight_kg === undefined || weight_kg === null) {
+    return res.status(400).json({ error: 'Fecha y peso son obligatorios.' });
+  }
+  db.run(
+    'INSERT INTO weight_log (date, weight_kg, comments) VALUES (?, ?, ?)',
+    [date, parseFloat(weight_kg), comments || ''],
+    function (err) {
+      if (err) return res.status(500).json({ error: 'Error al guardar el peso.' });
+      res.json({ id: this.lastID, date, weight_kg: parseFloat(weight_kg), comments: comments || '' });
+    }
+  );
+});
+
+app.delete('/api/weight/:id', (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  if (isNaN(idNum) || idNum <= 0) return res.status(400).json({ error: 'ID inválido.' });
+  db.run('DELETE FROM weight_log WHERE id = ?', [idNum], function (err) {
+    if (err) return res.status(500).json({ error: 'Error al eliminar el registro.' });
+    if (this.changes === 0) return res.status(404).json({ error: 'Registro no encontrado.' });
+    res.json({ success: true });
+  });
+});
+
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Endpoint no encontrado.' });
 });
