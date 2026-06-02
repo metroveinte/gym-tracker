@@ -95,6 +95,16 @@ db.serialize(() => {
 
   db.run(`ALTER TABLE tdee_profile ADD COLUMN goal TEXT`, () => {});
   db.run(`ALTER TABLE tdee_profile ADD COLUMN target_calories REAL`, () => {});
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS coach_plans (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      valid_until  TEXT NOT NULL,
+      plan_json    TEXT NOT NULL,
+      raw_response TEXT
+    )
+  `);
 });
 
 module.exports = db;

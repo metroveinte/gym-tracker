@@ -792,6 +792,21 @@ tr:last-child td { border-bottom: none; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Coach spinner ───────────────────────────────────────────────────────────── */
+.coach-spinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--border-mid);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: coachSpin 700ms linear infinite;
+}
+
+@keyframes coachSpin {
+  to { transform: rotate(360deg); }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .stat-item:hover { border-color: var(--border-mid); }
 }
