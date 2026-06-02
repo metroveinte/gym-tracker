@@ -590,7 +590,7 @@ tr:last-child td { border-bottom: none; }
   border-radius: 0 0 var(--r-sm) var(--r-sm);
   max-height: 280px;
   overflow-y: auto;
-  z-index: 100;
+  z-index: 210;
   box-shadow: 0 16px 40px rgba(0,0,0,0.5);
 }
 
@@ -731,6 +731,16 @@ tr:last-child td { border-bottom: none; }
 
 .modal-body label { margin-bottom: 18px; }
 .modal-body input { width: 100%; }
+
+/* Exercise modal: let the dropdown overflow the body/modal without clipping */
+#exercise-modal,
+#exercise-modal .modal-body {
+  overflow: visible;
+}
+
+#exercise-modal .modal-body {
+  min-height: 320px;
+}
 
 #first-serie-form label { margin-bottom: 14px; }
 
