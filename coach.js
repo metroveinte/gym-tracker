@@ -1,6 +1,6 @@
 const db = require('./db');
 
-const CLAUDE_MODEL  = 'claude-opus-4-8';
+const CLAUDE_MODEL  = 'claude-sonnet-4-6';
 const CLAUDE_API    = 'https://api.anthropic.com/v1/messages';
 const PLAN_WEEKS    = 4;
 const PLAN_DAYS     = PLAN_WEEKS * 7;
