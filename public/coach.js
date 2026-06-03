@@ -155,21 +155,48 @@ function renderPlan(plan, generatedAt, validUntil) {
   document.getElementById('plan-structure').textContent = wp.structure || '';
   document.getElementById('plan-rationale').textContent = wp.rationale || '';
 
-  document.getElementById('plan-days').innerHTML = (wp.days || []).map(d => `
+  document.getElementById('plan-days').innerHTML = (wp.days || []).map(d => {
+    const mins = d.estimated_minutes;
+    const timeChip = mins
+      ? `<span style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700;">⏱ ~${mins} min</span>`
+      : '';
+
+    const exerciseRows = (d.exercises || []).map(ex => {
+      const ww = ex.weekly_weights || {};
+      const hasWeights = Object.keys(ww).length > 0;
+      const weekKeys = ['week1','week2','week3','week4'];
+      const weightRow = hasWeights ? `
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;margin-bottom:2px;">
+          ${weekKeys.map((k,i) => ww[k] ? `
+            <span style="font-size:.75rem;padding:2px 8px;border-radius:4px;background:var(--bg);border:1px solid var(--border-mid);color:${i===3?'#888':'#ccc'};">
+              S${i+1} <strong style="color:${i===3?'#666':'var(--accent)'};">${ww[k]}</strong>${i===3?' ↓':''}
+            </span>` : '').join('')}
+        </div>` : '';
+
+      return `
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span style="color:var(--text);font-size:.88rem;font-weight:600;">${ex.name}</span>
+            <span style="color:#888;font-size:.82rem;white-space:nowrap;margin-left:10px;">${ex.sets}×${ex.reps}${ex.notes ? ' · <em style=color:#666>' + ex.notes + '</em>' : ''}</span>
+          </div>
+          ${weightRow}
+        </div>`;
+    }).join('');
+
+    return `
     <div style="border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;">
-      <div style="background:var(--bg-raised);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-weight:700;font-size:.95rem;">${d.day}</span>
-        <span style="color:#888;font-size:.82rem;">${d.focus}</span>
+      <div style="background:var(--bg-raised);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-weight:700;font-size:.95rem;">${d.day}</span>
+          <span style="color:#888;font-size:.82rem;">${d.focus}</span>
+        </div>
+        ${timeChip}
       </div>
-      ${(d.exercises || []).length ? `
-      <div style="padding:10px 14px;">
-        ${(d.exercises || []).map(ex => `
-          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border);">
-            <span style="color:var(--text);font-size:.88rem;">${ex.name}</span>
-            <span style="color:#888;font-size:.82rem;white-space:nowrap;margin-left:10px;">${ex.sets}×${ex.reps}${ex.notes ? ' · ' + ex.notes : ''}</span>
-          </div>`).join('')}
-      </div>` : `<div style="padding:10px 14px;color:#555;font-size:.85rem;">Descanso activo</div>`}
-    </div>`).join('');
+      ${exerciseRows.length
+        ? `<div style="padding:4px 14px 10px;">${exerciseRows}</div>`
+        : `<div style="padding:10px 14px;color:#555;font-size:.85rem;">Descanso activo</div>`}
+    </div>`;
+  }).join('');
 
   const prog = plan.progression || {};
   document.getElementById('progression-weeks').innerHTML =

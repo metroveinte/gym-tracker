@@ -156,7 +156,11 @@ ${topExercises.length ? topExercises.join(', ') : 'Ninguno registrado.'}
 ${recentSessions || '  Sin sesiones registradas aún.'}
 
 === INSTRUCCIONES ===
-Genera una respuesta JSON con exactamente esta estructura (sin texto fuera del JSON):
+Genera una respuesta JSON con exactamente esta estructura (sin texto fuera del JSON).
+
+REGLAS IMPORTANTES:
+- estimated_minutes: calcula el tiempo real de sesión sumando (sets_totales × 1.5 min de ejecución) + (sets_totales × 2.5 min de descanso) + 12 min de overhead (calentamiento, buscar máquinas, transiciones). Redondea a múltiplos de 5.
+- weekly_weights: usa el historial real del usuario para estimar el peso de partida. Si no hay datos, pon un peso conservador. Aplica progresión lineal: +2.5-5 kg/semana en ejercicios compuestos, +1.25-2.5 kg en aislamiento. Semana 4 = descarga al 60% de semana 3. Para ejercicios de peso corporal pon "PC" o variante más difícil. Incluye siempre la unidad (kg).
 
 {
   "analysis": {
@@ -169,8 +173,23 @@ Genera una respuesta JSON con exactamente esta estructura (sin texto fuera del J
     "structure": "Descripción del split elegido (ej: Push/Pull/Legs 3 días/semana)",
     "rationale": "Por qué este split es adecuado para su objetivo.",
     "days": [
-      { "day": "Lunes", "focus": "Push", "exercises": [
-          { "name": "Nombre ejercicio", "sets": 4, "reps": "8-10", "notes": "nota opcional" }
+      {
+        "day": "Lunes",
+        "focus": "Push",
+        "estimated_minutes": 65,
+        "exercises": [
+          {
+            "name": "Nombre ejercicio",
+            "sets": 4,
+            "reps": "8-10",
+            "notes": "nota opcional",
+            "weekly_weights": {
+              "week1": "60kg",
+              "week2": "65kg",
+              "week3": "67.5kg",
+              "week4": "55kg"
+            }
+          }
         ]
       }
     ]
