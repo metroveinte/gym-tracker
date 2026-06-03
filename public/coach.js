@@ -129,9 +129,8 @@ function renderPlan(plan, generatedAt, validUntil) {
   document.getElementById('plan-days-left').textContent    =
     daysLeft > 0 ? `${daysLeft} días restantes` : 'Plan vencido';
 
-  if (daysLeft <= 0) {
-    document.getElementById('regenerate-btn').style.display = '';
-  }
+  // Always visible for now (testing); restrict to daysLeft <= 0 in production
+  document.getElementById('regenerate-btn').style.display = '';
 
   const a = plan.analysis || {};
   document.getElementById('analysis-summary').textContent = a.summary || '';

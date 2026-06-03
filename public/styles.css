@@ -310,6 +310,34 @@ body {
   padding: 40px 20px;
 }
 
+/* ── Back button ─────────────────────────────────────────────────────────────── */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+  transition: color 140ms ease, gap 160ms var(--ease-out);
+  margin-bottom: 4px;
+}
+
+.back-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  transition: transform 160ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .back-btn:hover { color: var(--accent-h); gap: 12px; }
+  .back-btn:hover svg { transform: translateX(-3px); }
+}
+
+.back-btn:active { transform: scale(0.97); }
+
 h1 {
   font-family: 'Bebas Neue', cursive;
   font-size: clamp(2.2rem, 4vw, 3.6rem);
