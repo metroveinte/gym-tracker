@@ -13,11 +13,10 @@ function fmt(dateStr) {
 
 function openCheckin(isRegeneration) {
   return new Promise((resolve) => {
-    // Reset selections
     document.querySelectorAll('.checkin-opt').forEach(b => b.classList.remove('selected'));
+    document.getElementById('checkin-note').value = '';
     document.getElementById('checkin-confirm').disabled = true;
 
-    // Show/hide previous plan question
     document.getElementById('checkin-prev-plan').style.display = isRegeneration ? '' : 'none';
     document.getElementById('checkin-title').textContent = isRegeneration
       ? 'Revisión antes de regenerar'
@@ -40,14 +39,16 @@ function openCheckin(isRegeneration) {
         const sel = group.querySelector('.checkin-opt.selected');
         if (sel) answers[key] = sel.dataset.value;
       });
+      const note = document.getElementById('checkin-note').value.trim();
+      if (note) answers.coach_note = note;
       return answers;
     }
 
     function checkComplete() {
-      // All visible groups must have a selection
-      const groups = [...document.querySelectorAll('.checkin-group')]
-        .filter(g => g.style.display !== 'none');
-      const allDone = groups.every(g => g.querySelector('.checkin-opt.selected'));
+      // Only groups with .checkin-options that are visible must be answered
+      const visibleGroups = [...document.querySelectorAll('.checkin-group')]
+        .filter(g => g.style.display !== 'none' && g.querySelector('.checkin-options'));
+      const allDone = visibleGroups.every(g => g.querySelector('.checkin-opt.selected'));
       document.getElementById('checkin-confirm').disabled = !allDone;
     }
 
@@ -82,11 +83,111 @@ function openCheckin(isRegeneration) {
   });
 }
 
+// ── Compliance check ──────────────────────────────────────────────────────────
+
+function computeCompliance(plan, sessions, generatedAt) {
+  const generated   = new Date(generatedAt);
+  const today       = new Date();
+  const daysPassed  = Math.floor((today - generated) / 86400000);
+  const currentWeek = Math.min(4, Math.max(1, Math.floor(daysPassed / 7) + 1));
+  const weekKey     = `week${currentWeek}`;
+
+  // Sessions window for current week
+  const weekStart = new Date(generated);
+  weekStart.setDate(weekStart.getDate() + (currentWeek - 1) * 7);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  // Build exercise → max weight used this week
+  const logged = {};
+  for (const s of sessions) {
+    const d = new Date(s.date + 'T00:00:00');
+    if (d < weekStart || d >= weekEnd) continue;
+    for (const serie of (s.series || [])) {
+      if (serie.weight == null) continue;
+      const key = s.exercise.toLowerCase().trim();
+      logged[key] = Math.max(logged[key] || 0, serie.weight);
+    }
+  }
+
+  const results = [];
+  for (const day of (plan.weekly_plan?.days || [])) {
+    for (const ex of (day.exercises || [])) {
+      const targetStr = ex.weekly_weights?.[weekKey];
+      if (!targetStr) continue;
+      const targetNum = parseFloat(targetStr);
+      if (isNaN(targetNum)) continue; // bodyweight / PC — skip
+
+      const key    = ex.name.toLowerCase().trim();
+      const actual = logged[key];
+      const status = actual === undefined ? 'pending'
+                   : actual >= targetNum  ? 'ok'
+                   :                        'low';
+
+      results.push({ exercise: ex.name, day: day.day, target: targetStr, actual, status });
+    }
+  }
+
+  return { currentWeek, results };
+}
+
+function renderCompliance(plan, sessions, generatedAt) {
+  if (!sessions || !sessions.length) return;
+
+  const { currentWeek, results } = computeCompliance(plan, sessions, generatedAt);
+  if (!results.length) return;
+
+  document.getElementById('compliance-week-label').textContent =
+    `Semana ${currentWeek} de 4`;
+
+  const ok      = results.filter(r => r.status === 'ok').length;
+  const total   = results.filter(r => r.status !== 'pending').length;
+  const pending = results.filter(r => r.status === 'pending').length;
+
+  const statusIcon  = { ok: '✓', low: '!', pending: '·' };
+  const statusColor = { ok: '#4caf50', low: '#e5303a', pending: '#555' };
+  const statusLabel = { ok: 'En objetivo', low: 'Por debajo', pending: 'Sin registrar' };
+
+  let summaryHtml = '';
+  if (total > 0) {
+    const pct = Math.round((ok / total) * 100);
+    summaryHtml = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="flex:1;background:var(--bg-raised);border-radius:4px;height:6px;overflow:hidden;">
+          <div style="height:100%;background:${ok===total?'#4caf50':'var(--accent)'};border-radius:4px;width:${pct}%;transition:width 600ms var(--ease-out);"></div>
+        </div>
+        <span style="color:#888;font-size:.78rem;white-space:nowrap;">${ok}/${total} en objetivo</span>
+      </div>`;
+  }
+
+  const rows = results.map(r => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:.75rem;font-weight:700;color:${statusColor[r.status]};min-width:14px;">${statusIcon[r.status]}</span>
+        <div>
+          <span style="color:var(--text);font-size:.86rem;">${r.exercise}</span>
+          <span style="color:#555;font-size:.76rem;margin-left:6px;">${r.day}</span>
+        </div>
+      </div>
+      <div style="text-align:right;white-space:nowrap;">
+        <span style="color:#888;font-size:.76rem;">objetivo </span>
+        <span style="color:var(--accent);font-size:.82rem;font-weight:700;">${r.target}</span>
+        ${r.actual !== undefined
+          ? `<span style="color:#555;font-size:.76rem;margin-left:6px;">· real ${r.actual}kg</span>`
+          : `<span style="color:#555;font-size:.76rem;margin-left:6px;">${statusLabel[r.status]}</span>`}
+      </div>
+    </div>`).join('');
+
+  document.getElementById('compliance-list').innerHTML = summaryHtml + rows;
+  show('compliance-block');
+}
+
 // ── Generate ──────────────────────────────────────────────────────────────────
 
 async function generate(isRegeneration = false) {
   const answers = await openCheckin(isRegeneration);
-  if (!answers) return; // user cancelled
+  if (!answers) return;
 
   hide('state-plan');
   hide('state-no-key');
@@ -113,7 +214,7 @@ async function generate(isRegeneration = false) {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
-function renderPlan(plan, generatedAt, validUntil) {
+function renderPlan(plan, generatedAt, validUntil, sessions) {
   const genDate   = generatedAt ? fmt(generatedAt.slice(0, 10)) : '—';
   const validDate = validUntil  ? fmt(validUntil) : '—';
   document.getElementById('plan-meta').textContent =
@@ -129,7 +230,7 @@ function renderPlan(plan, generatedAt, validUntil) {
   document.getElementById('plan-days-left').textContent    =
     daysLeft > 0 ? `${daysLeft} días restantes` : 'Plan vencido';
 
-  // Always visible for now (testing); restrict to daysLeft <= 0 in production
+  // Always visible for testing; restrict to daysLeft <= 0 in production
   document.getElementById('regenerate-btn').style.display = '';
 
   const a = plan.analysis || {};
@@ -164,10 +265,9 @@ function renderPlan(plan, generatedAt, validUntil) {
     const exerciseRows = (d.exercises || []).map(ex => {
       const ww = ex.weekly_weights || {};
       const hasWeights = Object.keys(ww).length > 0;
-      const weekKeys = ['week1','week2','week3','week4'];
       const weightRow = hasWeights ? `
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;margin-bottom:2px;">
-          ${weekKeys.map((k,i) => ww[k] ? `
+          ${['week1','week2','week3','week4'].map((k,i) => ww[k] ? `
             <span style="font-size:.75rem;padding:2px 8px;border-radius:4px;background:var(--bg);border:1px solid var(--border-mid);color:${i===3?'#888':'#ccc'};">
               S${i+1} <strong style="color:${i===3?'#666':'var(--accent)'};">${ww[k]}</strong>${i===3?' ↓':''}
             </span>` : '').join('')}
@@ -206,12 +306,8 @@ function renderPlan(plan, generatedAt, validUntil) {
         <span style="color:#ccc;font-size:.88rem;line-height:1.5;">${prog[k] || ''}</span>
       </div>`).join('');
 
-  if (plan.nutrition_notes) {
-    document.getElementById('nutrition-notes').textContent = plan.nutrition_notes;
-    show('nutrition-block');
-  } else {
-    hide('nutrition-block');
-  }
+  // Compliance check (after plan is rendered)
+  renderCompliance(plan, sessions, generatedAt);
 
   hide('generate-block');
   show('state-plan');
@@ -221,9 +317,17 @@ function renderPlan(plan, generatedAt, validUntil) {
 
 async function load() {
   try {
-    const res  = await fetch('/api/coach/plan');
-    if (res.status === 503) { show('state-no-key'); return; }
-    const data = await res.json();
+    const [planRes, sessionsRes] = await Promise.all([
+      fetch('/api/coach/plan'),
+      fetch('/api/sessions'),
+    ]);
+
+    if (planRes.status === 503) { show('state-no-key'); return; }
+
+    const [data, sessions] = await Promise.all([
+      planRes.json(),
+      sessionsRes.json(),
+    ]);
 
     if (!data) {
       show('state-plan');
@@ -231,7 +335,7 @@ async function load() {
       return;
     }
 
-    renderPlan(data.plan_json, data.generated_at, data.valid_until);
+    renderPlan(data.plan_json, data.generated_at, data.valid_until, sessions);
   } catch (e) {
     show('state-no-data');
   }

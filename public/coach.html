@@ -107,16 +107,19 @@
         <div id="plan-days" style="display:flex; flex-direction:column; gap:12px;"></div>
       </div>
 
+      <!-- Seguimiento semanal -->
+      <div id="compliance-block" class="card hidden" style="margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+          <h2 style="margin:0;">Seguimiento</h2>
+          <span id="compliance-week-label" style="color:var(--accent); font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;"></span>
+        </div>
+        <div id="compliance-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
+
       <!-- Progresión -->
       <div class="card" style="margin-bottom:16px;">
         <h2 style="margin-bottom:16px;">Progresión 4 semanas</h2>
         <div id="progression-weeks" style="display:flex; flex-direction:column; gap:10px;"></div>
-      </div>
-
-      <!-- Nota de nutrición -->
-      <div id="nutrition-block" class="card" style="margin-bottom:16px;">
-        <h2 style="margin-bottom:10px;">Nutrición</h2>
-        <p id="nutrition-notes" style="color:#ccc; line-height:1.6; margin:0;"></p>
       </div>
 
       <!-- Botón generar plan (estado vacío) -->
@@ -180,27 +183,6 @@
           </div>
         </div>
 
-        <div class="checkin-group">
-          <p class="checkin-label">¿Qué equipamiento tienes disponible?</p>
-          <div class="checkin-options" data-key="equipment">
-            <button class="checkin-opt" data-value="gym_full">Gimnasio completo</button>
-            <button class="checkin-opt" data-value="gym_limited">Gimnasio con limitaciones</button>
-            <button class="checkin-opt" data-value="dumbbells">Solo mancuernas</button>
-            <button class="checkin-opt" data-value="bodyweight">Peso corporal</button>
-          </div>
-        </div>
-
-        <div class="checkin-group">
-          <p class="checkin-label">¿Tienes alguna molestia física actualmente?</p>
-          <div class="checkin-options" data-key="physical_issues">
-            <button class="checkin-opt" data-value="none">Ninguna</button>
-            <button class="checkin-opt" data-value="back">Espalda / lumbar</button>
-            <button class="checkin-opt" data-value="shoulders">Hombros</button>
-            <button class="checkin-opt" data-value="knees">Rodillas / caderas</button>
-            <button class="checkin-opt" data-value="other">Otra molestia</button>
-          </div>
-        </div>
-
         <!-- Solo en regeneración -->
         <div class="checkin-group" id="checkin-prev-plan" style="display:none;">
           <p class="checkin-label">¿Cómo fue el plan anterior?</p>
@@ -210,6 +192,13 @@
             <button class="checkin-opt" data-value="hard">Regular, me costó seguirlo</button>
             <button class="checkin-opt" data-value="skipped">No pude seguirlo</button>
           </div>
+        </div>
+
+        <div class="checkin-group">
+          <p class="checkin-label">Nota para el coach (opcional)</p>
+          <textarea id="checkin-note" rows="3"
+            placeholder="Ej: quiero más trabajo de pierna, últimamente noto el hombro derecho cargado…"
+            style="width:100%; resize:vertical; margin-top:0;"></textarea>
         </div>
 
       </div>

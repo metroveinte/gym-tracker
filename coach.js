@@ -91,8 +91,6 @@ async function buildContext() {
 const CHECKIN_LABELS = {
   training_days:     { '2':'2 días/semana', '3':'3 días/semana', '4':'4 días/semana', '5':'5 días/semana', '6+':'6+ días/semana' },
   session_duration:  { '<45min':'menos de 45 min', '45-60min':'45-60 min', '60-90min':'60-90 min', '>90min':'más de 90 min' },
-  equipment:         { 'gym_full':'gimnasio completo', 'gym_limited':'gimnasio con limitaciones', 'dumbbells':'solo mancuernas', 'bodyweight':'peso corporal' },
-  physical_issues:   { 'none':'ninguna molestia', 'back':'molestia en espalda/lumbar', 'shoulders':'molestia en hombros', 'knees':'molestia en rodillas/caderas', 'other':'otra molestia' },
   prev_plan_feedback:{ 'great':'muy bien, lo completó casi siempre', 'long':'bien pero las sesiones eran largas', 'hard':'regular, le costó seguirlo', 'skipped':'no pudo seguirlo' },
 };
 
@@ -100,8 +98,12 @@ function formatCheckin(checkin) {
   if (!checkin) return null;
   const lines = [];
   for (const [key, val] of Object.entries(checkin)) {
-    const label = CHECKIN_LABELS[key]?.[val] ?? val;
-    lines.push(`- ${label}`);
+    if (key === 'coach_note') {
+      lines.push(`- Nota del usuario: "${val}"`);
+    } else {
+      const label = CHECKIN_LABELS[key]?.[val] ?? val;
+      lines.push(`- ${label}`);
+    }
   }
   return lines.join('\n');
 }
@@ -200,7 +202,6 @@ REGLAS IMPORTANTES:
     "week3": "Descripción semana 3",
     "week4": "Descripción semana 4 (descarga o test)"
   },
-  "nutrition_notes": "2-3 frases sobre nutrición alineada con el objetivo calórico ya calculado.",
   "next_review": "${new Date(Date.now() + PLAN_DAYS * 86400000).toISOString().slice(0, 10)}"
 }
 
