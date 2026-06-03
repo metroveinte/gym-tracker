@@ -218,12 +218,14 @@ function updateStats() {
   const totalSeries = filtered.reduce((sum, s) => sum + (s.series ? s.series.length : 0), 0);
   const streakDays = calculateStreak(filtered);
   const topMuscle = findTopMuscleGroup(filtered);
+  const topExercise = findTopExercise(filtered);
 
   document.getElementById('total-sessions').textContent = totalSessions;
   document.getElementById('unique-exercises').textContent = uniqueExercises;
   document.getElementById('total-series').textContent = totalSeries;
   document.getElementById('streak-days').textContent = streakDays;
   document.getElementById('top-muscle').textContent = topMuscle || '-';
+  document.getElementById('top-exercise').textContent = topExercise || '-';
 
   renderHistory(filtered);
   renderProgressChart(filtered);
@@ -234,21 +236,29 @@ function updateStats() {
 function calculateStreak(sessions) {
   if (sessions.length === 0) return 0;
 
-  const dates = sessions.map(s => new Date(s.date));
-  dates.sort((a, b) => b - a);
+  // Deduplicate to unique training days
+  const uniqueDates = [...new Set(sessions.map(s => s.date))].sort((a, b) => b.localeCompare(a));
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  let streak = 0;
-  let currentDate = new Date(today);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
 
-  for (const date of dates) {
-    date.setHours(0, 0, 0, 0);
-    if (date.getTime() === currentDate.getTime()) {
+  // Allow streak to start from today OR yesterday (in case user hasn't trained yet today)
+  const latestDate = new Date(uniqueDates[0] + 'T00:00:00');
+  if (latestDate < yesterday) return 0;
+
+  let streak = 0;
+  let expected = latestDate;
+
+  for (const dateStr of uniqueDates) {
+    const d = new Date(dateStr + 'T00:00:00');
+    if (d.getTime() === expected.getTime()) {
       streak++;
-      currentDate.setDate(currentDate.getDate() - 1);
-    } else if (date.getTime() < currentDate.getTime()) {
+      expected = new Date(d);
+      expected.setDate(expected.getDate() - 1);
+    } else {
       break;
     }
   }
@@ -280,6 +290,15 @@ function findTopMuscleGroup(sessions) {
   }
 
   return topMuscle;
+}
+
+function findTopExercise(sessions) {
+  const counts = {};
+  for (const s of sessions) {
+    if (s.exercise) counts[s.exercise] = (counts[s.exercise] || 0) + 1;
+  }
+  if (!Object.keys(counts).length) return null;
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
 }
 
 function muscleGroupToClass(mg) {

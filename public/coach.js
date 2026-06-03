@@ -147,6 +147,7 @@ async function load() {
 }
 
 document.getElementById('generate-btn')?.addEventListener('click', generate);
+document.getElementById('pdf-btn')?.addEventListener('click', () => window.print());
 document.getElementById('regenerate-btn')?.addEventListener('click', async () => {
   const ok = await showConfirm({
     title: 'Regenerar plan',

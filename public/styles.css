@@ -1316,3 +1316,40 @@ input[type="checkbox"]:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Print / PDF (coach plan) ────────────────────────────────────────────────── */
+@media print {
+  body { background: #fff !important; color: #111 !important; font-size: 11pt; }
+
+  .header, .bottom-nav, #pdf-btn, #regenerate-btn,
+  #state-no-key, #state-no-data, #state-loading, #generate-block { display: none !important; }
+
+  .container { max-width: 100% !important; padding: 0 !important; }
+
+  .card {
+    background: #fff !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    margin-bottom: 14pt !important;
+  }
+
+  h1, h2, h3 { color: #111 !important; }
+  p, span, li { color: #333 !important; }
+
+  #plan-progress-bar { background: #c00 !important; }
+
+  /* Weekly day blocks */
+  #plan-days > div { break-inside: avoid; border: 1px solid #ccc !important; }
+  #plan-days > div > div:first-child { background: #f0f0f0 !important; }
+
+  /* Progression weeks */
+  #progression-weeks > div { padding: 4pt 0; border-bottom: 1px solid #eee; }
+
+  /* Analysis lists */
+  #analysis-strengths li, #analysis-gaps li, #analysis-imbalances li {
+    color: #333 !important;
+  }
+
+  @page { margin: 1.5cm; }
+}
