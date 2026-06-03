@@ -148,6 +148,77 @@
     </a>
   </nav>
 
+  <!-- Cuestionario previo a la generación -->
+  <div id="checkin-overlay" class="modal-overlay hidden"></div>
+  <div id="checkin-modal" class="modal hidden" style="max-width:540px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="checkin-title">Antes de generar tu plan</h2>
+        <button type="button" class="modal-close" id="checkin-close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+
+        <div class="checkin-group">
+          <p class="checkin-label">¿Cuántos días a la semana puedes entrenar?</p>
+          <div class="checkin-options" data-key="training_days">
+            <button class="checkin-opt" data-value="2">2 días</button>
+            <button class="checkin-opt" data-value="3">3 días</button>
+            <button class="checkin-opt" data-value="4">4 días</button>
+            <button class="checkin-opt" data-value="5">5 días</button>
+            <button class="checkin-opt" data-value="6+">6+ días</button>
+          </div>
+        </div>
+
+        <div class="checkin-group">
+          <p class="checkin-label">¿De cuánto tiempo dispones por sesión?</p>
+          <div class="checkin-options" data-key="session_duration">
+            <button class="checkin-opt" data-value="<45min">Menos de 45 min</button>
+            <button class="checkin-opt" data-value="45-60min">45 – 60 min</button>
+            <button class="checkin-opt" data-value="60-90min">60 – 90 min</button>
+            <button class="checkin-opt" data-value=">90min">Más de 90 min</button>
+          </div>
+        </div>
+
+        <div class="checkin-group">
+          <p class="checkin-label">¿Qué equipamiento tienes disponible?</p>
+          <div class="checkin-options" data-key="equipment">
+            <button class="checkin-opt" data-value="gym_full">Gimnasio completo</button>
+            <button class="checkin-opt" data-value="gym_limited">Gimnasio con limitaciones</button>
+            <button class="checkin-opt" data-value="dumbbells">Solo mancuernas</button>
+            <button class="checkin-opt" data-value="bodyweight">Peso corporal</button>
+          </div>
+        </div>
+
+        <div class="checkin-group">
+          <p class="checkin-label">¿Tienes alguna molestia física actualmente?</p>
+          <div class="checkin-options" data-key="physical_issues">
+            <button class="checkin-opt" data-value="none">Ninguna</button>
+            <button class="checkin-opt" data-value="back">Espalda / lumbar</button>
+            <button class="checkin-opt" data-value="shoulders">Hombros</button>
+            <button class="checkin-opt" data-value="knees">Rodillas / caderas</button>
+            <button class="checkin-opt" data-value="other">Otra molestia</button>
+          </div>
+        </div>
+
+        <!-- Solo en regeneración -->
+        <div class="checkin-group" id="checkin-prev-plan" style="display:none;">
+          <p class="checkin-label">¿Cómo fue el plan anterior?</p>
+          <div class="checkin-options" data-key="prev_plan_feedback">
+            <button class="checkin-opt" data-value="great">Muy bien, lo completé casi siempre</button>
+            <button class="checkin-opt" data-value="long">Bien, pero las sesiones eran largas</button>
+            <button class="checkin-opt" data-value="hard">Regular, me costó seguirlo</button>
+            <button class="checkin-opt" data-value="skipped">No pude seguirlo</button>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="checkin-cancel" class="btn-secondary">Cancelar</button>
+        <button type="button" id="checkin-confirm" class="btn-primary" disabled>Analizar y generar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="dialog.js"></script>
   <script src="coach.js"></script>
 </body>

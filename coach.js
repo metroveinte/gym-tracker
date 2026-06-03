@@ -6,7 +6,7 @@ const PLAN_WEEKS    = 4;
 const PLAN_DAYS     = PLAN_WEEKS * 7;
 
 const GOAL_LABELS = {
-  deficit: 'Pérdida de grasa (déficit calórico -20%)',
+  deficit: 'Pérdida de grasa (déficit calórico -20 %)',
   recomp:  'Recomposición corporal (mantenimiento calórico)',
   gain:    'Ganancia muscular (+10% calorías)',
   bulk:    'Volumen muscular (+15% calorías)',
@@ -88,7 +88,25 @@ async function buildContext() {
 
 // ── Prompt builder ────────────────────────────────────────────────────────────
 
-function buildPrompt(ctx) {
+const CHECKIN_LABELS = {
+  training_days:     { '2':'2 días/semana', '3':'3 días/semana', '4':'4 días/semana', '5':'5 días/semana', '6+':'6+ días/semana' },
+  session_duration:  { '<45min':'menos de 45 min', '45-60min':'45-60 min', '60-90min':'60-90 min', '>90min':'más de 90 min' },
+  equipment:         { 'gym_full':'gimnasio completo', 'gym_limited':'gimnasio con limitaciones', 'dumbbells':'solo mancuernas', 'bodyweight':'peso corporal' },
+  physical_issues:   { 'none':'ninguna molestia', 'back':'molestia en espalda/lumbar', 'shoulders':'molestia en hombros', 'knees':'molestia en rodillas/caderas', 'other':'otra molestia' },
+  prev_plan_feedback:{ 'great':'muy bien, lo completó casi siempre', 'long':'bien pero las sesiones eran largas', 'hard':'regular, le costó seguirlo', 'skipped':'no pudo seguirlo' },
+};
+
+function formatCheckin(checkin) {
+  if (!checkin) return null;
+  const lines = [];
+  for (const [key, val] of Object.entries(checkin)) {
+    const label = CHECKIN_LABELS[key]?.[val] ?? val;
+    lines.push(`- ${label}`);
+  }
+  return lines.join('\n');
+}
+
+function buildPrompt(ctx, checkin) {
   const { profile, allSessions, freq, topExercises, weights } = ctx;
   const today = new Date().toISOString().slice(0, 10);
 
@@ -113,12 +131,17 @@ function buildPrompt(ctx) {
     `  ${s.date} | ${s.exercise} (${s.muscle_group}) | ${s.series.map(se => `${se.sets}x${se.reps}@${se.weight ?? 'BW'}kg`).join(', ') || 'sin series'}`
   ).join('\n');
 
+  const checkinText = formatCheckin(checkin);
+
   return `Eres un entrenador personal experto. Analiza el historial de entrenamiento real del usuario y genera un plan de 4 semanas adaptado a su objetivo.
 
 HOY: ${today}
 
 === PERFIL DEL USUARIO ===
 ${profileText}
+
+=== PREFERENCIAS Y DISPONIBILIDAD (respuestas del usuario) ===
+${checkinText || '  No especificadas.'}
 
 === TENDENCIA DE PESO (últimas mediciones) ===
 ${weightTrend}
@@ -216,9 +239,9 @@ async function getLatestPlan() {
   `);
 }
 
-async function generatePlan() {
+async function generatePlan(checkin = null) {
   const ctx    = await buildContext();
-  const prompt = buildPrompt(ctx);
+  const prompt = buildPrompt(ctx, checkin);
   const { parsed, raw } = await callClaude(prompt);
 
   const validUntil = parsed.next_review ||

@@ -399,7 +399,7 @@ app.post('/api/coach/generate', async (req, res) => {
     return res.status(503).json({ error: 'API key no configurada. Añade ANTHROPIC_API_KEY al entorno.' });
   }
   try {
-    const plan = await coach.generatePlan();
+    const plan = await coach.generatePlan(req.body?.checkin || null);
     res.json(plan);
   } catch (e) {
     console.error('Coach error:', e.message);
