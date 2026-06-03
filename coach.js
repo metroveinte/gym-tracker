@@ -180,7 +180,7 @@ async function callClaude(prompt) {
     },
     body: JSON.stringify({
       model:      CLAUDE_MODEL,
-      max_tokens: 4096,
+      max_tokens: 8192,
       messages:   [{ role: 'user', content: prompt }],
     }),
   });
@@ -191,10 +191,20 @@ async function callClaude(prompt) {
   }
 
   const data = await res.json();
+
+  if (data.stop_reason === 'max_tokens') {
+    throw new Error('La respuesta fue demasiado larga y se cortó. Inténtalo de nuevo.');
+  }
+
   const raw  = data.content?.[0]?.text || '';
   const json = raw.match(/\{[\s\S]*\}/)?.[0];
   if (!json) throw new Error('Claude no devolvió JSON válido.');
-  return { parsed: JSON.parse(json), raw };
+
+  try {
+    return { parsed: JSON.parse(json), raw };
+  } catch (e) {
+    throw new Error(`JSON inválido en la respuesta de Claude: ${e.message}`);
+  }
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
