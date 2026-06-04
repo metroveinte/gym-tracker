@@ -963,7 +963,7 @@ document.getElementById('manage-add-cancel-btn').addEventListener('click', hideM
 document.getElementById('repair-db-btn').addEventListener('click', async () => {
   const ok = await showConfirm({
     title: 'Reparar Base de Datos',
-    body: `<p style="color:#ccc; line-height:1.6;">Restaurará el nombre y grupo muscular de los <strong>34 ejercicios predefinidos</strong> a su estado original.<br><br>Los ejercicios personalizados y los registros de sesiones <strong>no se verán afectados</strong>.</p>`,
+    body: `<p style="color:#ccc; line-height:1.6;">Restaurará el nombre y grupo muscular de los <strong>${PREDEFINED_EXERCISES.length} ejercicios predefinidos</strong> a su estado original.<br><br>Los ejercicios personalizados y los registros de sesiones <strong>no se verán afectados</strong>.</p>`,
     okText: 'Reparar'
   });
   if (!ok) return;
@@ -983,7 +983,7 @@ document.getElementById('repair-db-btn').addEventListener('click', async () => {
 document.getElementById('restore-db-btn').addEventListener('click', async () => {
   const first = await showConfirm({
     title: 'Restaurar Base de Datos',
-    body: `<p style="color:#ccc; line-height:1.6;">Esta acción eliminará <strong>todos los ejercicios</strong>, incluidos los personalizados, y restaurará únicamente los 34 predefinidos.<br><br>Los registros de sesiones no se verán afectados.</p>`,
+    body: `<p style="color:#ccc; line-height:1.6;">Esta acción eliminará <strong>todos los ejercicios</strong>, incluidos los personalizados, y restaurará únicamente los ${PREDEFINED_EXERCISES.length} predefinidos.<br><br>Los registros de sesiones no se verán afectados.</p>`,
     okText: 'Continuar',
     danger: true
   });
@@ -1003,7 +1003,7 @@ document.getElementById('restore-db-btn').addEventListener('click', async () => 
     availableExercises = [...PREDEFINED_EXERCISES];
     await loadExerciseOptions();
     await loadAndRenderManageList();
-    showAlert('Restauración completada', 'La base de datos ha sido restaurada a los 34 ejercicios predefinidos.');
+    showAlert('Restauración completada', `La base de datos ha sido restaurada a los ${PREDEFINED_EXERCISES.length} ejercicios predefinidos.`);
   } catch (err) {
     showAlert('Error', 'Error al restaurar: ' + err.message);
   }
