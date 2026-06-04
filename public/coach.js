@@ -282,12 +282,17 @@ function renderPlan(plan, generatedAt, validUntil, sessions) {
       const sw1 = ex.session_weights_week1 || [];
 
       // Weekly progression row (renamed Sem 1-4 to avoid confusion with sets)
+      const isDeload = (() => {
+        const w3 = parseFloat(ww['week3']);
+        const w4 = parseFloat(ww['week4']);
+        return !isNaN(w3) && !isNaN(w4) && w4 < w3;
+      })();
       const weeklyRow = Object.keys(ww).length ? `
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;">
           <span style="font-size:.7rem;color:#555;align-self:center;margin-right:2px;">progresión:</span>
           ${['week1','week2','week3','week4'].map((k,i) => ww[k] ? `
             <span style="font-size:.75rem;padding:2px 8px;border-radius:4px;background:var(--bg);border:1px solid var(--border-mid);color:${i===3?'#888':'#ccc'};">
-              Sem${i+1} <strong style="color:${i===3?'#666':'var(--accent)'};">${ww[k]}</strong>${i===3?' ↓':''}
+              Sem${i+1} <strong style="color:${i===3&&isDeload?'#666':'var(--accent)'};">${ww[k]}</strong>${i===3&&isDeload?' ↓':''}
             </span>` : '').join('')}
         </div>` : '';
 
@@ -301,11 +306,11 @@ function renderPlan(plan, generatedAt, validUntil, sessions) {
             </span>`).join('')}
         </div>` : '';
 
-      // Alternative exercise
-      const altRow = ex.alternative
-        ? `<div style="display:flex;align-items:center;gap:5px;margin-top:5px;">
-            <span style="font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:#555;font-weight:700;">Alt:</span>
-            <span style="font-size:.76rem;color:#666;">${ex.alternative}</span>
+      // Alternative exercise (shown on the right, below sets×reps)
+      const altInline = ex.alternative
+        ? `<div style="text-align:right;margin-top:3px;">
+            <span style="font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:700;">Alternativa:</span>
+            <span style="font-size:.76rem;color:#888;margin-left:4px;">${ex.alternative}</span>
           </div>`
         : '';
 
@@ -320,15 +325,17 @@ function renderPlan(plan, generatedAt, validUntil, sessions) {
 
       return `
         <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:4px;">
             <div style="display:flex;align-items:center;flex-wrap:wrap;">
               <span style="color:var(--text);font-size:.88rem;font-weight:600;">${ex.name}</span>
               ${schemeBadge}
             </div>
-            <span style="color:#888;font-size:.82rem;white-space:nowrap;">${ex.sets}×${ex.reps}${ex.notes ? ' · <em style=color:#666>' + ex.notes + '</em>' : ''}</span>
+            <div style="text-align:right;">
+              <div style="color:#888;font-size:.82rem;white-space:nowrap;">${ex.sets}×${ex.reps}${ex.notes ? ' · <em style=color:#666>' + ex.notes + '</em>' : ''}</div>
+              ${altInline}
+            </div>
           </div>
           ${schemeNote}
-          ${altRow}
           ${setsRow}
           ${weeklyRow}
         </div>`;
