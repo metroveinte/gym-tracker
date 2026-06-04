@@ -170,6 +170,7 @@ REGLAS IMPORTANTES:
     "calentamiento_trabajo" → 1-2 sets ligeros de activación + sets de trabajo al peso objetivo
 - set_scheme_note: frase corta (1 línea) explicando qué debe hacer el usuario dentro de la sesión con ese esquema.
 - session_weights_week1: array con el peso exacto de cada set en la semana 1 (longitud = sets). Para "rectas" todos iguales. Para pirámide, mostrar la progresión real. Usa siempre la unidad (kg o "PC").
+- alternative: nombre de UN ejercicio alternativo que trabaje el mismo músculo y se pueda hacer con equipamiento diferente (por si la máquina no está libre). Ejemplo: si el principal es "Press banca", el alternativo podría ser "Press mancuernas inclinado". Una sola frase corta, sin más detalles.
 
 {
   "analysis": {
@@ -192,6 +193,7 @@ REGLAS IMPORTANTES:
             "sets": 4,
             "reps": "8-10",
             "notes": "nota opcional",
+            "alternative": "Nombre del ejercicio alternativo",
             "set_scheme": "rectas",
             "set_scheme_note": "Todos los sets al mismo peso. Si completas todas las reps sube 2.5kg la semana siguiente.",
             "session_weights_week1": ["60kg","60kg","60kg","60kg"],

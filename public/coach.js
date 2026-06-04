@@ -293,6 +293,14 @@ function renderPlan(plan, generatedAt, validUntil, sessions) {
             </span>`).join('')}
         </div>` : '';
 
+      // Alternative exercise
+      const altRow = ex.alternative
+        ? `<div style="display:flex;align-items:center;gap:5px;margin-top:5px;">
+            <span style="font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:#555;font-weight:700;">Alt:</span>
+            <span style="font-size:.76rem;color:#666;">${ex.alternative}</span>
+          </div>`
+        : '';
+
       // Set scheme badge + note
       const schemeLabel = SCHEME_LABEL[ex.set_scheme] || ex.set_scheme || '';
       const schemeBadge = schemeLabel
@@ -312,6 +320,7 @@ function renderPlan(plan, generatedAt, validUntil, sessions) {
             <span style="color:#888;font-size:.82rem;white-space:nowrap;">${ex.sets}×${ex.reps}${ex.notes ? ' · <em style=color:#666>' + ex.notes + '</em>' : ''}</span>
           </div>
           ${schemeNote}
+          ${altRow}
           ${setsRow}
           ${weeklyRow}
         </div>`;
