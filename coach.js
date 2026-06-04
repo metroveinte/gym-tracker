@@ -61,29 +61,43 @@ async function buildContext() {
   }
   const allSessions = Array.from(sessionMap.values());
 
-  // Frequency per muscle group (last 30 days)
+  // Volume stats per muscle group (last 30 days)
   const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-  const freq = {};
+  const muscleStats = {};
   for (const s of allSessions) {
-    if (s.date >= cutoff) {
-      freq[s.muscle_group] = (freq[s.muscle_group] || 0) + 1;
-    }
-  }
-
-  // Top exercises by volume (all time)
-  const volMap = {};
-  for (const s of allSessions) {
+    if (s.date < cutoff) continue;
+    const mg = s.muscle_group;
+    if (!muscleStats[mg]) muscleStats[mg] = { sessions: 0, totalSets: 0, weights: [] };
+    muscleStats[mg].sessions++;
     for (const serie of s.series) {
-      const vol = (serie.sets || 1) * (serie.reps || 0) * (serie.weight || 0);
-      volMap[s.exercise] = (volMap[s.exercise] || 0) + vol;
+      muscleStats[mg].totalSets += (serie.sets || 1);
+      if (serie.weight) muscleStats[mg].weights.push(serie.weight);
     }
   }
-  const topExercises = Object.entries(volMap)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 20)
-    .map(([name]) => name);
 
-  return { profile, allSessions: allSessions.slice(0, 60), freq, topExercises, weights };
+  // Volume stats per exercise (all time, top 15 by tonnage)
+  const exerciseStats = {};
+  for (const s of allSessions) {
+    const name = s.exercise;
+    if (!name) continue;
+    if (!exerciseStats[name]) {
+      exerciseStats[name] = { totalSets: 0, weights: [], lastDate: s.date, tonnage: 0 };
+    }
+    for (const serie of s.series) {
+      const sets   = serie.sets   || 1;
+      const reps   = serie.reps   || 0;
+      const weight = serie.weight || 0;
+      exerciseStats[name].totalSets += sets;
+      if (serie.weight) exerciseStats[name].weights.push(serie.weight);
+      exerciseStats[name].tonnage += sets * reps * weight;
+    }
+    if (s.date > exerciseStats[name].lastDate) exerciseStats[name].lastDate = s.date;
+  }
+  const topExerciseStats = Object.entries(exerciseStats)
+    .sort((a, b) => b[1].tonnage - a[1].tonnage)
+    .slice(0, 15);
+
+  return { profile, allSessions: allSessions.slice(0, 60), muscleStats, topExerciseStats, weights };
 }
 
 // ── Prompt builder ────────────────────────────────────────────────────────────
@@ -109,7 +123,7 @@ function formatCheckin(checkin) {
 }
 
 function buildPrompt(ctx, checkin) {
-  const { profile, allSessions, freq, topExercises, weights } = ctx;
+  const { profile, allSessions, muscleStats, topExerciseStats, weights } = ctx;
   const today = new Date().toISOString().slice(0, 10);
 
   const profileText = profile ? `
@@ -121,8 +135,16 @@ function buildPrompt(ctx, checkin) {
 - Factor actividad: ${profile.activity_factor}
 `.trim() : 'Perfil no configurado.';
 
-  const freqText = Object.entries(freq).length
-    ? Object.entries(freq).map(([g, n]) => `  ${g}: ${n} sesiones`).join('\n')
+  const avg  = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+  const max  = arr => arr.length ? Math.max(...arr) : null;
+
+  const muscleText = Object.keys(muscleStats).length
+    ? Object.entries(muscleStats).map(([g, s]) => {
+        const avgW = avg(s.weights);
+        const maxW = max(s.weights);
+        const weightStr = avgW ? ` | media ${avgW}kg | máx ${maxW}kg` : '';
+        return `  ${g}: ${s.sessions} sesiones | ${s.totalSets} series totales${weightStr}`;
+      }).join('\n')
     : '  Sin sesiones en los últimos 30 días.';
 
   const weightTrend = weights.length >= 2
@@ -148,11 +170,18 @@ ${checkinText || '  No especificadas.'}
 === TENDENCIA DE PESO (últimas mediciones) ===
 ${weightTrend}
 
-=== FRECUENCIA POR GRUPO MUSCULAR (últimos 30 días) ===
-${freqText}
+=== VOLUMEN POR GRUPO MUSCULAR (últimos 30 días) ===
+${muscleText}
 
-=== EJERCICIOS MÁS USADOS (por volumen total) ===
-${topExercises.length ? topExercises.join(', ') : 'Ninguno registrado.'}
+=== EJERCICIOS PRINCIPALES (por volumen acumulado, todos los tiempos) ===
+${topExerciseStats.length
+  ? topExerciseStats.map(([name, s]) => {
+      const avgW = avg(s.weights);
+      const maxW = max(s.weights);
+      const weightStr = avgW ? ` | media ${avgW}kg | máx ${maxW}kg` : '';
+      return `  ${name}: ${s.totalSets} series${weightStr} | último ${s.lastDate}`;
+    }).join('\n')
+  : '  Ninguno registrado.'}
 
 === ÚLTIMAS 20 SESIONES ===
 ${recentSessions || '  Sin sesiones registradas aún.'}
