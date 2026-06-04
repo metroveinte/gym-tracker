@@ -256,6 +256,13 @@ function renderPlan(plan, generatedAt, validUntil, sessions) {
   document.getElementById('plan-structure').textContent = wp.structure || '';
   document.getElementById('plan-rationale').textContent = wp.rationale || '';
 
+  const SCHEME_LABEL = {
+    rectas:               'Series rectas',
+    piramide_asc:         'Pirámide ascendente',
+    piramide_desc:        'Pirámide descendente',
+    calentamiento_trabajo:'Calentamiento + trabajo',
+  };
+
   document.getElementById('plan-days').innerHTML = (wp.days || []).map(d => {
     const mins = d.estimated_minutes;
     const timeChip = mins
@@ -263,23 +270,50 @@ function renderPlan(plan, generatedAt, validUntil, sessions) {
       : '';
 
     const exerciseRows = (d.exercises || []).map(ex => {
-      const ww = ex.weekly_weights || {};
-      const hasWeights = Object.keys(ww).length > 0;
-      const weightRow = hasWeights ? `
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;margin-bottom:2px;">
+      const ww  = ex.weekly_weights || {};
+      const sw1 = ex.session_weights_week1 || [];
+
+      // Weekly progression row (renamed Sem 1-4 to avoid confusion with sets)
+      const weeklyRow = Object.keys(ww).length ? `
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;">
+          <span style="font-size:.7rem;color:#555;align-self:center;margin-right:2px;">progresión:</span>
           ${['week1','week2','week3','week4'].map((k,i) => ww[k] ? `
             <span style="font-size:.75rem;padding:2px 8px;border-radius:4px;background:var(--bg);border:1px solid var(--border-mid);color:${i===3?'#888':'#ccc'};">
-              S${i+1} <strong style="color:${i===3?'#666':'var(--accent)'};">${ww[k]}</strong>${i===3?' ↓':''}
+              Sem${i+1} <strong style="color:${i===3?'#666':'var(--accent)'};">${ww[k]}</strong>${i===3?' ↓':''}
             </span>` : '').join('')}
         </div>` : '';
 
+      // Per-set weights for week 1
+      const setsRow = sw1.length ? `
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;align-items:center;">
+          <span style="font-size:.7rem;color:#555;margin-right:2px;">esta sem:</span>
+          ${sw1.map((w, i) => `
+            <span style="font-size:.75rem;padding:2px 7px;border-radius:4px;background:var(--bg-raised);border:1px solid var(--border);color:#ccc;">
+              Set${i+1} <strong style="color:var(--text);">${w}</strong>
+            </span>`).join('')}
+        </div>` : '';
+
+      // Set scheme badge + note
+      const schemeLabel = SCHEME_LABEL[ex.set_scheme] || ex.set_scheme || '';
+      const schemeBadge = schemeLabel
+        ? `<span style="font-size:.7rem;padding:1px 7px;border-radius:10px;background:var(--bg-raised);border:1px solid var(--border-mid);color:#666;margin-left:6px;">${schemeLabel}</span>`
+        : '';
+      const schemeNote = ex.set_scheme_note
+        ? `<div style="color:#555;font-size:.76rem;margin-top:4px;line-height:1.4;font-style:italic;">${ex.set_scheme_note}</div>`
+        : '';
+
       return `
         <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;">
-            <span style="color:var(--text);font-size:.88rem;font-weight:600;">${ex.name}</span>
-            <span style="color:#888;font-size:.82rem;white-space:nowrap;margin-left:10px;">${ex.sets}×${ex.reps}${ex.notes ? ' · <em style=color:#666>' + ex.notes + '</em>' : ''}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
+            <div style="display:flex;align-items:center;flex-wrap:wrap;">
+              <span style="color:var(--text);font-size:.88rem;font-weight:600;">${ex.name}</span>
+              ${schemeBadge}
+            </div>
+            <span style="color:#888;font-size:.82rem;white-space:nowrap;">${ex.sets}×${ex.reps}${ex.notes ? ' · <em style=color:#666>' + ex.notes + '</em>' : ''}</span>
           </div>
-          ${weightRow}
+          ${schemeNote}
+          ${setsRow}
+          ${weeklyRow}
         </div>`;
     }).join('');
 

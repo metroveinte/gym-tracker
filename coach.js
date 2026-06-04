@@ -162,7 +162,14 @@ Genera una respuesta JSON con exactamente esta estructura (sin texto fuera del J
 
 REGLAS IMPORTANTES:
 - estimated_minutes: calcula el tiempo real de sesión sumando (sets_totales × 1.5 min de ejecución) + (sets_totales × 2.5 min de descanso) + 12 min de overhead (calentamiento, buscar máquinas, transiciones). Redondea a múltiplos de 5.
-- weekly_weights: usa el historial real del usuario para estimar el peso de partida. Si no hay datos, pon un peso conservador. Aplica progresión lineal: +2.5-5 kg/semana en ejercicios compuestos, +1.25-2.5 kg en aislamiento. Semana 4 = descarga al 60% de semana 3. Para ejercicios de peso corporal pon "PC" o variante más difícil. Incluye siempre la unidad (kg).
+- weekly_weights: usa el historial real del usuario para estimar el peso de partida. Si no hay datos, pon un peso conservador. Aplica progresión lineal: +2.5-5 kg/semana en ejercicios compuestos, +1.25-2.5 kg en aislamiento. Semana 4 = descarga al 60% de semana 3. Para ejercicios de peso corporal pon "PC". Incluye siempre la unidad (kg).
+- set_scheme: elige el esquema adecuado para cada ejercicio según su posición en la sesión y el objetivo:
+    "rectas" → todos los sets al mismo peso (ejercicios de aislamiento, accesorios)
+    "piramide_asc" → peso creciente set a set, últimos 2 sets son los de trabajo (ejercicios compuestos principales)
+    "piramide_desc" → primer set al peso máximo, va bajando (fuerza/potencia)
+    "calentamiento_trabajo" → 1-2 sets ligeros de activación + sets de trabajo al peso objetivo
+- set_scheme_note: frase corta (1 línea) explicando qué debe hacer el usuario dentro de la sesión con ese esquema.
+- session_weights_week1: array con el peso exacto de cada set en la semana 1 (longitud = sets). Para "rectas" todos iguales. Para pirámide, mostrar la progresión real. Usa siempre la unidad (kg o "PC").
 
 {
   "analysis": {
@@ -185,6 +192,9 @@ REGLAS IMPORTANTES:
             "sets": 4,
             "reps": "8-10",
             "notes": "nota opcional",
+            "set_scheme": "rectas",
+            "set_scheme_note": "Todos los sets al mismo peso. Si completas todas las reps sube 2.5kg la semana siguiente.",
+            "session_weights_week1": ["60kg","60kg","60kg","60kg"],
             "weekly_weights": {
               "week1": "60kg",
               "week2": "65kg",
