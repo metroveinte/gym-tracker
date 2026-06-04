@@ -246,7 +246,7 @@ REGLAS IMPORTANTES:
   "next_review": "${new Date(Date.now() + PLAN_DAYS * 86400000).toISOString().slice(0, 10)}"
 }
 
-Usa preferentemente los ejercicios que ya hace el usuario. El plan debe ser realista, sin inventar equipamiento que no se infiere del historial.`;
+Usa preferentemente los ejercicios que ya hace el usuario. El plan debe ser realista, sin inventar equipamiento que no se infiere del historial. IMPORTANTE: los nombres de ejercicio en el plan deben coincidir exactamente con los del historial del usuario (misma ortografía, mismo idioma), para que el seguimiento automático pueda cruzarlos. Si propones un ejercicio nuevo que el usuario no ha registrado nunca, puedes nombrarlo libremente.`;
 }
 
 // ── Claude API call ───────────────────────────────────────────────────────────

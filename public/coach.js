@@ -85,6 +85,14 @@ function openCheckin(isRegeneration) {
 
 // ── Compliance check ──────────────────────────────────────────────────────────
 
+function normalizeExerciseName(name) {
+  return (name || '')
+    .trim()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // strip accents
+    .toLowerCase()
+    .replace(/^./, c => c.toUpperCase());              // Title case first char
+}
+
 function computeCompliance(plan, sessions, generatedAt) {
   const generated   = new Date(generatedAt);
   const today       = new Date();
@@ -106,7 +114,7 @@ function computeCompliance(plan, sessions, generatedAt) {
     if (d < weekStart || d >= weekEnd) continue;
     for (const serie of (s.series || [])) {
       if (serie.weight == null) continue;
-      const key = s.exercise.toLowerCase().trim();
+      const key = normalizeExerciseName(s.exercise);
       logged[key] = Math.max(logged[key] || 0, serie.weight);
     }
   }
@@ -119,7 +127,7 @@ function computeCompliance(plan, sessions, generatedAt) {
       const targetNum = parseFloat(targetStr);
       if (isNaN(targetNum)) continue; // bodyweight / PC — skip
 
-      const key    = ex.name.toLowerCase().trim();
+      const key    = normalizeExerciseName(ex.name);
       const actual = logged[key];
       const status = actual === undefined ? 'pending'
                    : actual >= targetNum  ? 'ok'
