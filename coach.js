@@ -162,7 +162,7 @@ Genera una respuesta JSON con exactamente esta estructura (sin texto fuera del J
 
 REGLAS IMPORTANTES:
 - estimated_minutes: calcula el tiempo real de sesión sumando (sets_totales × 1.5 min de ejecución) + (sets_totales × 2.5 min de descanso) + 12 min de overhead (calentamiento, buscar máquinas, transiciones). Redondea a múltiplos de 5.
-- weekly_weights: usa el historial real del usuario para estimar el peso de partida. Si no hay datos, pon un peso conservador. Aplica progresión lineal: +2.5-5 kg/semana en ejercicios compuestos, +1.25-2.5 kg en aislamiento. Semana 4 = descarga al 60% de semana 3. Para ejercicios de peso corporal pon "PC". Incluye siempre la unidad (kg).
+- weekly_weights: usa el historial real del usuario para estimar el peso de partida. Si no hay datos, pon un peso conservador. Aplica progresión lineal: +2.5-5 kg/semana en ejercicios compuestos, +1.25-2.5 kg en aislamiento. Semana 4 = continúa la progresión normalmente (NO hagas semana de descarga) salvo que el usuario haya indicado explícitamente que quiere descarga o que le cuesta recuperarse (en ese caso semana 4 = 60% de semana 3). Para ejercicios de peso corporal pon "PC". Incluye siempre la unidad (kg).
 - set_scheme: elige el esquema adecuado para cada ejercicio según su posición en la sesión y el objetivo:
     "rectas" → todos los sets al mismo peso (ejercicios de aislamiento, accesorios)
     "piramide_asc" → peso creciente set a set, últimos 2 sets son los de trabajo (ejercicios compuestos principales)
