@@ -1010,5 +1010,11 @@ document.getElementById('restore-db-btn').addEventListener('click', async () => 
 });
 
 // Inicializar
-loadExerciseOptions();
+loadExerciseOptions().then(() => {
+  const prefill = new URLSearchParams(window.location.search).get('ejercicio');
+  if (prefill) {
+    openModal();
+    selectExerciseInModal(decodeURIComponent(prefill));
+  }
+});
 renderExercises();

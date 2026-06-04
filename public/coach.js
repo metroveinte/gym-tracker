@@ -170,20 +170,28 @@ function renderCompliance(plan, sessions, generatedAt) {
   }
 
   const rows = results.map(r => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:.75rem;font-weight:700;color:${statusColor[r.status]};min-width:14px;">${statusIcon[r.status]}</span>
-        <div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span style="font-size:.75rem;font-weight:700;color:${statusColor[r.status]};min-width:14px;flex-shrink:0;">${statusIcon[r.status]}</span>
+        <div style="min-width:0;">
           <span style="color:var(--text);font-size:.86rem;">${r.exercise}</span>
           <span style="color:#555;font-size:.76rem;margin-left:6px;">${r.day}</span>
         </div>
       </div>
-      <div style="text-align:right;white-space:nowrap;">
-        <span style="color:#888;font-size:.76rem;">objetivo </span>
-        <span style="color:var(--accent);font-size:.82rem;font-weight:700;">${r.target}</span>
-        ${r.actual !== undefined
-          ? `<span style="color:#555;font-size:.76rem;margin-left:6px;">· real ${r.actual}kg</span>`
-          : `<span style="color:#555;font-size:.76rem;margin-left:6px;">${statusLabel[r.status]}</span>`}
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <div style="text-align:right;white-space:nowrap;">
+          <span style="color:#888;font-size:.76rem;">obj </span>
+          <span style="color:var(--accent);font-size:.82rem;font-weight:700;">${r.target}</span>
+          ${r.actual !== undefined
+            ? `<span style="color:#555;font-size:.76rem;margin-left:4px;">· real ${r.actual}kg</span>`
+            : `<span style="color:#555;font-size:.76rem;margin-left:4px;">${statusLabel[r.status]}</span>`}
+        </div>
+        <a href="/sessions?ejercicio=${encodeURIComponent(r.exercise)}"
+           style="font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:4px;border:1px solid var(--accent);color:var(--accent);text-decoration:none;white-space:nowrap;transition:background 150ms,color 150ms;"
+           onmouseover="this.style.background='var(--accent)';this.style.color='#000';"
+           onmouseout="this.style.background='';this.style.color='var(--accent)';">
+          + Registrar
+        </a>
       </div>
     </div>`).join('');
 
