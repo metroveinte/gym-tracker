@@ -190,6 +190,7 @@ ${recentSessions || '  Sin sesiones registradas aún.'}
 Genera una respuesta JSON con exactamente esta estructura (sin texto fuera del JSON).
 
 REGLAS IMPORTANTES:
+- day: usa siempre nombres genéricos "Día 1", "Día 2", "Día 3"… (nunca días de la semana como Lunes, Martes, etc.), ya que el usuario puede entrenar cualquier día.
 - estimated_minutes: calcula el tiempo real de sesión sumando (sets_totales × 1.5 min de ejecución) + (sets_totales × 2.5 min de descanso) + 12 min de overhead (calentamiento, buscar máquinas, transiciones). Redondea a múltiplos de 5.
 - weekly_weights: usa el historial real del usuario para estimar el peso de partida. Si no hay datos, pon un peso conservador. Aplica progresión lineal: +2.5-5 kg/semana en ejercicios compuestos, +1.25-2.5 kg en aislamiento. Semana 4 = continúa la progresión normalmente (NO hagas semana de descarga) salvo que el usuario haya indicado explícitamente que quiere descarga o que le cuesta recuperarse (en ese caso semana 4 = 60% de semana 3). Para ejercicios de peso corporal pon "PC". Incluye siempre la unidad (kg).
 - set_scheme: elige el esquema adecuado para cada ejercicio según su posición en la sesión y el objetivo:
@@ -213,7 +214,7 @@ REGLAS IMPORTANTES:
     "rationale": "Por qué este split es adecuado para su objetivo.",
     "days": [
       {
-        "day": "Lunes",
+        "day": "Día 1",
         "focus": "Push",
         "estimated_minutes": 65,
         "exercises": [
