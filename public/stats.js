@@ -14,14 +14,22 @@ updateButtonMode();
 window.addEventListener('resize', updateButtonMode);
 
 const MUSCLE_COLORS = {
-  'Pecho':   '#c0392b',
-  'Espalda': '#2471a3',
-  'Hombros': '#7d3c98',
-  'Bíceps':  '#1e8449',
-  'Tríceps': '#148f77',
-  'Piernas': '#ca6f1e',
-  'Glúteos': '#d35400',
-  'Core':    '#616a6b'
+  'Pecho':               '#c0392b',
+  'Dorsal':              '#2471a3',
+  'Espalda media':       '#1a5276',
+  'Lumbar':              '#0d3349',
+  'Hombros':             '#7d3c98',
+  'Deltoides posterior': '#5b2c6f',
+  'Bíceps':              '#1e8449',
+  'Tríceps':             '#148f77',
+  'Cuádriceps':          '#ca6f1e',
+  'Isquiosurales':       '#a04000',
+  'Glúteos':             '#d35400',
+  'Gemelos':             '#784212',
+  'Core':                '#616a6b',
+  // legacy fallbacks
+  'Espalda':             '#2471a3',
+  'Piernas':             '#ca6f1e',
 };
 
 function muscleGroupColor(mg) {
@@ -29,40 +37,34 @@ function muscleGroupColor(mg) {
 }
 
 const EXERCISE_MUSCLE_MAP = {
-  'Press de banca': 'Pecho',
-  'Press inclinado con mancuernas': 'Pecho',
-  'Fondos en paralelas': 'Pecho',
-  'Aperturas con mancuernas': 'Pecho',
-  'Cruce de poleas': 'Pecho',
-  'Dominadas': 'Espalda',
-  'Jalón al pecho': 'Espalda',
-  'Remo con barra': 'Espalda',
-  'Remo con mancuerna': 'Espalda',
-  'Peso muerto': 'Espalda',
-  'Press militar': 'Hombros',
-  'Elevaciones laterales': 'Hombros',
-  'Pájaros': 'Hombros',
-  'Face pulls': 'Hombros',
-  'Sentadilla': 'Piernas',
-  'Prensa de piernas': 'Piernas',
-  'Peso muerto rumano': 'Piernas',
-  'Zancadas': 'Piernas',
-  'Hip thrust': 'Glúteos',
-  'Curl femoral': 'Piernas',
-  'Extensión de cuádriceps': 'Piernas',
-  'Elevación de gemelos': 'Piernas',
-  'Curl con barra': 'Bíceps',
-  'Curl martillo': 'Bíceps',
-  'Curl en banco inclinado': 'Bíceps',
-  'Curl en polea': 'Bíceps',
-  'Press francés': 'Tríceps',
-  'Extensión de tríceps en polea': 'Tríceps',
-  'Fondos para tríceps': 'Tríceps',
-  'Extensión por encima de la cabeza': 'Tríceps',
-  'Crunch abdominal': 'Core',
-  'Elevaciones de piernas': 'Core',
-  'Plancha': 'Core',
-  'Rueda abdominal': 'Core'
+  'Press de banca':'Pecho','Press de banca con mancuernas':'Pecho','Press inclinado con barra':'Pecho',
+  'Press inclinado con mancuernas':'Pecho','Press declinado':'Pecho','Fondos en paralelas':'Pecho',
+  'Aperturas con mancuernas':'Pecho','Aperturas en máquina (pec deck)':'Pecho','Cruce de poleas':'Pecho','Press en máquina':'Pecho',
+  'Dominadas':'Dorsal','Jalón al pecho':'Dorsal','Jalón en polea agarre neutro':'Dorsal',
+  'Remo con barra':'Dorsal','Remo con mancuerna':'Dorsal','Remo en máquina':'Dorsal',
+  'Remo sentado en polea':'Dorsal','Remo sentado en máquina':'Dorsal','Remo en polea baja':'Dorsal',
+  'Face pulls':'Espalda media','Remo al cuello':'Espalda media',
+  'Peso muerto':'Lumbar','Hiperextensiones':'Lumbar','Buenos días':'Lumbar',
+  'Press militar':'Hombros','Press arnold':'Hombros','Press con mancuernas':'Hombros',
+  'Elevaciones laterales':'Hombros','Elevaciones frontales':'Hombros',
+  'Pájaros':'Deltoides posterior','Pájaros en máquina':'Deltoides posterior','Remo al mentón':'Deltoides posterior',
+  'Press francés':'Tríceps','Extensión de tríceps en polea':'Tríceps','Extensión de tríceps con cuerda':'Tríceps',
+  'Fondos para tríceps':'Tríceps','Extensión por encima de la cabeza':'Tríceps','Press cerrado':'Tríceps',
+  'Curl con barra':'Bíceps','Curl con barra EZ':'Bíceps','Curl con mancuernas':'Bíceps',
+  'Curl martillo':'Bíceps','Curl en banco inclinado':'Bíceps','Curl en polea':'Bíceps',
+  'Curl en máquina':'Bíceps','Curl concentrado':'Bíceps',
+  'Sentadilla':'Cuádriceps','Sentadilla hack':'Cuádriceps','Sentadilla goblet':'Cuádriceps',
+  'Prensa de piernas':'Cuádriceps','Extensión de cuádriceps':'Cuádriceps',
+  'Zancadas':'Cuádriceps','Zancadas con mancuernas':'Cuádriceps','Step-up':'Cuádriceps',
+  'Peso muerto rumano':'Isquiosurales','Curl femoral':'Isquiosurales','Curl femoral tumbado':'Isquiosurales',
+  'Curl femoral sentado':'Isquiosurales','Curl femoral de pie':'Isquiosurales',
+  'Peso muerto sumo':'Isquiosurales','Nordics':'Isquiosurales',
+  'Hip thrust':'Glúteos','Hip thrust con barra':'Glúteos','Patada de glúteo en polea':'Glúteos',
+  'Abducción de cadera en máquina':'Glúteos','Puente de glúteo':'Glúteos',
+  'Elevación de gemelos':'Gemelos','Elevación de gemelos de pie':'Gemelos',
+  'Elevación de gemelos sentado':'Gemelos','Elevación de gemelos en prensa':'Gemelos',
+  'Crunch abdominal':'Core','Crunch en polea':'Core','Elevaciones de piernas':'Core',
+  'Plancha':'Core','Rueda abdominal':'Core','Sit-up':'Core','Russian twist':'Core','Dragon flag':'Core',
 };
 
 let exercisesMuscleData = {};
@@ -302,7 +304,14 @@ function findTopExercise(sessions) {
 }
 
 function muscleGroupToClass(mg) {
-  const map = { 'Pecho':'pecho','Espalda':'espalda','Hombros':'hombros','Bíceps':'biceps','Tríceps':'triceps','Piernas':'piernas','Glúteos':'gluteos','Core':'core' };
+  const map = {
+    'Pecho':'pecho','Dorsal':'dorsal','Espalda media':'espalda-media','Lumbar':'lumbar',
+    'Hombros':'hombros','Deltoides posterior':'deltoides-post',
+    'Bíceps':'biceps','Tríceps':'triceps',
+    'Cuádriceps':'cuadriceps','Isquiosurales':'isquios','Glúteos':'gluteos','Gemelos':'gemelos',
+    'Core':'core',
+    'Espalda':'dorsal','Piernas':'cuadriceps', // legacy
+  };
   return map[mg] || 'other';
 }
 

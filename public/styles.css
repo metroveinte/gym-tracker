@@ -1182,15 +1182,20 @@ input[type="checkbox"]:disabled {
   color: #fff;
 }
 
-.muscle-pecho    { background: #c0392b; }
-.muscle-espalda  { background: #2471a3; }
-.muscle-hombros  { background: #7d3c98; }
-.muscle-biceps   { background: #1e8449; }
-.muscle-triceps  { background: #148f77; }
-.muscle-piernas  { background: #ca6f1e; }
-.muscle-gluteos  { background: #d35400; }
-.muscle-core     { background: #616a6b; }
-.muscle-other    { background: #3a3a3a; }
+.muscle-pecho          { background: #c0392b; }
+.muscle-dorsal         { background: #2471a3; }
+.muscle-espalda-media  { background: #1a5276; }
+.muscle-lumbar         { background: #0d3349; }
+.muscle-hombros        { background: #7d3c98; }
+.muscle-deltoides-post { background: #5b2c6f; }
+.muscle-biceps         { background: #1e8449; }
+.muscle-triceps        { background: #148f77; }
+.muscle-cuadriceps     { background: #ca6f1e; }
+.muscle-isquios        { background: #a04000; }
+.muscle-gluteos        { background: #d35400; }
+.muscle-gemelos        { background: #784212; }
+.muscle-core           { background: #616a6b; }
+.muscle-other          { background: #3a3a3a; }
 
 /* ── Bottom navigation ───────────────────────────────────────────────────────── */
 .bottom-nav { display: none; }
