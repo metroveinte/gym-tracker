@@ -157,13 +157,6 @@ function renderPlan(plan, generatedAt, validUntil) {
   document.getElementById('plan-structure').textContent = wp.structure || '';
   document.getElementById('plan-rationale').textContent = wp.rationale || '';
 
-  const SCHEME_LABEL = {
-    rectas:               'Series rectas',
-    piramide_asc:         'Pirámide ascendente',
-    piramide_desc:        'Pirámide descendente',
-    calentamiento_trabajo:'Calentamiento + trabajo',
-  };
-
   document.getElementById('plan-days').innerHTML = (wp.days || []).map((d, dayIdx) => {
     const mins = d.estimated_minutes;
     const timeChip = mins
@@ -171,25 +164,9 @@ function renderPlan(plan, generatedAt, validUntil) {
       : '';
 
     const exerciseRows = (d.exercises || []).map(ex => {
-      const ww  = ex.weekly_weights || {};
       const sw1 = ex.session_weights_week1 || [];
 
-      // Weekly progression row (renamed Sem 1-4 to avoid confusion with sets)
-      const isDeload = (() => {
-        const w3 = parseFloat(ww['week3']);
-        const w4 = parseFloat(ww['week4']);
-        return !isNaN(w3) && !isNaN(w4) && w4 < w3;
-      })();
-      const weeklyRow = Object.keys(ww).length ? `
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;">
-          <span style="font-size:.7rem;color:#555;align-self:center;margin-right:2px;">progresión:</span>
-          ${['week1','week2','week3','week4'].map((k,i) => ww[k] ? `
-            <span style="font-size:.75rem;padding:2px 8px;border-radius:4px;background:var(--bg);border:1px solid var(--border-mid);color:${i===3?'#888':'#ccc'};">
-              Sem${i+1} <strong style="color:${i===3&&isDeload?'#666':'var(--accent)'};">${ww[k]}</strong>${i===3&&isDeload?' ↓':''}
-            </span>` : '').join('')}
-        </div>` : '';
-
-      // Per-set weights for week 1
+      // Per-set weights for this week
       const setsRow = sw1.length ? `
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;align-items:center;">
           <span style="font-size:.7rem;color:#555;margin-right:2px;">esta sem:</span>
@@ -199,7 +176,7 @@ function renderPlan(plan, generatedAt, validUntil) {
             </span>`).join('')}
         </div>` : '';
 
-      // Alternative exercise (shown on the right, below sets×reps)
+      // Alternative exercise
       const altInline = ex.alternative
         ? `<div style="text-align:right;margin-top:3px;">
             <span style="font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:700;">Alternativa:</span>
@@ -207,30 +184,23 @@ function renderPlan(plan, generatedAt, validUntil) {
           </div>`
         : '';
 
-      // Set scheme badge + note
-      const schemeLabel = SCHEME_LABEL[ex.set_scheme] || ex.set_scheme || '';
-      const schemeBadge = schemeLabel
-        ? `<span style="font-size:.7rem;padding:1px 7px;border-radius:10px;background:var(--bg-raised);border:1px solid var(--border-mid);color:#666;margin-left:6px;">${schemeLabel}</span>`
-        : '';
+      // Scheme execution note
       const schemeNote = ex.set_scheme_note
         ? `<div style="color:#555;font-size:.76rem;margin-top:4px;line-height:1.4;font-style:italic;">${ex.set_scheme_note}</div>`
         : '';
 
-      // Progression rationale
+      // Coach progression explanation — prominent
       const progressionNote = ex.progression_note
-        ? `<div style="display:flex;align-items:flex-start;gap:5px;margin-top:5px;padding:5px 8px;background:rgba(229,48,58,.06);border-left:2px solid rgba(229,48,58,.35);border-radius:0 4px 4px 0;">
-            <span style="font-size:.68rem;color:var(--accent);font-weight:700;white-space:nowrap;padding-top:1px;">📈</span>
-            <span style="font-size:.74rem;color:#777;line-height:1.45;">${ex.progression_note}</span>
+        ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(229,48,58,.08);border-left:3px solid rgba(229,48,58,.5);border-radius:0 6px 6px 0;">
+            <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);font-weight:700;margin-bottom:3px;">📈 Análisis del coach</div>
+            <div style="font-size:.82rem;color:#bbb;line-height:1.55;">${ex.progression_note}</div>
           </div>`
         : '';
 
       return `
         <div style="padding:8px 0;border-bottom:1px solid var(--border);">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:4px;">
-            <div style="display:flex;align-items:center;flex-wrap:wrap;">
-              <span style="color:var(--text);font-size:.88rem;font-weight:600;">${ex.name}</span>
-              ${schemeBadge}
-            </div>
+            <span style="color:var(--text);font-size:.88rem;font-weight:600;">${ex.name}</span>
             <div style="text-align:right;">
               <div style="color:#888;font-size:.82rem;white-space:nowrap;">${ex.sets}×${ex.reps}${ex.notes ? ' · <em style=color:#666>' + ex.notes + '</em>' : ''}</div>
               ${altInline}
@@ -238,7 +208,6 @@ function renderPlan(plan, generatedAt, validUntil) {
           </div>
           ${schemeNote}
           ${setsRow}
-          ${weeklyRow}
           ${progressionNote}
         </div>`;
     }).join('');
