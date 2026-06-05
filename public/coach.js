@@ -215,6 +215,14 @@ function renderPlan(plan, generatedAt, validUntil) {
         ? `<div style="color:#555;font-size:.76rem;margin-top:4px;line-height:1.4;font-style:italic;">${ex.set_scheme_note}</div>`
         : '';
 
+      // Progression rationale
+      const progressionNote = ex.progression_note
+        ? `<div style="display:flex;align-items:flex-start;gap:5px;margin-top:5px;padding:5px 8px;background:rgba(229,48,58,.06);border-left:2px solid rgba(229,48,58,.35);border-radius:0 4px 4px 0;">
+            <span style="font-size:.68rem;color:var(--accent);font-weight:700;white-space:nowrap;padding-top:1px;">📈</span>
+            <span style="font-size:.74rem;color:#777;line-height:1.45;">${ex.progression_note}</span>
+          </div>`
+        : '';
+
       return `
         <div style="padding:8px 0;border-bottom:1px solid var(--border);">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:4px;">
@@ -230,6 +238,7 @@ function renderPlan(plan, generatedAt, validUntil) {
           ${schemeNote}
           ${setsRow}
           ${weeklyRow}
+          ${progressionNote}
         </div>`;
     }).join('');
 

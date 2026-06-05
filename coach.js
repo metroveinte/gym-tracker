@@ -75,14 +75,18 @@ async function buildContext() {
     }
   }
 
-  // Volume stats per exercise (all time, top 15 by tonnage)
+  // Volume stats per exercise (all time, top 15 by tonnage; recent for double-progression)
   const exerciseStats = {};
   for (const s of allSessions) {
     const name = s.exercise;
     if (!name) continue;
     if (!exerciseStats[name]) {
-      exerciseStats[name] = { totalSets: 0, weights: [], lastDate: s.date, tonnage: 0 };
+      exerciseStats[name] = {
+        totalSets: 0, weights: [], lastDate: s.date, tonnage: 0,
+        recentSets: 0, recentWeights: [], recentReps: [],
+      };
     }
+    const isRecent = s.date >= cutoff;
     for (const serie of s.series) {
       const sets   = serie.sets   || 1;
       const reps   = serie.reps   || 0;
@@ -90,6 +94,11 @@ async function buildContext() {
       exerciseStats[name].totalSets += sets;
       if (serie.weight) exerciseStats[name].weights.push(serie.weight);
       exerciseStats[name].tonnage += sets * reps * weight;
+      if (isRecent) {
+        exerciseStats[name].recentSets += sets;
+        if (serie.weight) exerciseStats[name].recentWeights.push(serie.weight);
+        if (serie.reps)   exerciseStats[name].recentReps.push(serie.reps);
+      }
     }
     if (s.date > exerciseStats[name].lastDate) exerciseStats[name].lastDate = s.date;
   }
@@ -135,8 +144,10 @@ function buildPrompt(ctx, checkin) {
 - Factor actividad: ${profile.activity_factor}
 `.trim() : 'Perfil no configurado.';
 
-  const avg  = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
-  const max  = arr => arr.length ? Math.max(...arr) : null;
+  const avg    = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+  const avgDec = arr => arr.length ? +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : null;
+  const max    = arr => arr.length ? Math.max(...arr) : null;
+  const min    = arr => arr.length ? Math.min(...arr) : null;
 
   const muscleText = Object.keys(muscleStats).length
     ? Object.entries(muscleStats).map(([g, s]) => {
@@ -157,6 +168,20 @@ function buildPrompt(ctx, checkin) {
 
   const checkinText = formatCheckin(checkin);
 
+  const exerciseLines = topExerciseStats.map(([name, s]) => {
+    const avgW = avg(s.weights);
+    const maxW = max(s.weights);
+    const weightStr = avgW ? ` | peso: media ${avgW}kg/máx ${maxW}kg` : '';
+    let repsStr = '';
+    if (s.recentReps.length > 0) {
+      const avgR = avgDec(s.recentReps);
+      const maxR = max(s.recentReps);
+      const minR = min(s.recentReps);
+      repsStr = ` | reps último mes: ${minR}-${maxR} (media ${avgR})`;
+    }
+    return `  ${name}: ${s.totalSets} series totales${weightStr}${repsStr} | último ${s.lastDate}`;
+  }).join('\n');
+
   return `Eres un entrenador personal experto. Analiza el historial de entrenamiento real del usuario y genera un plan de 4 semanas adaptado a su objetivo.
 
 HOY: ${today}
@@ -173,15 +198,8 @@ ${weightTrend}
 === VOLUMEN POR GRUPO MUSCULAR (últimos 30 días) ===
 ${muscleText}
 
-=== EJERCICIOS PRINCIPALES (por volumen acumulado, todos los tiempos) ===
-${topExerciseStats.length
-  ? topExerciseStats.map(([name, s]) => {
-      const avgW = avg(s.weights);
-      const maxW = max(s.weights);
-      const weightStr = avgW ? ` | media ${avgW}kg | máx ${maxW}kg` : '';
-      return `  ${name}: ${s.totalSets} series${weightStr} | último ${s.lastDate}`;
-    }).join('\n')
-  : '  Ninguno registrado.'}
+=== EJERCICIOS PRINCIPALES (por volumen acumulado; con reps reales del último mes) ===
+${exerciseLines || '  Ninguno registrado.'}
 
 === ÚLTIMAS 20 SESIONES ===
 ${recentSessions || '  Sin sesiones registradas aún.'}
@@ -192,14 +210,22 @@ Genera una respuesta JSON con exactamente esta estructura (sin texto fuera del J
 REGLAS IMPORTANTES:
 - day: usa siempre nombres genéricos "Día 1", "Día 2", "Día 3"… (nunca días de la semana como Lunes, Martes, etc.), ya que el usuario puede entrenar cualquier día.
 - estimated_minutes: calcula el tiempo real de sesión sumando (sets_totales × 1.5 min de ejecución) + (sets_totales × 2.5 min de descanso) + 12 min de overhead (calentamiento, buscar máquinas, transiciones). Redondea a múltiplos de 5.
-- weekly_weights: usa el historial real del usuario para estimar el peso de partida. Si no hay datos, pon un peso conservador. Aplica progresión lineal: +2.5-5 kg/semana en ejercicios compuestos, +1.25-2.5 kg en aislamiento. Semana 4 = continúa la progresión normalmente (NO hagas semana de descarga) salvo que el usuario haya indicado explícitamente que quiere descarga o que le cuesta recuperarse (en ese caso semana 4 = 60% de semana 3). Para ejercicios de peso corporal pon "PC". Incluye siempre la unidad (kg).
+- weekly_weights + doble progresión: Aplica el modelo de DOBLE PROGRESIÓN para decidir los pesos:
+    1. Analiza las reps reales del último mes por ejercicio (columna "reps último mes"):
+       • media de reps ≥ máximo del rango - 0.5: el usuario domina ese peso → SUBE el peso de partida (semana 1) respecto al último registrado: +2.5-5 kg compuestos, +1.25-2.5 kg aislamiento.
+       • media de reps < máximo del rango: el usuario aún no llega al techo → MANTÉN el mismo peso; el objetivo este mes es subir reps, no peso.
+       • Sin datos de reps recientes: usa el último peso registrado (o peso conservador si ejercicio nuevo).
+    2. Semanas 2-4 del plan: solo aplica subida semanal si en semana 1 ya se parte de un peso consolidado. Si el peso se mantiene, semanas 2-4 también mantienen (progreso = reps, no kg).
+    3. Semana 4 = continúa la progresión normalmente (NO hagas semana de descarga) salvo que el usuario lo haya pedido explícitamente (en ese caso semana 4 = 60% de semana 3).
+    4. Para ejercicios de peso corporal usa "PC". Incluye siempre la unidad (kg).
 - set_scheme: elige el esquema adecuado para cada ejercicio según su posición en la sesión y el objetivo:
     "rectas" → todos los sets al mismo peso (ejercicios de aislamiento, accesorios)
     "piramide_asc" → peso creciente set a set, últimos 2 sets son los de trabajo (ejercicios compuestos principales)
     "piramide_desc" → primer set al peso máximo, va bajando (fuerza/potencia)
     "calentamiento_trabajo" → 1-2 sets ligeros de activación + sets de trabajo al peso objetivo
-- set_scheme_note: frase corta (1 línea) explicando qué debe hacer el usuario dentro de la sesión con ese esquema.
+- set_scheme_note: frase corta (1 línea) con la regla de ejecución y progresión. Ejemplo: "Rango 8-10: cuando completes todas las series en 10 reps, sube 2.5kg el mes siguiente."
 - session_weights_week1: array con el peso exacto de cada set en la semana 1 (longitud = sets). Para "rectas" todos iguales. Para pirámide, mostrar la progresión real. Usa siempre la unidad (kg o "PC").
+- progression_note: 1-2 frases explicando la lógica de peso para este ejercicio: qué hizo el usuario el mes pasado (reps/peso real), por qué se eligió este peso de partida, y qué tiene que ocurrir para subir peso el mes siguiente. Ejemplo: "Media 9.8 reps a 60kg → ya domina el peso. Subimos a 62.5kg. Cuando completes las 4 series a 10 reps, sube a 65kg el mes que viene."
 - alternative: nombre de UN ejercicio alternativo que trabaje el mismo músculo y se pueda hacer con equipamiento diferente (por si la máquina no está libre). Ejemplo: si el principal es "Press banca", el alternativo podría ser "Press mancuernas inclinado". Una sola frase corta, sin más detalles.
 
 {
@@ -225,13 +251,14 @@ REGLAS IMPORTANTES:
             "notes": "nota opcional",
             "alternative": "Nombre del ejercicio alternativo",
             "set_scheme": "rectas",
-            "set_scheme_note": "Todos los sets al mismo peso. Si completas todas las reps sube 2.5kg la semana siguiente.",
-            "session_weights_week1": ["60kg","60kg","60kg","60kg"],
+            "set_scheme_note": "Rango 8-10: cuando completes todas las series en 10 reps, sube 2.5kg el mes siguiente.",
+            "progression_note": "Media 9.8 reps a 60kg el mes pasado → ya domina el peso. Subimos a 62.5kg. Cuando completes 4×10, sube a 65kg el mes que viene.",
+            "session_weights_week1": ["62.5kg","62.5kg","62.5kg","62.5kg"],
             "weekly_weights": {
-              "week1": "60kg",
-              "week2": "65kg",
-              "week3": "67.5kg",
-              "week4": "55kg"
+              "week1": "62.5kg",
+              "week2": "62.5kg",
+              "week3": "65kg",
+              "week4": "65kg"
             }
           }
         ]
