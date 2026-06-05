@@ -234,7 +234,7 @@ REGLAS IMPORTANTES:
     "calentamiento_trabajo" → 1-2 sets ligeros de activación + sets de trabajo al peso objetivo
 - set_scheme_note: frase corta (1 línea) con la regla de ejecución y progresión. Ejemplo: "Rango 8-10: cuando completes todas las series en 10 reps, sube 2.5kg el mes siguiente."
 - session_weights_week1: array con el peso exacto de cada set en la semana 1 (longitud = sets). Para "rectas" todos iguales. Para pirámide, mostrar la progresión real. Usa siempre la unidad (kg o "PC").
-- progression_note: 1-2 frases explicando la lógica de peso para este ejercicio: qué hizo el usuario el mes pasado (reps/peso real), por qué se eligió este peso de partida, y qué tiene que ocurrir para subir peso el mes siguiente. Ejemplo: "Media 9.8 reps a 60kg → ya domina el peso. Subimos a 62.5kg. Cuando completes las 4 series a 10 reps, sube a 65kg el mes que viene."
+- progression_note: 1-2 frases explicando la lógica de peso para este ejercicio: qué hizo el usuario el mes pasado (reps/peso real de las series de trabajo), por qué se eligió este peso de partida, y qué tiene que ocurrir para subir peso el mes siguiente. Distingue siempre entre peso de activación y peso de trabajo cuando aplique. Ejemplo: "Media 9.8 reps a 60 kg en series de trabajo → ya domina el peso. Subimos a 62.5 kg de trabajo (activación ~50 kg). Cuando completes todas las series de trabajo a 10 reps, sube a 65 kg el mes que viene."
 - alternative: nombre de UN ejercicio alternativo que trabaje el mismo músculo y se pueda hacer con equipamiento diferente (por si la máquina no está libre). Ejemplo: si el principal es "Press banca", el alternativo podría ser "Press mancuernas inclinado". Una sola frase corta, sin más detalles.
 
 {
