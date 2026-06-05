@@ -818,6 +818,7 @@ function renderEditExercises() {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <h4 style="margin:0; color:#fff; font-size:1rem;">${escapeHtml(ex.name)}</h4>
           <div style="display:flex; gap:8px;">
+            <button type="button" class="icon-btn edit-rename-exercise" data-ex="${exIdx}" style="font-size:0.8rem; padding:4px 10px;" title="Cambiar ejercicio">⇄ Cambiar</button>
             <button type="button" class="icon-btn edit-add-serie" data-ex="${exIdx}" style="font-size:0.8rem; padding:4px 10px;">+ Serie</button>
             <button type="button" class="icon-btn icon-btn-danger edit-delete-exercise" data-ex="${exIdx}" style="font-size:0.8rem; padding:4px 8px;">🗑</button>
           </div>
@@ -830,6 +831,23 @@ function renderEditExercises() {
       </div>
     `;
   }).join('');
+
+  container.querySelectorAll('.edit-rename-exercise').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const exIdx = parseInt(btn.dataset.ex);
+      const current = editingExercises[exIdx].name;
+      const newName = await showInput({
+        title: 'Cambiar ejercicio',
+        body: 'Introduce el nombre del nuevo ejercicio. Las series y pesos se mantendrán.',
+        defaultValue: current,
+        placeholder: 'Nombre del ejercicio',
+        okText: 'Cambiar',
+      });
+      if (!newName || !newName.trim() || newName.trim() === current) return;
+      editingExercises[exIdx].name = newName.trim();
+      renderEditExercises();
+    });
+  });
 
   container.querySelectorAll('.edit-delete-exercise').forEach(btn => {
     btn.addEventListener('click', () => {
