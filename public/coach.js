@@ -94,14 +94,15 @@ async function generate(isRegeneration = false) {
   show('state-loading');
 
   try {
-    const res  = await fetch('/api/coach/generate', {
+    const res = await fetch('/api/coach/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ checkin: answers }),
     });
-    const data = await res.json();
     if (res.status === 503) { hide('state-loading'); show('state-no-key'); return; }
-    if (!res.ok) throw new Error(data.error || 'Error desconocido');
+    let data;
+    try { data = await res.json(); } catch { data = {}; }
+    if (!res.ok) throw new Error(data.error || `Error del servidor (${res.status})`);
     hide('state-loading');
     await load();
   } catch (e) {

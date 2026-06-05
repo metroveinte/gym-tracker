@@ -417,6 +417,13 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'home.html'));
 });
 
+// Global error handler — ensures errors always return JSON, never HTML
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err.message);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: err.message || 'Error interno del servidor.' });
+});
+
 app.listen(PORT, () => {
   console.log(`Gym Tracker running at http://localhost:${PORT}`);
 });
