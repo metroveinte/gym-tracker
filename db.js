@@ -68,6 +68,13 @@ db.serialize(() => {
     db.run(`UPDATE exercises SET is_predefined = 1 WHERE name = ? COLLATE NOCASE AND is_predefined = 0`, [name]);
   }
 
+  // Migration: sync muscle_group for all predefined exercises (idempotent)
+  const stmtMg = db.prepare(`UPDATE exercises SET muscle_group = ? WHERE name = ? COLLATE NOCASE`);
+  for (const [name, mg] of Object.entries(PREDEFINED_EXERCISES)) {
+    stmtMg.run(mg, name);
+  }
+  stmtMg.finalize();
+
   db.run(`
     CREATE TABLE IF NOT EXISTS tdee_profile (
       id INTEGER PRIMARY KEY,
@@ -95,6 +102,16 @@ db.serialize(() => {
 
   db.run(`ALTER TABLE tdee_profile ADD COLUMN goal TEXT`, () => {});
   db.run(`ALTER TABLE tdee_profile ADD COLUMN target_calories REAL`, () => {});
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS coach_plans (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      valid_until  TEXT NOT NULL,
+      plan_json    TEXT NOT NULL,
+      raw_response TEXT
+    )
+  `);
 });
 
 module.exports = db;

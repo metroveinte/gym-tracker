@@ -17,44 +17,44 @@ const firstRepsInput = document.getElementById('first-reps');
 const firstWeightInput = document.getElementById('first-weight');
 
 const EXERCISE_MUSCLE_MAP = {
-  'Press de banca': 'Pecho',
-  'Press inclinado con mancuernas': 'Pecho',
-  'Fondos en paralelas': 'Pecho',
-  'Aperturas con mancuernas': 'Pecho',
-  'Cruce de poleas': 'Pecho',
-  'Dominadas': 'Espalda',
-  'Jalón al pecho': 'Espalda',
-  'Remo con barra': 'Espalda',
-  'Remo con mancuerna': 'Espalda',
-  'Peso muerto': 'Espalda',
-  'Press militar': 'Hombros',
-  'Elevaciones laterales': 'Hombros',
-  'Pájaros': 'Hombros',
-  'Face pulls': 'Hombros',
-  'Sentadilla': 'Piernas',
-  'Prensa de piernas': 'Piernas',
-  'Peso muerto rumano': 'Piernas',
-  'Zancadas': 'Piernas',
-  'Hip thrust': 'Glúteos',
-  'Curl femoral': 'Piernas',
-  'Extensión de cuádriceps': 'Piernas',
-  'Elevación de gemelos': 'Piernas',
-  'Curl con barra': 'Bíceps',
-  'Curl martillo': 'Bíceps',
-  'Curl en banco inclinado': 'Bíceps',
-  'Curl en polea': 'Bíceps',
-  'Press francés': 'Tríceps',
-  'Extensión de tríceps en polea': 'Tríceps',
-  'Fondos para tríceps': 'Tríceps',
-  'Extensión por encima de la cabeza': 'Tríceps',
-  'Crunch abdominal': 'Core',
-  'Elevaciones de piernas': 'Core',
-  'Plancha': 'Core',
-  'Rueda abdominal': 'Core'
+  'Press de banca':'Pecho','Press de banca con mancuernas':'Pecho','Press inclinado con barra':'Pecho',
+  'Press inclinado con mancuernas':'Pecho','Press declinado':'Pecho','Fondos en paralelas':'Pecho',
+  'Aperturas con mancuernas':'Pecho','Aperturas en máquina (pec deck)':'Pecho','Cruce de poleas':'Pecho','Press en máquina':'Pecho',
+  'Dominadas':'Dorsal','Jalón al pecho':'Dorsal','Jalón en polea agarre neutro':'Dorsal',
+  'Remo con barra':'Dorsal','Remo con mancuerna':'Dorsal','Remo en máquina':'Dorsal',
+  'Remo sentado en polea':'Dorsal','Remo sentado en máquina':'Dorsal','Remo en polea baja':'Dorsal',
+  'Face pulls':'Espalda media','Remo al cuello':'Espalda media',
+  'Peso muerto':'Lumbar','Hiperextensiones':'Lumbar','Buenos días':'Lumbar',
+  'Press militar':'Hombros','Press arnold':'Hombros','Press con mancuernas':'Hombros',
+  'Elevaciones laterales':'Hombros','Elevaciones frontales':'Hombros',
+  'Pájaros':'Deltoides posterior','Pájaros en máquina':'Deltoides posterior','Remo al mentón':'Deltoides posterior',
+  'Press francés':'Tríceps','Extensión de tríceps en polea':'Tríceps','Extensión de tríceps con cuerda':'Tríceps',
+  'Fondos para tríceps':'Tríceps','Extensión por encima de la cabeza':'Tríceps','Press cerrado':'Tríceps',
+  'Curl con barra':'Bíceps','Curl con barra EZ':'Bíceps','Curl con mancuernas':'Bíceps',
+  'Curl martillo':'Bíceps','Curl en banco inclinado':'Bíceps','Curl en polea':'Bíceps',
+  'Curl en máquina':'Bíceps','Curl concentrado':'Bíceps',
+  'Sentadilla':'Cuádriceps','Sentadilla hack':'Cuádriceps','Sentadilla goblet':'Cuádriceps',
+  'Prensa de piernas':'Cuádriceps','Extensión de cuádriceps':'Cuádriceps',
+  'Zancadas':'Cuádriceps','Zancadas con mancuernas':'Cuádriceps','Step-up':'Cuádriceps',
+  'Peso muerto rumano':'Isquiosurales','Curl femoral':'Isquiosurales','Curl femoral tumbado':'Isquiosurales',
+  'Curl femoral sentado':'Isquiosurales','Curl femoral de pie':'Isquiosurales',
+  'Peso muerto sumo':'Isquiosurales','Nordics':'Isquiosurales',
+  'Hip thrust':'Glúteos','Hip thrust con barra':'Glúteos','Patada de glúteo en polea':'Glúteos',
+  'Abducción de cadera en máquina':'Glúteos','Puente de glúteo':'Glúteos',
+  'Elevación de gemelos':'Gemelos','Elevación de gemelos de pie':'Gemelos',
+  'Elevación de gemelos sentado':'Gemelos','Elevación de gemelos en prensa':'Gemelos',
+  'Crunch abdominal':'Core','Crunch en polea':'Core','Elevaciones de piernas':'Core',
+  'Plancha':'Core','Rueda abdominal':'Core','Sit-up':'Core','Russian twist':'Core','Dragon flag':'Core',
 };
 
 const PREDEFINED_EXERCISES = Object.keys(EXERCISE_MUSCLE_MAP);
-const MUSCLE_GROUPS = ['Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps', 'Piernas', 'Glúteos', 'Core'];
+const MUSCLE_GROUPS = [
+  'Pecho','Dorsal','Espalda media','Lumbar',
+  'Hombros','Deltoides posterior',
+  'Bíceps','Tríceps',
+  'Cuádriceps','Isquiosurales','Glúteos','Gemelos',
+  'Core',
+];
 
 let currentExercises = [];
 let availableExercises = [...PREDEFINED_EXERCISES];
@@ -91,7 +91,14 @@ function capitalizeFirstLetter(string) {
 }
 
 function muscleGroupToClass(mg) {
-  const map = { 'Pecho':'pecho','Espalda':'espalda','Hombros':'hombros','Bíceps':'biceps','Tríceps':'triceps','Piernas':'piernas','Glúteos':'gluteos','Core':'core' };
+  const map = {
+    'Pecho':'pecho','Dorsal':'dorsal','Espalda media':'espalda-media','Lumbar':'lumbar',
+    'Hombros':'hombros','Deltoides posterior':'deltoides-post',
+    'Bíceps':'biceps','Tríceps':'triceps',
+    'Cuádriceps':'cuadriceps','Isquiosurales':'isquios','Glúteos':'gluteos','Gemelos':'gemelos',
+    'Core':'core',
+    'Espalda':'dorsal','Piernas':'cuadriceps', // legacy
+  };
   return map[mg] || 'other';
 }
 
@@ -328,7 +335,10 @@ function renderExercises() {
     html += `
       <div style="margin-bottom: 25px; padding: 15px; background: #1a1a1a; border-radius: 8px; border-left: 3px solid #d32f2f;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h4 style="margin: 0; color: #fff;">${escapeHtml(exercise.name)}</h4>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <h4 style="margin: 0; color: #fff;">${escapeHtml(exercise.name)}</h4>
+            ${exercise.plannedWeight ? `<span style="font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(229,48,58,.15);border:1px solid rgba(229,48,58,.4);color:var(--accent);">🎯 ${escapeHtml(exercise.plannedWeight)}</span>` : ''}
+          </div>
           <div style="display: flex; gap: 8px;">
             <button class="add-serie-to-exercise" data-idx="${exIdx}" style="font-size:0.8rem; padding:4px 10px;">+ Serie</button>
             <button class="delete-exercise-btn" data-idx="${exIdx}" style="font-size:0.8rem; padding:4px 8px;" title="Eliminar ejercicio">🗑</button>
@@ -956,7 +966,7 @@ document.getElementById('manage-add-cancel-btn').addEventListener('click', hideM
 document.getElementById('repair-db-btn').addEventListener('click', async () => {
   const ok = await showConfirm({
     title: 'Reparar Base de Datos',
-    body: `<p style="color:#ccc; line-height:1.6;">Restaurará el nombre y grupo muscular de los <strong>34 ejercicios predefinidos</strong> a su estado original.<br><br>Los ejercicios personalizados y los registros de sesiones <strong>no se verán afectados</strong>.</p>`,
+    body: `<p style="color:#ccc; line-height:1.6;">Restaurará el nombre y grupo muscular de los <strong>${PREDEFINED_EXERCISES.length} ejercicios predefinidos</strong> a su estado original.<br><br>Los ejercicios personalizados y los registros de sesiones <strong>no se verán afectados</strong>.</p>`,
     okText: 'Reparar'
   });
   if (!ok) return;
@@ -976,7 +986,7 @@ document.getElementById('repair-db-btn').addEventListener('click', async () => {
 document.getElementById('restore-db-btn').addEventListener('click', async () => {
   const first = await showConfirm({
     title: 'Restaurar Base de Datos',
-    body: `<p style="color:#ccc; line-height:1.6;">Esta acción eliminará <strong>todos los ejercicios</strong>, incluidos los personalizados, y restaurará únicamente los 34 predefinidos.<br><br>Los registros de sesiones no se verán afectados.</p>`,
+    body: `<p style="color:#ccc; line-height:1.6;">Esta acción eliminará <strong>todos los ejercicios</strong>, incluidos los personalizados, y restaurará únicamente los ${PREDEFINED_EXERCISES.length} predefinidos.<br><br>Los registros de sesiones no se verán afectados.</p>`,
     okText: 'Continuar',
     danger: true
   });
@@ -996,12 +1006,65 @@ document.getElementById('restore-db-btn').addEventListener('click', async () => 
     availableExercises = [...PREDEFINED_EXERCISES];
     await loadExerciseOptions();
     await loadAndRenderManageList();
-    showAlert('Restauración completada', 'La base de datos ha sido restaurada a los 34 ejercicios predefinidos.');
+    showAlert('Restauración completada', `La base de datos ha sido restaurada a los ${PREDEFINED_EXERCISES.length} ejercicios predefinidos.`);
   } catch (err) {
     showAlert('Error', 'Error al restaurar: ' + err.message);
   }
 });
 
 // Inicializar
-loadExerciseOptions();
+loadExerciseOptions().then(async () => {
+  const params  = new URLSearchParams(window.location.search);
+  const prefill = params.get('ejercicio');
+  const plandia = params.get('plandia');
+
+  if (prefill) {
+    openModal();
+    selectExerciseInModal(decodeURIComponent(prefill));
+    return;
+  }
+
+  if (plandia !== null) {
+    try {
+      const res  = await fetch('/api/coach/plan');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data?.plan_json) return;
+
+      const days = data.plan_json.weekly_plan?.days || [];
+      const day  = days[parseInt(plandia)];
+      if (!day) return;
+
+      // Semana actual del plan (1-4)
+      const generated   = new Date(data.generated_at);
+      const daysPassed  = Math.floor((Date.now() - generated) / 86400000);
+      const currentWeek = Math.min(4, Math.max(1, Math.floor(daysPassed / 7) + 1));
+      const weekKey     = `week${currentWeek}`;
+
+      // Pre-cargar ejercicios con peso guía
+      for (const ex of (day.exercises || [])) {
+        const raw = ex.weekly_weights?.[weekKey] || null;
+        const plannedWeight = raw && !/^PC$/i.test(raw.trim()) ? raw : null;
+        currentExercises.push({ name: ex.name, series: [], notes: '', plannedWeight });
+      }
+
+      // Mostrar banner contextual
+      const banner = document.getElementById('plan-banner');
+      const focus  = decodeURIComponent(params.get('playfocus') || '');
+      document.getElementById('plan-banner-text').textContent =
+        `Plan activo · ${day.day}${focus ? ' · ' + focus : ''} · Semana ${currentWeek} de 4`;
+      banner.classList.remove('hidden');
+
+      renderExercises();
+
+      // Poner fecha de hoy
+      const dateInput = document.getElementById('date');
+      if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().slice(0, 10);
+      }
+    } catch (e) {
+      console.error('Error cargando plan:', e);
+    }
+  }
+});
 renderExercises();

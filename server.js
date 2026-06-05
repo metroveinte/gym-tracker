@@ -1,7 +1,9 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const db = require('./db');
 const PREDEFINED_EXERCISES = require('./predefined-exercises');
+const coach = require('./coach');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -381,12 +383,45 @@ app.delete('/api/weight/:id', (req, res) => {
   });
 });
 
+// Coach endpoints
+app.get('/api/coach/plan', async (req, res) => {
+  try {
+    const plan = await coach.getLatestPlan();
+    if (!plan) return res.json(null);
+    res.json({ ...plan, plan_json: JSON.parse(plan.plan_json) });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al cargar el plan.' });
+  }
+});
+
+app.post('/api/coach/generate', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(503).json({ error: 'API key no configurada. Añade ANTHROPIC_API_KEY al entorno.' });
+  }
+  try {
+    const plan = await coach.generatePlan(req.body?.checkin || null);
+    res.json(plan);
+  } catch (e) {
+    console.error('Coach error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/coach', (req, res) => res.sendFile(path.join(__dirname, 'public', 'coach.html')));
+
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Endpoint no encontrado.' });
 });
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'home.html'));
+});
+
+// Global error handler — ensures errors always return JSON, never HTML
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err.message);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: err.message || 'Error interno del servidor.' });
 });
 
 app.listen(PORT, () => {

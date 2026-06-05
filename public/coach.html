@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planificación - Gym Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <nav>
+      <a href="/" class="nav-link">Inicio</a>
+      <a href="/sessions" class="nav-link">Sesiones</a>
+      <a href="/stats" class="nav-link">Estadísticas</a>
+      <a href="/nutrition" class="nav-link">Nutrición</a>
+      <a href="/coach" class="nav-link active">Planificación</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
+      <a href="/" class="back-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Inicio</a>
+    </div>
+    <h1>Planificación</h1>
+
+    <!-- Estado: sin API key -->
+    <div id="state-no-key" class="card hidden" style="text-align:center; padding:40px 20px;">
+      <div style="font-size:3rem; margin-bottom:16px;">🔑</div>
+      <p style="color:#999; margin-bottom:8px;">El servidor no tiene configurada la API key de Anthropic.</p>
+      <p style="color:#666; font-size:0.85rem;">Añade <code style="color:#e5303a;">ANTHROPIC_API_KEY</code> al fichero <code style="color:#e5303a;">.env</code> y reinicia el servidor.</p>
+    </div>
+
+    <!-- Estado: sin datos suficientes -->
+    <div id="state-no-data" class="card hidden" style="text-align:center; padding:40px 20px;">
+      <div style="font-size:3rem; margin-bottom:16px;">📋</div>
+      <p style="color:#999; margin-bottom:8px;">Aún no hay suficiente historial para generar un plan.</p>
+      <p style="color:#666; font-size:0.85rem;">Registra al menos unas sesiones de entrenamiento y configura tu perfil TMB.</p>
+    </div>
+
+    <!-- Estado: generando -->
+    <div id="state-loading" class="card hidden" style="text-align:center; padding:60px 20px;">
+      <div class="coach-spinner"></div>
+      <p style="color:#999; margin-top:24px; margin-bottom:4px;">Analizando tu historial…</p>
+      <p style="color:#555; font-size:0.8rem;">Esto puede tardar unos segundos.</p>
+    </div>
+
+    <!-- Estado: plan listo -->
+    <div id="state-plan" class="hidden">
+
+      <!-- Header del plan -->
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h2 style="margin:0 0 6px;">Tu plan de entrenamiento</h2>
+            <p id="plan-meta" style="color:#666; font-size:0.8rem; margin:0;"></p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="pdf-btn" class="btn-secondary" style="width:auto; margin:0; padding:8px 18px;">
+              ↓ Guardar PDF
+            </button>
+            <button id="regenerate-btn" class="btn-secondary" style="width:auto; margin:0; padding:8px 18px; display:none;">
+              Regenerar plan
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de vigencia -->
+        <div style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="color:#888; font-size:0.78rem;">Vigencia del plan</span>
+            <span id="plan-days-left" style="color:#888; font-size:0.78rem;"></span>
+          </div>
+          <div style="background:var(--bg-raised); border-radius:4px; height:6px; overflow:hidden;">
+            <div id="plan-progress-bar" style="height:100%; background:var(--accent); border-radius:4px; transition:width 600ms var(--ease-out);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Análisis -->
+      <div class="card" style="margin-bottom:16px;">
+        <h2 style="margin-bottom:16px;">Análisis de tu historial</h2>
+        <p id="analysis-summary" style="color:#ccc; line-height:1.6; margin-bottom:20px;"></p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div>
+            <p style="color:#4caf50; font-size:0.78rem; font-weight:700; margin-bottom:8px; text-transform:uppercase; letter-spacing:.05em;">Puntos fuertes</p>
+            <ul id="analysis-strengths" style="list-style:none; padding:0; margin:0;"></ul>
+          </div>
+          <div>
+            <p style="color:#e5303a; font-size:0.78rem; font-weight:700; margin-bottom:8px; text-transform:uppercase; letter-spacing:.05em;">Carencias</p>
+            <ul id="analysis-gaps" style="list-style:none; padding:0; margin:0;"></ul>
+          </div>
+        </div>
+        <div id="imbalances-block" class="hidden" style="margin-top:14px;">
+          <p style="color:#f0b429; font-size:0.78rem; font-weight:700; margin-bottom:8px; text-transform:uppercase; letter-spacing:.05em;">Desequilibrios</p>
+          <ul id="analysis-imbalances" style="list-style:none; padding:0; margin:0;"></ul>
+        </div>
+      </div>
+
+      <!-- Plan semanal -->
+      <div class="card" style="margin-bottom:16px;">
+        <h2 style="margin-bottom:6px;">Plan semanal</h2>
+        <p id="plan-structure" style="color:#888; font-size:0.85rem; margin-bottom:4px;"></p>
+        <p id="plan-rationale" style="color:#666; font-size:0.82rem; margin-bottom:20px;"></p>
+        <div id="plan-days" style="display:flex; flex-direction:column; gap:12px;"></div>
+      </div>
+
+      <!-- Progresión -->
+      <div class="card" style="margin-bottom:16px;">
+        <h2 style="margin-bottom:16px;">Progresión 4 semanas</h2>
+        <div id="progression-weeks" style="display:flex; flex-direction:column; gap:10px;"></div>
+      </div>
+
+      <!-- Botón generar plan (estado vacío) -->
+      <div id="generate-block" class="hidden" style="text-align:center; padding:40px 20px;">
+        <div style="font-size:3rem; margin-bottom:16px;">🤖</div>
+        <p style="color:#999; margin-bottom:24px;">Aún no tienes un plan generado. El análisis revisa todo tu historial y crea una propuesta personalizada de 4 semanas.</p>
+        <button id="generate-btn" class="btn-primary" style="width:auto; padding:14px 36px;">Generar mi plan</button>
+      </div>
+
+    </div>
+
+  </main>
+
+  <nav class="bottom-nav">
+    <a href="/" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>Inicio</span>
+    </a>
+    <a href="/sessions" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></svg>
+      <span>Sesiones</span>
+    </a>
+    <a href="/stats" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zM16.2 13h2.8v6h-2.8v-6z"/></svg>
+      <span>Stats</span>
+    </a>
+    <a href="/nutrition" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg>
+      <span>Nutri</span>
+    </a>
+    <a href="/coach" class="bottom-nav-item active">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      <span>Plan</span>
+    </a>
+  </nav>
+
+  <!-- Cuestionario previo a la generación -->
+  <div id="checkin-overlay" class="modal-overlay hidden"></div>
+  <div id="checkin-modal" class="modal hidden" style="max-width:540px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="checkin-title">Antes de generar tu plan</h2>
+        <button type="button" class="modal-close" id="checkin-close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+
+        <div class="checkin-group">
+          <p class="checkin-label">¿Cuántos días a la semana puedes entrenar?</p>
+          <div class="checkin-options" data-key="training_days">
+            <button class="checkin-opt" data-value="2">2 días</button>
+            <button class="checkin-opt" data-value="3">3 días</button>
+            <button class="checkin-opt" data-value="4">4 días</button>
+            <button class="checkin-opt" data-value="5">5 días</button>
+            <button class="checkin-opt" data-value="6+">6+ días</button>
+          </div>
+        </div>
+
+        <div class="checkin-group">
+          <p class="checkin-label">¿De cuánto tiempo dispones por sesión?</p>
+          <div class="checkin-options" data-key="session_duration">
+            <button class="checkin-opt" data-value="<45min">Menos de 45 min</button>
+            <button class="checkin-opt" data-value="45-60min">45 – 60 min</button>
+            <button class="checkin-opt" data-value="60-90min">60 – 90 min</button>
+            <button class="checkin-opt" data-value=">90min">Más de 90 min</button>
+          </div>
+        </div>
+
+        <!-- Solo en regeneración -->
+        <div class="checkin-group" id="checkin-prev-plan" style="display:none;">
+          <p class="checkin-label">¿Cómo fue el plan anterior?</p>
+          <div class="checkin-options" data-key="prev_plan_feedback">
+            <button class="checkin-opt" data-value="great">Muy bien, lo completé casi siempre</button>
+            <button class="checkin-opt" data-value="long">Bien, pero las sesiones eran largas</button>
+            <button class="checkin-opt" data-value="hard">Regular, me costó seguirlo</button>
+            <button class="checkin-opt" data-value="skipped">No pude seguirlo</button>
+          </div>
+        </div>
+
+        <div class="checkin-group">
+          <p class="checkin-label">Nota para el coach (opcional)</p>
+          <textarea id="checkin-note" rows="3"
+            placeholder="Ej: quiero más trabajo de pierna, últimamente noto el hombro derecho cargado…"
+            style="width:100%; resize:vertical; margin-top:0;"></textarea>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="checkin-cancel" class="btn-secondary">Cancelar</button>
+        <button type="button" id="checkin-confirm" class="btn-primary" disabled>Analizar y generar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="dialog.js"></script>
+  <script src="coach.js"></script>
+</body>
+</html>
