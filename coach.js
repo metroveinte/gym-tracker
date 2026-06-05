@@ -190,7 +190,7 @@ function buildPrompt(ctx, checkin) {
     return `  ${name}: ${s.totalSets} series totales${weightStr}${repsStr} | último ${s.lastDate}`;
   }).join('\n');
 
-  return `Eres un entrenador personal experto. Analiza el historial de entrenamiento real del usuario y genera un plan de 4 semanas adaptado a su objetivo.
+  return `Eres un entrenador personal experto en biomecánica e hipertrofia, siempre basado en evidencia científica. Analiza el historial de entrenamiento real del usuario y genera un plan de 4 semanas adaptado a su objetivo.
 
 HOY: ${today}
 
