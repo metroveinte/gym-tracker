@@ -69,6 +69,14 @@ const EXERCISE_MUSCLE_MAP = {
 
 let exercisesMuscleData = {};
 
+const MUSCLE_GROUPS = [
+  'Pecho','Dorsal','Espalda media','Lumbar',
+  'Hombros','Deltoides posterior',
+  'Bíceps','Tríceps',
+  'Cuádriceps','Isquiosurales','Glúteos','Gemelos',
+  'Core',
+];
+
 async function loadStats() {
   try {
     allSessions = await fetch('/api/sessions').then(r => r.json());
@@ -901,12 +909,25 @@ editExerciseInput.addEventListener('input', () => {
       item.addEventListener('mousedown', async (e) => {
         e.preventDefault();
         const name = item.dataset.name;
+        const isNew = item.classList.contains('dropdown-item-new');
         editExerciseDropdown.classList.add('hidden');
         editExerciseInput.value = '';
 
         if (editingExercises.some(ex => ex.name.toLowerCase() === name.toLowerCase())) {
           await showAlert('Duplicado', `"${name}" ya está en este entreno`);
           return;
+        }
+
+        if (isNew) {
+          const muscleGroup = await showMuscleGroupSelect(MUSCLE_GROUPS);
+          if (!muscleGroup) return;
+          await fetch('/api/exercises', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, muscle_group: muscleGroup }),
+          });
+          editExerciseOptions.push(name);
+          exercisesMuscleData[name] = muscleGroup;
         }
 
         const result = await showSerieForm(1);

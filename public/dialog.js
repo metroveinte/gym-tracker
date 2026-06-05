@@ -164,4 +164,39 @@
       e.overlay.onclick = (ev) => { if (ev.target === e.overlay) done(false); };
     });
   };
+
+  // Muscle group selector. Returns Promise<string|null>
+  window.showMuscleGroupSelect = (groups) => {
+    return new Promise(resolve => {
+      const e = _els();
+      e.title.textContent = 'Grupo muscular';
+      e.body.innerHTML = `
+        <p style="color:#999; margin-bottom:12px; font-size:.88rem;">Ejercicio nuevo — selecciona su grupo muscular:</p>
+        <select id="_dlg_muscle" style="width:100%; padding:10px; border:2px solid #444; background:#1a1a1a; color:#fff; border-radius:8px; font-family:'Oswald',sans-serif; cursor:pointer;">
+          <option value="">Seleccionar...</option>
+          ${groups.map(g => `<option value="${g}">${g}</option>`).join('')}
+        </select>`;
+      e.ok.textContent = 'Confirmar';
+      e.ok.className = 'btn-primary';
+      e.cancel.style.display = '';
+      e.cancel.textContent = 'Cancelar';
+      e.overlay.classList.remove('hidden');
+      e.modal.classList.remove('hidden');
+      document.getElementById('_dlg_muscle').focus();
+
+      const done = (confirmed) => {
+        e.overlay.classList.add('hidden');
+        e.modal.classList.add('hidden');
+        e.ok.onclick = null; e.cancel.onclick = null;
+        e.close.onclick = null; e.overlay.onclick = null;
+        if (!confirmed) { resolve(null); return; }
+        resolve(document.getElementById('_dlg_muscle').value || null);
+      };
+
+      e.ok.onclick = () => { if (!document.getElementById('_dlg_muscle').value) return; done(true); };
+      e.cancel.onclick = () => done(false);
+      e.close.onclick  = () => done(false);
+      e.overlay.onclick = (ev) => { if (ev.target === e.overlay) done(false); };
+    });
+  };
 })();

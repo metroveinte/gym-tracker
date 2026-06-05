@@ -83,122 +83,6 @@ function openCheckin(isRegeneration) {
   });
 }
 
-// ── Compliance check ──────────────────────────────────────────────────────────
-
-function normalizeExerciseName(name) {
-  return (name || '')
-    .trim()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '') // strip accents
-    .toLowerCase()
-    .replace(/^./, c => c.toUpperCase());              // Title case first char
-}
-
-function computeCompliance(plan, sessions, generatedAt) {
-  const generated   = new Date(generatedAt);
-  const today       = new Date();
-  const daysPassed  = Math.floor((today - generated) / 86400000);
-  const currentWeek = Math.min(4, Math.max(1, Math.floor(daysPassed / 7) + 1));
-  const weekKey     = `week${currentWeek}`;
-
-  // Sessions window for current week
-  const weekStart = new Date(generated);
-  weekStart.setDate(weekStart.getDate() + (currentWeek - 1) * 7);
-  weekStart.setHours(0, 0, 0, 0);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
-
-  // Build exercise → max weight used this week
-  const logged = {};
-  for (const s of sessions) {
-    const d = new Date(s.date + 'T00:00:00');
-    if (d < weekStart || d >= weekEnd) continue;
-    for (const serie of (s.series || [])) {
-      if (serie.weight == null) continue;
-      const key = normalizeExerciseName(s.exercise);
-      logged[key] = Math.max(logged[key] || 0, serie.weight);
-    }
-  }
-
-  const results = [];
-  for (const day of (plan.weekly_plan?.days || [])) {
-    for (const ex of (day.exercises || [])) {
-      const targetStr = ex.weekly_weights?.[weekKey];
-      if (!targetStr) continue;
-      const targetNum = parseFloat(targetStr);
-      if (isNaN(targetNum)) continue; // bodyweight / PC — skip
-
-      const key    = normalizeExerciseName(ex.name);
-      const actual = logged[key];
-      const status = actual === undefined ? 'pending'
-                   : actual >= targetNum  ? 'ok'
-                   :                        'low';
-
-      results.push({ exercise: ex.name, day: day.day, target: targetStr, actual, status });
-    }
-  }
-
-  return { currentWeek, results };
-}
-
-function renderCompliance(plan, sessions, generatedAt) {
-  if (!sessions || !sessions.length) return;
-
-  const { currentWeek, results } = computeCompliance(plan, sessions, generatedAt);
-  if (!results.length) return;
-
-  document.getElementById('compliance-week-label').textContent =
-    `Semana ${currentWeek} de 4`;
-
-  const ok      = results.filter(r => r.status === 'ok').length;
-  const total   = results.filter(r => r.status !== 'pending').length;
-  const pending = results.filter(r => r.status === 'pending').length;
-
-  const statusIcon  = { ok: '✓', low: '!', pending: '·' };
-  const statusColor = { ok: '#4caf50', low: '#e5303a', pending: '#555' };
-  const statusLabel = { ok: 'En objetivo', low: 'Por debajo', pending: 'Sin registrar' };
-
-  let summaryHtml = '';
-  if (total > 0) {
-    const pct = Math.round((ok / total) * 100);
-    summaryHtml = `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-        <div style="flex:1;background:var(--bg-raised);border-radius:4px;height:6px;overflow:hidden;">
-          <div style="height:100%;background:${ok===total?'#4caf50':'var(--accent)'};border-radius:4px;width:${pct}%;transition:width 600ms var(--ease-out);"></div>
-        </div>
-        <span style="color:#888;font-size:.78rem;white-space:nowrap;">${ok}/${total} en objetivo</span>
-      </div>`;
-  }
-
-  const rows = results.map(r => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px;">
-      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-        <span style="font-size:.75rem;font-weight:700;color:${statusColor[r.status]};min-width:14px;flex-shrink:0;">${statusIcon[r.status]}</span>
-        <div style="min-width:0;">
-          <span style="color:var(--text);font-size:.86rem;">${r.exercise}</span>
-          <span style="color:#555;font-size:.76rem;margin-left:6px;">${r.day}</span>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-        <div style="text-align:right;white-space:nowrap;">
-          <span style="color:#888;font-size:.76rem;">obj </span>
-          <span style="color:var(--accent);font-size:.82rem;font-weight:700;">${r.target}</span>
-          ${r.actual !== undefined
-            ? `<span style="color:#555;font-size:.76rem;margin-left:4px;">· real ${r.actual}kg</span>`
-            : `<span style="color:#555;font-size:.76rem;margin-left:4px;">${statusLabel[r.status]}</span>`}
-        </div>
-        <a href="/sessions?ejercicio=${encodeURIComponent(r.exercise)}"
-           style="font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:4px;border:1px solid var(--accent);color:var(--accent);text-decoration:none;white-space:nowrap;transition:background 150ms,color 150ms;"
-           onmouseover="this.style.background='var(--accent)';this.style.color='#000';"
-           onmouseout="this.style.background='';this.style.color='var(--accent)';">
-          + Registrar
-        </a>
-      </div>
-    </div>`).join('');
-
-  document.getElementById('compliance-list').innerHTML = summaryHtml + rows;
-  show('compliance-block');
-}
-
 // ── Generate ──────────────────────────────────────────────────────────────────
 
 async function generate(isRegeneration = false) {
@@ -230,7 +114,7 @@ async function generate(isRegeneration = false) {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
-function renderPlan(plan, generatedAt, validUntil, sessions) {
+function renderPlan(plan, generatedAt, validUntil) {
   const genDate   = generatedAt ? fmt(generatedAt.slice(0, 10)) : '—';
   const validDate = validUntil  ? fmt(validUntil) : '—';
   document.getElementById('plan-meta').textContent =
@@ -372,9 +256,6 @@ function renderPlan(plan, generatedAt, validUntil, sessions) {
         <span style="color:#ccc;font-size:.88rem;line-height:1.5;">${prog[k] || ''}</span>
       </div>`).join('');
 
-  // Compliance check (after plan is rendered)
-  renderCompliance(plan, sessions, generatedAt);
-
   hide('generate-block');
   show('state-plan');
 }
@@ -383,17 +264,11 @@ function renderPlan(plan, generatedAt, validUntil, sessions) {
 
 async function load() {
   try {
-    const [planRes, sessionsRes] = await Promise.all([
-      fetch('/api/coach/plan'),
-      fetch('/api/sessions'),
-    ]);
+    const planRes = await fetch('/api/coach/plan');
 
     if (planRes.status === 503) { show('state-no-key'); return; }
 
-    const [data, sessions] = await Promise.all([
-      planRes.json(),
-      sessionsRes.json(),
-    ]);
+    const data = await planRes.json();
 
     if (!data) {
       show('state-plan');
@@ -401,7 +276,7 @@ async function load() {
       return;
     }
 
-    renderPlan(data.plan_json, data.generated_at, data.valid_until, sessions);
+    renderPlan(data.plan_json, data.generated_at, data.valid_until);
   } catch (e) {
     show('state-no-data');
   }
