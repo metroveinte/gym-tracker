@@ -162,9 +162,9 @@ function buildPrompt(ctx, checkin) {
         const avgW = avg(s.weights);
         const maxW = max(s.weights);
         const weightStr = avgW ? ` | media ${avgW}kg | máx ${maxW}kg` : '';
-        return `  ${g}: ${s.sessions} sesiones | ${s.totalSets} series totales${weightStr}`;
+        return `  ${g}: ${s.sessions} entrenos | ${s.totalSets} series totales${weightStr}`;
       }).join('\n')
-    : '  Sin sesiones en los últimos 30 días.';
+    : '  Sin entrenos en los últimos 30 días.';
 
   const weightTrend = weights.length >= 2
     ? `Peso inicial: ${weights[weights.length - 1].weight_kg} kg (${weights[weights.length - 1].date}) → Último: ${weights[0].weight_kg} kg (${weights[0].date})`
