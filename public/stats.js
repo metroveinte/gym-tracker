@@ -816,7 +816,10 @@ function renderEditExercises() {
     return `
       <div style="margin-bottom:20px; padding:14px; background:#1a1a1a; border-radius:8px; border-left:3px solid #d32f2f;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <h4 style="margin:0; color:#fff; font-size:1rem;">${escapeHtml(ex.name)}</h4>
+          <div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+            <h4 style="margin:0; color:#fff; font-size:1rem;">${escapeHtml(ex.name)}</h4>
+            ${(() => { const mg = getMuscleGroup(ex.name); return mg ? `<span class="muscle-badge muscle-${muscleGroupToClass(mg)}">${escapeHtml(mg)}</span>` : ''; })()}
+          </div>
           <div style="display:flex; gap:8px;">
             <button type="button" class="icon-btn edit-rename-exercise" data-ex="${exIdx}" style="font-size:0.8rem; padding:4px 10px;" title="Cambiar ejercicio">⇄ Cambiar</button>
             <button type="button" class="icon-btn edit-add-serie" data-ex="${exIdx}" style="font-size:0.8rem; padding:4px 10px;">+ Serie</button>
