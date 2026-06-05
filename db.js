@@ -57,19 +57,25 @@ db.serialize(() => {
   db.run('CREATE INDEX IF NOT EXISTS idx_series_session_id ON series(session_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date)');
 
-  // Insertar predefinidos y marcar los que ya existían sin la bandera
-  const stmt = db.prepare(`INSERT OR IGNORE INTO exercises (name, muscle_group, is_predefined) VALUES (?, ?, 1)`);
-  for (const [name, muscleGroup] of Object.entries(PREDEFINED_EXERCISES)) {
-    stmt.run(name, muscleGroup);
-  }
-  stmt.finalize();
+  // Seed predefined exercises only on a fresh database (empty table).
+  // Never re-insert on subsequent startups so user deletions are respected.
+  db.get(`SELECT COUNT(*) AS cnt FROM exercises`, [], (err, row) => {
+    if (err || (row && row.cnt > 0)) return;
+    const stmt = db.prepare(`INSERT OR IGNORE INTO exercises (name, muscle_group, is_predefined) VALUES (?, ?, 1)`);
+    for (const [name, muscleGroup] of Object.entries(PREDEFINED_EXERCISES)) {
+      stmt.run(name, muscleGroup);
+    }
+    stmt.finalize();
+  });
 
+  // Mark legacy predefined exercises that were inserted before is_predefined column existed.
   for (const name of Object.keys(PREDEFINED_EXERCISES)) {
     db.run(`UPDATE exercises SET is_predefined = 1 WHERE name = ? COLLATE NOCASE AND is_predefined = 0`, [name]);
   }
 
-  // Migration: sync muscle_group for all predefined exercises (idempotent)
-  const stmtMg = db.prepare(`UPDATE exercises SET muscle_group = ? WHERE name = ? COLLATE NOCASE`);
+  // Migration: assign muscle_group only to predefined exercises that don't have one yet.
+  // Does NOT overwrite muscle groups the user may have customised.
+  const stmtMg = db.prepare(`UPDATE exercises SET muscle_group = ? WHERE name = ? COLLATE NOCASE AND (muscle_group IS NULL OR muscle_group = '')`);
   for (const [name, mg] of Object.entries(PREDEFINED_EXERCISES)) {
     stmtMg.run(mg, name);
   }
