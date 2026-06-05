@@ -756,6 +756,8 @@ document.getElementById('delete-all-btn').addEventListener('click', async () => 
 let editingBatchId = null;
 let editingExercises = [];
 let editExerciseOptions = [];
+let renamingExIdx = -1;
+let renamingDropdown = null;
 
 const editModal        = document.getElementById('edit-modal');
 const editModalOverlay = document.getElementById('edit-modal-overlay');
@@ -787,9 +789,13 @@ function closeEditModal() {
   editModalOverlay.classList.add('hidden');
   editExerciseInput.value = '';
   editExerciseDropdown.classList.add('hidden');
+  renamingExIdx = -1;
+  if (renamingDropdown) { renamingDropdown.remove(); renamingDropdown = null; }
 }
 
 function renderEditExercises() {
+  if (renamingDropdown) { renamingDropdown.remove(); renamingDropdown = null; }
+
   const container = document.getElementById('edit-exercises-container');
   if (editingExercises.length === 0) {
     container.innerHTML = '<p style="color:#999; text-align:center; margin-bottom:15px;">No hay ejercicios</p>';
@@ -813,12 +819,21 @@ function renderEditExercises() {
       ? `<tr><td colspan="4" style="color:#666; font-size:0.82rem; text-align:center;">Sin series</td></tr>`
       : '';
 
+    const isRenaming = exIdx === renamingExIdx;
+    const nameArea = isRenaming
+      ? `<input type="text" id="rename-input-${exIdx}" autocomplete="off" placeholder="Buscar ejercicio…"
+           style="flex:1; min-width:0; background:#111; border:1px solid #555; border-radius:6px; padding:5px 9px; color:#fff; font-family:'Oswald',sans-serif; font-size:1rem;" />`
+      : `<h4 style="margin:0; color:#fff; font-size:1rem;">${escapeHtml(ex.name)}</h4>`;
+    const renameBtn = isRenaming
+      ? `<button type="button" class="icon-btn edit-rename-cancel" data-ex="${exIdx}" style="font-size:0.8rem; padding:4px 10px;" title="Cancelar">✕</button>`
+      : `<button type="button" class="icon-btn edit-rename-exercise" data-ex="${exIdx}" style="font-size:0.8rem; padding:4px 10px;" title="Cambiar ejercicio">⇄ Cambiar</button>`;
+
     return `
       <div style="margin-bottom:20px; padding:14px; background:#1a1a1a; border-radius:8px; border-left:3px solid #d32f2f;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <h4 style="margin:0; color:#fff; font-size:1rem;">${escapeHtml(ex.name)}</h4>
-          <div style="display:flex; gap:8px;">
-            <button type="button" class="icon-btn edit-rename-exercise" data-ex="${exIdx}" style="font-size:0.8rem; padding:4px 10px;" title="Cambiar ejercicio">⇄ Cambiar</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px;">
+          ${nameArea}
+          <div style="display:flex; gap:8px; flex-shrink:0;">
+            ${renameBtn}
             <button type="button" class="icon-btn edit-add-serie" data-ex="${exIdx}" style="font-size:0.8rem; padding:4px 10px;">+ Serie</button>
             <button type="button" class="icon-btn icon-btn-danger edit-delete-exercise" data-ex="${exIdx}" style="font-size:0.8rem; padding:4px 8px;">🗑</button>
           </div>
@@ -833,21 +848,77 @@ function renderEditExercises() {
   }).join('');
 
   container.querySelectorAll('.edit-rename-exercise').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const exIdx = parseInt(btn.dataset.ex);
-      const current = editingExercises[exIdx].name;
-      const newName = await showInput({
-        title: 'Cambiar ejercicio',
-        body: 'Introduce el nombre del nuevo ejercicio. Las series y pesos se mantendrán.',
-        defaultValue: current,
-        placeholder: 'Nombre del ejercicio',
-        okText: 'Cambiar',
-      });
-      if (!newName || !newName.trim() || newName.trim() === current) return;
-      editingExercises[exIdx].name = newName.trim();
+    btn.addEventListener('click', () => {
+      renamingExIdx = parseInt(btn.dataset.ex);
       renderEditExercises();
     });
   });
+
+  container.querySelectorAll('.edit-rename-cancel').forEach(btn => {
+    btn.addEventListener('click', () => {
+      renamingExIdx = -1;
+      renderEditExercises();
+    });
+  });
+
+  if (renamingExIdx >= 0) {
+    const renameInput = document.getElementById(`rename-input-${renamingExIdx}`);
+    if (renameInput) {
+      renameInput.focus();
+
+      renamingDropdown = document.createElement('div');
+      renamingDropdown.className = 'dropdown hidden';
+      document.body.appendChild(renamingDropdown);
+
+      function positionRenameDropdown() {
+        const rect = renameInput.getBoundingClientRect();
+        Object.assign(renamingDropdown.style, {
+          position: 'fixed',
+          top: rect.bottom + 'px',
+          left: rect.left + 'px',
+          width: rect.width + 'px',
+          right: 'auto',
+          zIndex: '9999',
+          borderTop: '2px solid #ff0000',
+        });
+      }
+
+      renameInput.addEventListener('input', () => {
+        const query = renameInput.value.trim();
+        if (!query) { renamingDropdown.classList.add('hidden'); return; }
+        const lower = query.toLowerCase();
+        const matches = editExerciseOptions.filter(n => n.toLowerCase().includes(lower));
+        if (!matches.length) { renamingDropdown.classList.add('hidden'); return; }
+        renamingDropdown.innerHTML = matches.map(n =>
+          `<div class="dropdown-item" data-name="${escapeHtml(n)}">${escapeHtml(n)}</div>`
+        ).join('');
+        renamingDropdown.classList.remove('hidden');
+        positionRenameDropdown();
+        renamingDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+          item.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            const name = item.dataset.name;
+            if (renamingDropdown) { renamingDropdown.remove(); renamingDropdown = null; }
+            editingExercises[renamingExIdx].name = name;
+            renamingExIdx = -1;
+            renderEditExercises();
+          });
+        });
+      });
+
+      renameInput.addEventListener('blur', () => {
+        setTimeout(() => { if (renamingDropdown) renamingDropdown.classList.add('hidden'); }, 150);
+      });
+
+      renameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (renamingDropdown) { renamingDropdown.remove(); renamingDropdown = null; }
+          renamingExIdx = -1;
+          renderEditExercises();
+        }
+      });
+    }
+  }
 
   container.querySelectorAll('.edit-delete-exercise').forEach(btn => {
     btn.addEventListener('click', () => {
