@@ -118,6 +118,16 @@ db.serialize(() => {
       raw_response TEXT
     )
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS weekly_weights (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      week_start   TEXT NOT NULL UNIQUE,
+      generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      valid_until  TEXT NOT NULL,
+      weights_json TEXT NOT NULL
+    )
+  `);
 });
 
 module.exports = db;

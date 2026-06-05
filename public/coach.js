@@ -136,7 +136,11 @@ async function generate(isRegeneration = false) {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
-function renderPlan(plan, generatedAt, validUntil) {
+function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
+  // Build case-insensitive lookup for weekly weights
+  const weeklyMap = weeklyWeights
+    ? Object.fromEntries(Object.entries(weeklyWeights).map(([k, v]) => [k.toLowerCase(), v]))
+    : null;
   const genDate   = generatedAt ? fmt(generatedAt.slice(0, 10)) : '—';
   const validDate = validUntil  ? fmt(validUntil) : '—';
   document.getElementById('plan-meta').textContent =
@@ -187,13 +191,17 @@ function renderPlan(plan, generatedAt, validUntil) {
     const exerciseRows = (d.exercises || []).map(ex => {
       const sw1 = ex.session_weights_week1 || [];
 
-      // Per-set weights for this week
-      const setsRow = sw1.length ? `
+      // Per-set weights: weekly suggestion overrides plan weights when available
+      const weeklyW    = weeklyMap?.[ex.name.toLowerCase()];
+      const setsToShow = (weeklyW && weeklyW.length) ? weeklyW : sw1;
+      const isAdj      = !!(weeklyW && weeklyW.length);
+
+      const setsRow = setsToShow.length ? `
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;align-items:center;">
-          <span style="font-size:.7rem;color:#555;margin-right:2px;">esta sem:</span>
-          ${sw1.map((w, i) => `
-            <span style="font-size:.75rem;padding:2px 7px;border-radius:4px;background:var(--bg-raised);border:1px solid var(--border);color:#ccc;">
-              Set${i+1} <strong style="color:var(--text);">${w}</strong>
+          <span style="font-size:.7rem;color:${isAdj ? '#4caf50' : '#555'};margin-right:2px;">${isAdj ? '✦ ajustado:' : 'esta sem:'}</span>
+          ${setsToShow.map((w, i) => `
+            <span style="font-size:.75rem;padding:2px 7px;border-radius:4px;background:${isAdj ? 'rgba(76,175,80,0.12)' : 'var(--bg-raised)'};border:1px solid ${isAdj ? 'rgba(76,175,80,0.35)' : 'var(--border)'};color:${isAdj ? '#a5d6a7' : '#ccc'};">
+              Set${i+1} <strong style="color:${isAdj ? '#c8e6c9' : 'var(--text)'};">${w}</strong>
             </span>`).join('')}
         </div>` : '';
 
@@ -272,6 +280,43 @@ function renderPlan(plan, generatedAt, validUntil) {
   show('state-plan');
 }
 
+// ── Weekly weights bar ────────────────────────────────────────────────────────
+
+function renderWeeklyWeightsBar(ww) {
+  const container  = document.getElementById('weekly-weights-bar');
+  const btn        = document.getElementById('weekly-weights-btn');
+  const doneLabel  = document.getElementById('weekly-weights-done');
+  const validWrap  = document.getElementById('weekly-validity-wrap');
+  const validLabel = document.getElementById('weekly-validity-label');
+  const daysLeftEl = document.getElementById('weekly-days-left');
+  const bar        = document.getElementById('weekly-progress-bar');
+  if (!container) return;
+
+  container.style.display = '';
+
+  if (!ww) {
+    btn.style.display      = '';
+    doneLabel.style.display = 'none';
+    validWrap.style.display = 'none';
+    return;
+  }
+
+  btn.style.display       = 'none';
+  doneLabel.style.display = '';
+  validWrap.style.display = '';
+
+  const monday  = new Date(ww.week_start + 'T00:00:00');
+  const sunday  = new Date(ww.valid_until + 'T00:00:00');
+  const now     = new Date();
+  const elapsed = (now - monday) / 86400000;
+  const pct     = Math.max(0, Math.min(100, (elapsed / 7) * 100));
+  const left    = Math.max(0, Math.round((sunday - now) / 86400000));
+
+  validLabel.textContent = `${fmt(ww.week_start)} → ${fmt(ww.valid_until)}`;
+  daysLeftEl.textContent = left > 0 ? `${left} días restantes` : 'Expiran hoy';
+  bar.style.width        = pct + '%';
+}
+
 // ── Load ──────────────────────────────────────────────────────────────────────
 
 async function load() {
@@ -288,7 +333,11 @@ async function load() {
       return;
     }
 
-    renderPlan(data.plan_json, data.generated_at, data.valid_until);
+    const wwRes = await fetch('/api/coach/weekly-weights');
+    const ww    = wwRes.ok ? await wwRes.json() : null;
+
+    renderPlan(data.plan_json, data.generated_at, data.valid_until, ww?.weights_json || null);
+    renderWeeklyWeightsBar(ww);
   } catch (e) {
     show('state-no-data');
   }
@@ -299,5 +348,28 @@ async function load() {
 document.getElementById('generate-btn')?.addEventListener('click', () => generate(false));
 document.getElementById('pdf-btn')?.addEventListener('click', () => window.print());
 document.getElementById('regenerate-btn')?.addEventListener('click', () => generate(true));
+
+document.getElementById('weekly-weights-btn')?.addEventListener('click', async () => {
+  const btn      = document.getElementById('weekly-weights-btn');
+  const origText = btn.textContent;
+  btn.textContent = 'Generando…';
+  btn.disabled    = true;
+  try {
+    const res  = await fetch('/api/coach/weekly-weights', { method: 'POST' });
+    const data = await res.json();
+    if (res.status === 503) {
+      await showAlert('Sin API key', '<p style="color:#ccc;">API key no configurada en el servidor.</p>');
+      btn.textContent = origText;
+      btn.disabled    = false;
+      return;
+    }
+    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    await load();
+  } catch (e) {
+    btn.textContent = origText;
+    btn.disabled    = false;
+    await showAlert('Error al generar', `<p style="color:#ccc;">${e.message}</p>`);
+  }
+});
 
 load();

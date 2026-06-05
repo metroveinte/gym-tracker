@@ -407,6 +407,30 @@ app.post('/api/coach/generate', async (req, res) => {
   }
 });
 
+app.get('/api/coach/weekly-weights', async (req, res) => {
+  try {
+    const row = await coach.getLatestWeeklyWeights();
+    if (!row) return res.json(null);
+    res.json({ ...row, weights_json: JSON.parse(row.weights_json) });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al cargar pesos semanales.' });
+  }
+});
+
+app.post('/api/coach/weekly-weights', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(503).json({ error: 'API key no configurada.' });
+  }
+  try {
+    const result = await coach.generateWeeklyWeights();
+    res.json(result);
+  } catch (e) {
+    console.error('Weekly weights error:', e.message);
+    const status = e.message.includes('Ya tienes') ? 409 : 500;
+    res.status(status).json({ error: e.message });
+  }
+});
+
 app.get('/coach', (req, res) => res.sendFile(path.join(__dirname, 'public', 'coach.html')));
 
 app.use('/api', (req, res) => {

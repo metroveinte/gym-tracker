@@ -329,6 +329,110 @@ async function callClaude(prompt) {
   }
 }
 
+// ── Week helpers ──────────────────────────────────────────────────────────────
+
+function getWeekMonday(d = new Date()) {
+  const day  = d.getDay(); // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day;
+  const mon  = new Date(d);
+  mon.setDate(d.getDate() + diff);
+  return mon.toISOString().slice(0, 10);
+}
+
+function getWeekSunday(mondayStr) {
+  const d = new Date(mondayStr + 'T00:00:00');
+  d.setDate(d.getDate() + 6);
+  return d.toISOString().slice(0, 10);
+}
+
+// ── Weekly weights prompt ─────────────────────────────────────────────────────
+
+async function buildWeeklyPrompt(plan, allSessions) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const planExercises = [];
+  for (const day of (plan.weekly_plan?.days || [])) {
+    for (const ex of (day.exercises || [])) {
+      if (ex.name) planExercises.push({
+        name:       ex.name,
+        sets:       ex.sets,
+        reps:       ex.reps,
+        scheme:     ex.set_scheme || 'rectas',
+        planWeights: ex.session_weights_week1 || [],
+      });
+    }
+  }
+
+  const sections = planExercises.map(ex => {
+    const sessions = allSessions
+      .filter(s => s.exercise && s.exercise.toLowerCase() === ex.name.toLowerCase())
+      .slice(0, 8);
+
+    const maxW = sessions
+      .flatMap(s => s.series.map(se => se.weight))
+      .filter(w => w != null && w > 0)
+      .reduce((m, w) => Math.max(m, w), 0);
+
+    const histLines = sessions.length
+      ? sessions.map(s => {
+          const sr = s.series.map(se => `${se.sets}x${se.reps}@${se.weight ?? 'PC'}kg`).join(', ');
+          return `  ${s.date}: ${sr}`;
+        }).join('\n')
+      : '  Sin historial.';
+
+    return `${ex.name} (${ex.sets} series × ${ex.reps} | esquema: ${ex.scheme} | plan: ${ex.planWeights.join(', ') || '—'} | máx histórico: ${maxW ? maxW + 'kg' : 'N/A'}):\n${histLines}`;
+  }).join('\n\n');
+
+  return `Eres un entrenador personal experto. Sugiere el peso exacto para CADA SET de cada ejercicio del plan esta semana, basándote en el historial real del usuario.
+
+HOY: ${today}
+
+=== EJERCICIOS DEL PLAN (con historial reciente) ===
+${sections}
+
+=== INSTRUCCIONES ===
+- Devuelve un array con el peso para cada set (longitud exacta = número de sets del ejercicio)
+- Basa los pesos en el historial: si el usuario maneja más peso del plan, sube; si no llega, ajusta
+- Respeta el esquema: piramide_asc = pesos crecientes; rectas = todos iguales; calentamiento_trabajo = primer elemento al ~65% del peso de trabajo, resto = peso de trabajo
+- Para peso corporal usa "PC"; incluye siempre la unidad (ej: "22.5kg", "45kg")
+- RESPONDE SOLO CON JSON, sin texto adicional:
+
+{
+  "NombreEjercicio1": ["pesoSet1", "pesoSet2", "pesoSet3", "pesoSet4"],
+  "NombreEjercicio2": ["pesoSet1", "pesoSet2"]
+}`;
+}
+
+async function generateWeeklyWeights() {
+  const weekStart = getWeekMonday();
+
+  const existing = await dbGet('SELECT id FROM weekly_weights WHERE week_start = ?', [weekStart]);
+  if (existing) throw new Error('Ya tienes pesos generados para esta semana. Se podrán recalcular la semana que viene.');
+
+  const planRow = await getLatestPlan();
+  if (!planRow) throw new Error('No hay plan activo. Genera un plan primero.');
+
+  const plan  = JSON.parse(planRow.plan_json);
+  const ctx   = await buildContext();
+  const prompt = await buildWeeklyPrompt(plan, ctx.allSessions);
+  const { parsed } = await callClaude(prompt);
+
+  const validUntil = getWeekSunday(weekStart);
+
+  await dbRun(
+    `INSERT INTO weekly_weights (week_start, generated_at, valid_until, weights_json)
+     VALUES (?, CURRENT_TIMESTAMP, ?, ?)`,
+    [weekStart, validUntil, JSON.stringify(parsed)]
+  );
+
+  return { weekStart, validUntil, weights: parsed };
+}
+
+async function getLatestWeeklyWeights() {
+  const weekStart = getWeekMonday();
+  return dbGet('SELECT * FROM weekly_weights WHERE week_start = ?', [weekStart]);
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 async function getLatestPlan() {
@@ -355,4 +459,4 @@ async function generatePlan(checkin = null) {
   return parsed;
 }
 
-module.exports = { getLatestPlan, generatePlan };
+module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights };

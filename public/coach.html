@@ -77,6 +77,28 @@
             <div id="plan-progress-bar" style="height:100%; background:var(--accent); border-radius:4px; transition:width 600ms var(--ease-out);"></div>
           </div>
         </div>
+
+        <!-- Pesos semanales -->
+        <div id="weekly-weights-bar" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <span style="color:#888; font-size:0.78rem;">Pesos esta semana</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span id="weekly-weights-done" style="display:none; font-size:.75rem; color:#4caf50; font-weight:600;">✦ Calculados</span>
+              <button id="weekly-weights-btn" class="btn-secondary" style="display:none; width:auto; margin:0; padding:5px 14px; font-size:.78rem;">
+                ✦ Sugerir pesos
+              </button>
+            </div>
+          </div>
+          <div id="weekly-validity-wrap" style="display:none; margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span id="weekly-validity-label" style="color:#666; font-size:0.75rem;"></span>
+              <span id="weekly-days-left" style="color:#888; font-size:0.75rem;"></span>
+            </div>
+            <div style="background:var(--bg-raised); border-radius:4px; height:4px; overflow:hidden;">
+              <div id="weekly-progress-bar" style="height:100%; background:#4caf50; border-radius:4px; transition:width 600ms var(--ease-out);"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Análisis -->
