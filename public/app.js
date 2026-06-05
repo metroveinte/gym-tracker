@@ -335,9 +335,12 @@ function renderExercises() {
     html += `
       <div style="margin-bottom: 25px; padding: 15px; background: #1a1a1a; border-radius: 8px; border-left: 3px solid #d32f2f;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <h4 style="margin: 0; color: #fff;">${escapeHtml(exercise.name)}</h4>
-            ${exercise.plannedWeight ? `<span style="font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(229,48,58,.15);border:1px solid rgba(229,48,58,.4);color:var(--accent);">🎯 ${escapeHtml(exercise.plannedWeight)}</span>` : ''}
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <h4 style="margin: 0; color: #fff;">${escapeHtml(exercise.name)}</h4>
+              ${exercise.plannedWeight ? `<span style="font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(229,48,58,.15);border:1px solid rgba(229,48,58,.4);color:var(--accent);">🎯 ${escapeHtml(exercise.plannedWeight)}</span>` : ''}
+            </div>
+            ${(() => { const mg = (exercisesFromAPI[exercise.name] || {}).muscle_group || EXERCISE_MUSCLE_MAP[exercise.name] || ''; return mg ? `<span class="muscle-badge muscle-${muscleGroupToClass(mg)}">${escapeHtml(mg)}</span>` : ''; })()}
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="add-serie-to-exercise" data-idx="${exIdx}" style="font-size:0.8rem; padding:4px 10px;">+ Serie</button>

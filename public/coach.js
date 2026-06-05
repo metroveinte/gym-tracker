@@ -248,7 +248,7 @@ function renderPlan(plan, generatedAt, validUntil) {
              onclick="event.stopPropagation()"
              style="font-size:.75rem;font-weight:700;padding:4px 12px;border-radius:4px;background:var(--accent);color:#000;text-decoration:none;white-space:nowrap;transition:opacity 150ms;"
              onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
-            ▶ Iniciar
+            ▶ Registrar
           </a>
         </div>
       </div>
