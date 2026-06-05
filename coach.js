@@ -450,6 +450,8 @@ async function generatePlan(checkin = null) {
   const validUntil = parsed.next_review ||
     new Date(Date.now() + PLAN_DAYS * 86400000).toISOString().slice(0, 10);
 
+  await dbRun('DELETE FROM weekly_weights WHERE week_start = ?', [getWeekMonday()]);
+
   await dbRun(
     `INSERT INTO coach_plans (generated_at, valid_until, plan_json, raw_response)
      VALUES (CURRENT_TIMESTAMP, ?, ?, ?)`,
