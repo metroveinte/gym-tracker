@@ -335,7 +335,10 @@ function renderExercises() {
     html += `
       <div style="margin-bottom: 25px; padding: 15px; background: #1a1a1a; border-radius: 8px; border-left: 3px solid #d32f2f;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h4 style="margin: 0; color: #fff;">${escapeHtml(exercise.name)}</h4>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <h4 style="margin: 0; color: #fff;">${escapeHtml(exercise.name)}</h4>
+            ${exercise.plannedWeight ? `<span style="font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(229,48,58,.15);border:1px solid rgba(229,48,58,.4);color:var(--accent);">🎯 ${escapeHtml(exercise.plannedWeight)}</span>` : ''}
+          </div>
           <div style="display: flex; gap: 8px;">
             <button class="add-serie-to-exercise" data-idx="${exIdx}" style="font-size:0.8rem; padding:4px 10px;">+ Serie</button>
             <button class="delete-exercise-btn" data-idx="${exIdx}" style="font-size:0.8rem; padding:4px 8px;" title="Eliminar ejercicio">🗑</button>
@@ -1010,11 +1013,58 @@ document.getElementById('restore-db-btn').addEventListener('click', async () => 
 });
 
 // Inicializar
-loadExerciseOptions().then(() => {
-  const prefill = new URLSearchParams(window.location.search).get('ejercicio');
+loadExerciseOptions().then(async () => {
+  const params  = new URLSearchParams(window.location.search);
+  const prefill = params.get('ejercicio');
+  const plandia = params.get('plandia');
+
   if (prefill) {
     openModal();
     selectExerciseInModal(decodeURIComponent(prefill));
+    return;
+  }
+
+  if (plandia !== null) {
+    try {
+      const res  = await fetch('/api/coach/plan');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data?.plan_json) return;
+
+      const days = data.plan_json.weekly_plan?.days || [];
+      const day  = days[parseInt(plandia)];
+      if (!day) return;
+
+      // Semana actual del plan (1-4)
+      const generated   = new Date(data.generated_at);
+      const daysPassed  = Math.floor((Date.now() - generated) / 86400000);
+      const currentWeek = Math.min(4, Math.max(1, Math.floor(daysPassed / 7) + 1));
+      const weekKey     = `week${currentWeek}`;
+
+      // Pre-cargar ejercicios con peso guía
+      for (const ex of (day.exercises || [])) {
+        const raw = ex.weekly_weights?.[weekKey] || null;
+        const plannedWeight = raw && !/^PC$/i.test(raw.trim()) ? raw : null;
+        currentExercises.push({ name: ex.name, series: [], notes: '', plannedWeight });
+      }
+
+      // Mostrar banner contextual
+      const banner = document.getElementById('plan-banner');
+      const focus  = decodeURIComponent(params.get('playfocus') || '');
+      document.getElementById('plan-banner-text').textContent =
+        `Plan activo · ${day.day}${focus ? ' · ' + focus : ''} · Semana ${currentWeek} de 4`;
+      banner.classList.remove('hidden');
+
+      renderExercises();
+
+      // Poner fecha de hoy
+      const dateInput = document.getElementById('date');
+      if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().slice(0, 10);
+      }
+    } catch (e) {
+      console.error('Error cargando plan:', e);
+    }
   }
 });
 renderExercises();

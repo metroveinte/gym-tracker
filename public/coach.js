@@ -163,7 +163,7 @@ function renderPlan(plan, generatedAt, validUntil) {
     calentamiento_trabajo:'Calentamiento + trabajo',
   };
 
-  document.getElementById('plan-days').innerHTML = (wp.days || []).map(d => {
+  document.getElementById('plan-days').innerHTML = (wp.days || []).map((d, dayIdx) => {
     const mins = d.estimated_minutes;
     const timeChip = mins
       ? `<span style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700;">⏱ ~${mins} min</span>`
@@ -240,7 +240,14 @@ function renderPlan(plan, generatedAt, validUntil) {
           <span style="font-weight:700;font-size:.95rem;">${d.day}</span>
           <span style="color:#888;font-size:.82rem;">${d.focus}</span>
         </div>
-        ${timeChip}
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          ${timeChip}
+          <a href="/sessions?plandia=${dayIdx}&playfocus=${encodeURIComponent(d.focus)}"
+             style="font-size:.75rem;font-weight:700;padding:4px 12px;border-radius:4px;background:var(--accent);color:#000;text-decoration:none;white-space:nowrap;transition:opacity 150ms;"
+             onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+            ▶ Iniciar
+          </a>
+        </div>
       </div>
       ${exerciseRows.length
         ? `<div style="padding:4px 14px 10px;">${exerciseRows}</div>`
