@@ -62,6 +62,7 @@ async function buildContext() {
   const allSessions = Array.from(sessionMap.values());
 
   // Volume stats per muscle group (last 30 days)
+  // First series per exercise is treated as activation (skipped for weight averages)
   const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const muscleStats = {};
   for (const s of allSessions) {
@@ -69,13 +70,16 @@ async function buildContext() {
     const mg = s.muscle_group;
     if (!muscleStats[mg]) muscleStats[mg] = { sessions: 0, totalSets: 0, weights: [] };
     muscleStats[mg].sessions++;
-    for (const serie of s.series) {
+    for (let i = 0; i < s.series.length; i++) {
+      const serie = s.series[i];
+      const isActivation = i === 0 && s.series.length > 1;
       muscleStats[mg].totalSets += (serie.sets || 1);
-      if (serie.weight) muscleStats[mg].weights.push(serie.weight);
+      if (!isActivation && serie.weight) muscleStats[mg].weights.push(serie.weight);
     }
   }
 
   // Volume stats per exercise (all time, top 15 by tonnage; recent for double-progression)
+  // First series per exercise is treated as activation: counted for volume, excluded from quality averages
   const exerciseStats = {};
   for (const s of allSessions) {
     const name = s.exercise;
@@ -87,17 +91,21 @@ async function buildContext() {
       };
     }
     const isRecent = s.date >= cutoff;
-    for (const serie of s.series) {
+    for (let i = 0; i < s.series.length; i++) {
+      const serie = s.series[i];
+      const isActivation = i === 0 && s.series.length > 1;
       const sets   = serie.sets   || 1;
       const reps   = serie.reps   || 0;
       const weight = serie.weight || 0;
       exerciseStats[name].totalSets += sets;
-      if (serie.weight) exerciseStats[name].weights.push(serie.weight);
       exerciseStats[name].tonnage += sets * reps * weight;
+      if (!isActivation && serie.weight) exerciseStats[name].weights.push(serie.weight);
       if (isRecent) {
         exerciseStats[name].recentSets += sets;
-        if (serie.weight) exerciseStats[name].recentWeights.push(serie.weight);
-        if (serie.reps)   exerciseStats[name].recentReps.push(serie.reps);
+        if (!isActivation) {
+          if (serie.weight) exerciseStats[name].recentWeights.push(serie.weight);
+          if (serie.reps)   exerciseStats[name].recentReps.push(serie.reps);
+        }
       }
     }
     if (s.date > exerciseStats[name].lastDate) exerciseStats[name].lastDate = s.date;
@@ -199,6 +207,7 @@ ${weightTrend}
 ${muscleText}
 
 === EJERCICIOS PRINCIPALES (por volumen acumulado; con reps reales del último mes) ===
+NOTA: medias de peso y reps calculadas sobre series de trabajo. La primera serie por ejercicio (activación/calentamiento) está excluida de estas medias pero sí cuenta en el volumen total.
 ${exerciseLines || '  Ninguno registrado.'}
 
 === ÚLTIMAS 20 SESIONES ===
