@@ -3,6 +3,27 @@ const PLAN_DAYS = 28;
 function hide(id) { document.getElementById(id).classList.add('hidden'); }
 function show(id) { document.getElementById(id).classList.remove('hidden'); }
 
+function toggleCollapse(bodyId, chevronId) {
+  const body    = document.getElementById(bodyId);
+  const chevron = document.getElementById(chevronId);
+  if (!body) return;
+  const collapsed = body.classList.contains('is-collapsed') || body.style.maxHeight === '0px' || body.style.maxHeight === '0';
+  if (collapsed) {
+    body.style.maxHeight = body.scrollHeight + 'px';
+    body.style.opacity   = '1';
+    chevron?.classList.remove('is-collapsed');
+    body.addEventListener('transitionend', () => {
+      if (body.style.opacity === '1') body.style.maxHeight = 'none';
+    }, { once: true });
+  } else {
+    body.style.maxHeight = body.scrollHeight + 'px';
+    body.offsetHeight; // force reflow
+    body.style.maxHeight = '0';
+    body.style.opacity   = '0';
+    chevron?.classList.add('is-collapsed');
+  }
+}
+
 function fmt(dateStr) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('es-ES', {
     day: '2-digit', month: 'short', year: 'numeric'
@@ -214,23 +235,28 @@ function renderPlan(plan, generatedAt, validUntil) {
 
     return `
     <div style="border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;">
-      <div style="background:var(--bg-raised);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div class="collapse-header" onclick="toggleCollapse('day-body-${dayIdx}','day-chev-${dayIdx}')"
+           style="background:var(--bg-raised);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
         <div style="display:flex;align-items:center;gap:10px;">
+          <svg id="day-chev-${dayIdx}" class="collapse-chevron is-collapsed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><polyline points="6 9 12 15 18 9"/></svg>
           <span style="font-weight:700;font-size:.95rem;">${d.day}</span>
           <span style="color:#888;font-size:.82rem;">${d.focus}</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           ${timeChip}
           <a href="/sessions?plandia=${dayIdx}&playfocus=${encodeURIComponent(d.focus)}"
+             onclick="event.stopPropagation()"
              style="font-size:.75rem;font-weight:700;padding:4px 12px;border-radius:4px;background:var(--accent);color:#000;text-decoration:none;white-space:nowrap;transition:opacity 150ms;"
              onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
             ▶ Iniciar
           </a>
         </div>
       </div>
-      ${exerciseRows.length
-        ? `<div style="padding:4px 14px 10px;">${exerciseRows}</div>`
-        : `<div style="padding:10px 14px;color:#555;font-size:.85rem;">Descanso activo</div>`}
+      <div id="day-body-${dayIdx}" class="collapse-body" style="max-height:0;opacity:0;">
+        ${exerciseRows.length
+          ? `<div style="padding:4px 14px 10px;">${exerciseRows}</div>`
+          : `<div style="padding:10px 14px;color:#555;font-size:.85rem;">Descanso activo</div>`}
+      </div>
     </div>`;
   }).join('');
 

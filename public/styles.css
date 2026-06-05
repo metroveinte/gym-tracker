@@ -884,6 +884,24 @@ tr:last-child td { border-bottom: none; }
   to { transform: rotate(360deg); }
 }
 
+.collapse-header {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.collapse-body {
+  overflow: hidden;
+  transition: max-height 300ms cubic-bezier(0.23,1,0.32,1), opacity 220ms ease;
+}
+.collapse-chevron {
+  flex-shrink: 0;
+  transition: transform 280ms cubic-bezier(0.23,1,0.32,1);
+  color: #555;
+}
+.collapse-chevron.is-collapsed {
+  transform: rotate(-90deg);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .stat-item:hover { border-color: var(--border-mid); }
 }
