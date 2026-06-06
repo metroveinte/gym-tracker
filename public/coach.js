@@ -113,6 +113,26 @@ function openCheckin(isRegeneration) {
 
 // ── Generate ──────────────────────────────────────────────────────────────────
 
+async function readSSE(res) {
+  const reader  = res.body.getReader();
+  const dec     = new TextDecoder();
+  let buf = '';
+  let result = null;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try { result = JSON.parse(line.slice(6)); } catch {}
+      }
+    }
+  }
+  return result;
+}
+
 async function generate(isRegeneration = false) {
   const answers = await openCheckin(isRegeneration);
   if (!answers) return;
@@ -128,9 +148,9 @@ async function generate(isRegeneration = false) {
       body: JSON.stringify({ checkin: answers }),
     });
     if (res.status === 503) { hide('state-loading'); show('state-no-key'); return; }
-    let data;
-    try { data = await res.json(); } catch { data = {}; }
-    if (!res.ok) throw new Error(data.error || `Error del servidor (${res.status})`);
+    const data = await readSSE(res);
+    if (!data) throw new Error('Sin respuesta del servidor.');
+    if (data.error) throw new Error(data.error);
     hide('state-loading');
     await load();
   } catch (e) {
@@ -362,15 +382,16 @@ document.getElementById('weekly-weights-btn')?.addEventListener('click', async (
   btn.textContent = 'Generando…';
   btn.disabled    = true;
   try {
-    const res  = await fetch('/api/coach/weekly-weights', { method: 'POST' });
-    const data = await res.json();
+    const res = await fetch('/api/coach/weekly-weights', { method: 'POST' });
     if (res.status === 503) {
       await showAlert('Sin API key', '<p style="color:#ccc;">API key no configurada en el servidor.</p>');
       btn.textContent = origText;
       btn.disabled    = false;
       return;
     }
-    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    const data = await readSSE(res);
+    if (!data) throw new Error('Sin respuesta del servidor.');
+    if (data.error) throw new Error(data.error);
     await load();
   } catch (e) {
     btn.textContent = origText;

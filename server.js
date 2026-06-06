@@ -398,12 +398,23 @@ app.post('/api/coach/generate', async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(503).json({ error: 'API key no configurada. Añade ANTHROPIC_API_KEY al entorno.' });
   }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  const heartbeat = setInterval(() => res.write(': ping\n\n'), 15000);
+
   try {
     const plan = await coach.generatePlan(req.body?.checkin || null);
-    res.json(plan);
+    clearInterval(heartbeat);
+    res.write(`data: ${JSON.stringify({ plan })}\n\n`);
   } catch (e) {
+    clearInterval(heartbeat);
     console.error('Coach error:', e.message);
-    res.status(500).json({ error: e.message });
+    res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+  } finally {
+    res.end();
   }
 });
 
@@ -421,13 +432,23 @@ app.post('/api/coach/weekly-weights', async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(503).json({ error: 'API key no configurada.' });
   }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  const heartbeat = setInterval(() => res.write(': ping\n\n'), 15000);
+
   try {
     const result = await coach.generateWeeklyWeights();
-    res.json(result);
+    clearInterval(heartbeat);
+    res.write(`data: ${JSON.stringify(result)}\n\n`);
   } catch (e) {
+    clearInterval(heartbeat);
     console.error('Weekly weights error:', e.message);
-    const status = e.message.includes('Ya tienes') ? 409 : 500;
-    res.status(status).json({ error: e.message });
+    res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+  } finally {
+    res.end();
   }
 });
 
