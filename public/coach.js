@@ -30,6 +30,13 @@ function fmt(dateStr) {
   });
 }
 
+function fmtDatetime(dtStr) {
+  if (!dtStr) return '—';
+  const d = new Date(dtStr.replace(' ', 'T') + 'Z');
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+    + ' ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+}
+
 // ── Check-in modal ────────────────────────────────────────────────────────────
 
 function openCheckin(isRegeneration) {
@@ -141,7 +148,7 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
   const weeklyMap = weeklyWeights
     ? Object.fromEntries(Object.entries(weeklyWeights).map(([k, v]) => [k.toLowerCase(), v]))
     : null;
-  const genDate   = generatedAt ? fmt(generatedAt.slice(0, 10)) : '—';
+  const genDate   = generatedAt ? fmtDatetime(generatedAt) : '—';
   const validDate = validUntil  ? fmt(validUntil) : '—';
   document.getElementById('plan-meta').textContent =
     `Generado el ${genDate} · Válido hasta ${validDate}`;
