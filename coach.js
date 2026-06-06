@@ -110,18 +110,10 @@ async function buildContext() {
     }
     if (s.date > exerciseStats[name].lastDate) exerciseStats[name].lastDate = s.date;
   }
-  // Recent exercises (last 30 days) — ALL of them, sorted by tonnage.
-  // Historical-only exercises (not done recently) — top 5 for context.
+  // All exercises done in the last 30 days — no limit, sorted by tonnage
   const recentExerciseStats = Object.entries(exerciseStats)
     .filter(([, s]) => s.recentSets > 0)
     .sort((a, b) => b[1].tonnage - a[1].tonnage);
-
-  const historicalExerciseStats = Object.entries(exerciseStats)
-    .filter(([, s]) => s.recentSets === 0)
-    .sort((a, b) => b[1].tonnage - a[1].tonnage)
-    .slice(0, 5);
-
-  const topExerciseStats = [...recentExerciseStats, ...historicalExerciseStats];
 
   // Per-muscle-group exercise breakdown for the last 30 days
   const muscleExerciseMap = {};
@@ -133,7 +125,10 @@ async function buildContext() {
     muscleExerciseMap[mg][s.exercise] = (muscleExerciseMap[mg][s.exercise] || 0) + sets;
   }
 
-  return { profile, allSessions: allSessions.slice(0, 60), muscleStats, topExerciseStats, muscleExerciseMap, weights };
+  // All sessions from the last 30 days (no arbitrary cap)
+  const recentSessionsFull = allSessions.filter(s => s.date >= cutoff);
+
+  return { profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights };
 }
 
 // ── Prompt builder ────────────────────────────────────────────────────────────
@@ -159,8 +154,9 @@ function formatCheckin(checkin) {
 }
 
 function buildPrompt(ctx, checkin) {
-  const { profile, allSessions, muscleStats, topExerciseStats, muscleExerciseMap, weights } = ctx;
-  const today = new Date().toISOString().slice(0, 10);
+  const { profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights } = ctx;
+  const today  = new Date().toISOString().slice(0, 10);
+  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
 
   const profileText = profile ? `
 - Sexo: ${profile.gender === 'male' ? 'Hombre' : 'Mujer'}
@@ -195,15 +191,14 @@ function buildPrompt(ctx, checkin) {
     ? `Peso inicial: ${weights[weights.length - 1].weight_kg} kg (${weights[weights.length - 1].date}) → Último: ${weights[0].weight_kg} kg (${weights[0].date})`
     : 'Sin datos de peso registrados.';
 
-  const recentSessions = allSessions
-    .filter(s => s.date >= cutoff)
+  const recentSessions = recentSessionsFull
     .map(s =>
       `  ${s.date} | ${s.exercise} (${s.muscle_group}) | ${s.series.map(se => `${se.sets}x${se.reps}@${se.weight ?? 'BW'}kg`).join(', ') || 'sin series'}`
     ).join('\n');
 
   const checkinText = formatCheckin(checkin);
 
-  const exerciseLines = topExerciseStats.map(([name, s]) => {
+  const exerciseLines = recentExerciseStats.map(([name, s]) => {
     const avgW = avg(s.weights);
     const maxW = max(s.weights);
     const weightStr = avgW ? ` | peso: media ${avgW}kg/máx ${maxW}kg` : '';
@@ -441,7 +436,7 @@ async function generateWeeklyWeights() {
 
   const plan  = JSON.parse(planRow.plan_json);
   const ctx   = await buildContext();
-  const prompt = await buildWeeklyPrompt(plan, ctx.allSessions);
+  const prompt = await buildWeeklyPrompt(plan, ctx.recentSessionsFull);
   const { parsed } = await callClaude(prompt);
 
   const validUntil = getWeekSunday(weekStart);
