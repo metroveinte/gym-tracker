@@ -110,11 +110,30 @@ async function buildContext() {
     }
     if (s.date > exerciseStats[name].lastDate) exerciseStats[name].lastDate = s.date;
   }
-  const topExerciseStats = Object.entries(exerciseStats)
-    .sort((a, b) => b[1].tonnage - a[1].tonnage)
-    .slice(0, 15);
+  // Recent exercises (last 30 days) — ALL of them, sorted by tonnage.
+  // Historical-only exercises (not done recently) — top 5 for context.
+  const recentExerciseStats = Object.entries(exerciseStats)
+    .filter(([, s]) => s.recentSets > 0)
+    .sort((a, b) => b[1].tonnage - a[1].tonnage);
 
-  return { profile, allSessions: allSessions.slice(0, 60), muscleStats, topExerciseStats, weights };
+  const historicalExerciseStats = Object.entries(exerciseStats)
+    .filter(([, s]) => s.recentSets === 0)
+    .sort((a, b) => b[1].tonnage - a[1].tonnage)
+    .slice(0, 5);
+
+  const topExerciseStats = [...recentExerciseStats, ...historicalExerciseStats];
+
+  // Per-muscle-group exercise breakdown for the last 30 days
+  const muscleExerciseMap = {};
+  for (const s of allSessions) {
+    if (s.date < cutoff || !s.exercise) continue;
+    const mg = s.muscle_group || 'Sin clasificar';
+    if (!muscleExerciseMap[mg]) muscleExerciseMap[mg] = {};
+    const sets = s.series.reduce((sum, se) => sum + (se.sets || 1), 0);
+    muscleExerciseMap[mg][s.exercise] = (muscleExerciseMap[mg][s.exercise] || 0) + sets;
+  }
+
+  return { profile, allSessions: allSessions.slice(0, 60), muscleStats, topExerciseStats, muscleExerciseMap, weights };
 }
 
 // ── Prompt builder ────────────────────────────────────────────────────────────
@@ -140,7 +159,7 @@ function formatCheckin(checkin) {
 }
 
 function buildPrompt(ctx, checkin) {
-  const { profile, allSessions, muscleStats, topExerciseStats, weights } = ctx;
+  const { profile, allSessions, muscleStats, topExerciseStats, muscleExerciseMap, weights } = ctx;
   const today = new Date().toISOString().slice(0, 10);
 
   const profileText = profile ? `
@@ -162,7 +181,13 @@ function buildPrompt(ctx, checkin) {
         const avgW = avg(s.weights);
         const maxW = max(s.weights);
         const weightStr = avgW ? ` | media ${avgW}kg | máx ${maxW}kg` : '';
-        return `  ${g}: ${s.sessions} entrenos | ${s.totalSets} series totales${weightStr}`;
+        const exList = muscleExerciseMap[g]
+          ? ' → ' + Object.entries(muscleExerciseMap[g])
+              .sort((a, b) => b[1] - a[1])
+              .map(([name, sets]) => `${name} (${sets} series)`)
+              .join(', ')
+          : '';
+        return `  ${g}: ${s.sessions} entrenos | ${s.totalSets} series totales${weightStr}${exList}`;
       }).join('\n')
     : '  Sin entrenos en los últimos 30 días.';
 
@@ -170,9 +195,11 @@ function buildPrompt(ctx, checkin) {
     ? `Peso inicial: ${weights[weights.length - 1].weight_kg} kg (${weights[weights.length - 1].date}) → Último: ${weights[0].weight_kg} kg (${weights[0].date})`
     : 'Sin datos de peso registrados.';
 
-  const recentSessions = allSessions.slice(0, 20).map(s =>
-    `  ${s.date} | ${s.exercise} (${s.muscle_group}) | ${s.series.map(se => `${se.sets}x${se.reps}@${se.weight ?? 'BW'}kg`).join(', ') || 'sin series'}`
-  ).join('\n');
+  const recentSessions = allSessions
+    .filter(s => s.date >= cutoff)
+    .map(s =>
+      `  ${s.date} | ${s.exercise} (${s.muscle_group}) | ${s.series.map(se => `${se.sets}x${se.reps}@${se.weight ?? 'BW'}kg`).join(', ') || 'sin series'}`
+    ).join('\n');
 
   const checkinText = formatCheckin(checkin);
 
