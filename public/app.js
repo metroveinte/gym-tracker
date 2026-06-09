@@ -1027,7 +1027,30 @@ loadExerciseOptions().then(async () => {
     return;
   }
 
-  if (plandia !== null) {
+  if (plandia === 'extra') {
+    try {
+      const res  = await fetch('/api/coach/extra-workout');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data?.workout_json) return;
+
+      for (const ex of (data.workout_json.exercises || [])) {
+        const rawW = ex.session_weights_week1?.[0] || null;
+        const plannedWeight = rawW && !/^PC$/i.test(String(rawW).trim()) ? rawW : null;
+        currentExercises.push({ name: ex.name, series: [], notes: '', plannedWeight });
+      }
+
+      const focus = decodeURIComponent(params.get('playfocus') || '');
+      document.getElementById('plan-banner-text').textContent =
+        `Entreno adicional${focus ? ' · ' + focus : ''}`;
+      document.getElementById('plan-banner').classList.remove('hidden');
+      renderExercises();
+      const dateInput = document.getElementById('date');
+      if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+    } catch (e) {
+      console.error('Error cargando entreno adicional:', e);
+    }
+  } else if (plandia !== null) {
     try {
       const res  = await fetch('/api/coach/plan');
       if (!res.ok) return;

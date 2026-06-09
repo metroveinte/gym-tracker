@@ -325,7 +325,7 @@ function renderExtraWorkoutDay(workout) {
 
   const mins = workout.estimated_minutes;
   const timeChip = mins
-    ? `<span style="background:rgba(255,193,7,.15);color:#ffc107;border:1px solid rgba(255,193,7,.4);border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700;">⏱ ~${mins} min</span>`
+    ? `<span style="background:rgba(255,193,7,.12);color:#ffc107;border:1px solid rgba(255,193,7,.5);border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700;white-space:nowrap;">⏱ ~${mins} min</span>`
     : '';
 
   const exerciseRows = (workout.exercises || []).map(ex => {
@@ -383,13 +383,13 @@ function renderExtraWorkoutDay(workout) {
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;">
           ${timeChip}
-          <a href="/sessions?playfocus=${encodeURIComponent(workout.focus || 'Extra')}"
+          <a href="/sessions?plandia=extra&playfocus=${encodeURIComponent(workout.focus || '')}"
              onclick="event.stopPropagation()"
              style="font-size:.75rem;font-weight:700;padding:4px 12px;border-radius:4px;background:rgba(255,193,7,.85);color:#000;text-decoration:none;white-space:nowrap;transition:opacity 150ms;"
              onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
             ▶ Registrar
           </a>
-          <button id="extra-delete-btn" onclick="event.stopPropagation()"
+          <button onclick="event.stopPropagation(); handleExtraDelete(this)"
                   style="font-size:.75rem;font-weight:700;padding:4px 12px;border-radius:4px;background:#e5303a;color:#fff;border:none;cursor:pointer;white-space:nowrap;transition:opacity 150ms;"
                   onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
             × Eliminar
@@ -525,19 +525,18 @@ async function generateExtraWorkout(btn) {
 document.getElementById('extra-workout-btn')?.addEventListener('click', function () { generateExtraWorkout(this); });
 document.getElementById('extra-workout-regen-btn')?.addEventListener('click', function () { generateExtraWorkout(this); });
 
-document.getElementById('extra-workout-slot')?.addEventListener('click', async (e) => {
-  const btn = e.target.closest('#extra-delete-btn');
-  if (!btn) return;
-  btn.disabled = true;
+async function handleExtraDelete(btn) {
+  const origText = btn.textContent;
+  btn.disabled   = true;
   btn.textContent = 'Eliminando…';
   try {
     await fetch('/api/coach/extra-workout', { method: 'DELETE' });
     await load();
   } catch (err) {
-    btn.disabled = false;
-    btn.textContent = '× Eliminar';
+    btn.disabled    = false;
+    btn.textContent = origText;
   }
-});
+}
 
 document.getElementById('weekly-weights-btn')?.addEventListener('click', async () => {
   const btn      = document.getElementById('weekly-weights-btn');
