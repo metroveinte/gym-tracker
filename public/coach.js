@@ -390,7 +390,7 @@ function renderExtraWorkoutDay(workout) {
             ▶ Registrar
           </a>
           <button onclick="event.stopPropagation(); handleExtraDelete(this)"
-                  style="font-size:.75rem;font-weight:700;padding:4px 12px;border-radius:4px;background:#e5303a;color:#fff;border:none;cursor:pointer;white-space:nowrap;transition:opacity 150ms;"
+                  style="width:auto;margin-top:0;text-transform:none;font-size:.75rem;font-weight:700;padding:4px 12px;border-radius:4px;background:#e5303a;color:#fff;border:none;cursor:pointer;white-space:nowrap;transition:opacity 150ms;"
                   onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
             × Eliminar
           </button>
