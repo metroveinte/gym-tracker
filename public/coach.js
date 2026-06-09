@@ -9,17 +9,27 @@ function toggleCollapse(bodyId, chevronId) {
   if (!body) return;
   const collapsed = body.classList.contains('is-collapsed') || body.style.maxHeight === '0px' || body.style.maxHeight === '0';
   if (collapsed) {
+    body.classList.remove('is-collapsed');
+    body.classList.remove('is-open');
+    body.style.overflow  = 'hidden';
     body.style.maxHeight = body.scrollHeight + 'px';
     body.style.opacity   = '1';
     chevron?.classList.remove('is-collapsed');
-    body.addEventListener('transitionend', () => {
-      if (body.style.opacity === '1') body.style.maxHeight = 'none';
-    }, { once: true });
+    // Set to none after transition — use both transitionend and a timeout fallback for Safari
+    const done = () => {
+      body.style.maxHeight = 'none';
+      body.classList.add('is-open');
+    };
+    const timer = setTimeout(done, 350);
+    body.addEventListener('transitionend', () => { clearTimeout(timer); done(); }, { once: true });
   } else {
+    body.classList.remove('is-open');
+    body.style.overflow  = 'hidden';
     body.style.maxHeight = body.scrollHeight + 'px';
     body.offsetHeight; // force reflow
     body.style.maxHeight = '0';
     body.style.opacity   = '0';
+    body.classList.add('is-collapsed');
     chevron?.classList.add('is-collapsed');
   }
 }
@@ -234,7 +244,7 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
 
       // Alternative exercise
       const altInline = ex.alternative
-        ? `<div style="text-align:right;margin-top:3px;">
+        ? `<div style="text-align:right;margin-top:3px;word-break:break-word;overflow-wrap:break-word;">
             <span style="font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:700;">Alternativa:</span>
             <span style="font-size:.76rem;color:#888;margin-left:4px;">${ex.alternative}</span>
           </div>`
@@ -242,23 +252,23 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
 
       // Scheme execution note
       const schemeNote = ex.set_scheme_note
-        ? `<div style="color:#555;font-size:.76rem;margin-top:4px;line-height:1.4;font-style:italic;">${ex.set_scheme_note}</div>`
+        ? `<div style="color:#555;font-size:.76rem;margin-top:4px;line-height:1.4;font-style:italic;word-break:break-word;overflow-wrap:break-word;">${ex.set_scheme_note}</div>`
         : '';
 
       // Coach progression explanation — prominent
       const progressionNote = ex.progression_note
         ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(229,48,58,.08);border-left:3px solid rgba(229,48,58,.5);border-radius:0 6px 6px 0;">
             <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);font-weight:700;margin-bottom:3px;">📈 Análisis del coach</div>
-            <div style="font-size:.82rem;color:#bbb;line-height:1.55;">${ex.progression_note}</div>
+            <div style="font-size:.82rem;color:#bbb;line-height:1.55;word-break:break-word;overflow-wrap:break-word;">${ex.progression_note}</div>
           </div>`
         : '';
 
       return `
         <div style="padding:8px 0;border-bottom:1px solid var(--border);">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:4px;">
-            <span style="color:var(--text);font-size:.88rem;font-weight:600;">${ex.name}</span>
-            <div style="text-align:right;">
-              <div style="color:#888;font-size:.82rem;white-space:nowrap;">${ex.sets}×${ex.reps}${ex.notes ? ' · <em style=color:#666>' + ex.notes + '</em>' : ''}</div>
+            <span style="color:var(--text);font-size:.88rem;font-weight:600;flex:1;min-width:0;word-break:break-word;">${ex.name}</span>
+            <div style="text-align:right;min-width:0;max-width:100%;">
+              <div style="color:#888;font-size:.82rem;word-break:break-word;">${ex.sets}×${ex.reps}${ex.notes ? ' · <em style=color:#666>' + ex.notes + '</em>' : ''}</div>
               ${altInline}
             </div>
           </div>
