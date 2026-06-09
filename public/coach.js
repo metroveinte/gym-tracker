@@ -414,13 +414,19 @@ function renderExtraWorkoutBar(hasWorkout) {
   bar.style.display = '';
 
   if (hasWorkout) {
-    btn.style.display      = 'none';
-    done.style.display     = '';
-    regenBtn.style.display = '';
+    btn.style.display        = 'none';
+    done.style.display       = '';
+    regenBtn.style.display   = '';
+    regenBtn.disabled        = true;
+    regenBtn.style.opacity   = '0.4';
+    regenBtn.style.cursor    = 'not-allowed';
   } else {
-    btn.style.display      = '';
-    done.style.display     = 'none';
-    regenBtn.style.display = 'none';
+    btn.style.display        = '';
+    done.style.display       = 'none';
+    regenBtn.style.display   = 'none';
+    regenBtn.disabled        = false;
+    regenBtn.style.opacity   = '';
+    regenBtn.style.cursor    = '';
   }
 }
 
