@@ -381,7 +381,7 @@ function renderExtraWorkoutDay(workout) {
           <span style="font-weight:700;font-size:.95rem;">${workout.day || 'Entreno adicional'}</span>
           <span style="color:#ffc107;font-size:.82rem;">${workout.focus || ''}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;">
           ${timeChip}
           <a href="/sessions?playfocus=${encodeURIComponent(workout.focus || 'Extra')}"
              onclick="event.stopPropagation()"
@@ -390,7 +390,8 @@ function renderExtraWorkoutDay(workout) {
             ▶ Registrar
           </a>
           <button id="extra-delete-btn" onclick="event.stopPropagation()"
-                  style="font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:4px;background:transparent;color:#e5303a;border:1px solid rgba(229,48,58,.4);cursor:pointer;line-height:1.4;white-space:nowrap;">
+                  style="font-size:.75rem;font-weight:700;padding:4px 12px;border-radius:4px;background:#e5303a;color:#fff;border:none;cursor:pointer;white-space:nowrap;transition:opacity 150ms;"
+                  onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
             × Eliminar
           </button>
         </div>
