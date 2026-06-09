@@ -325,7 +325,6 @@ async function callClaude(prompt) {
     body: JSON.stringify({
       model:      CLAUDE_MODEL,
       max_tokens: 16000,
-      thinking:   { type: 'adaptive' },
       messages:   [{ role: 'user', content: prompt }],
     }),
   });
