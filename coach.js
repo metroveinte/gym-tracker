@@ -539,8 +539,13 @@ async function generateExtraWorkout() {
 }
 
 async function getLatestExtraWorkout() {
-  const weekStart = getWeekMonday();
-  return dbGet('SELECT * FROM extra_workouts WHERE week_start = ?', [weekStart]);
+  return dbGet(
+    `SELECT * FROM extra_workouts WHERE generated_at >= datetime('now', '-2 days') ORDER BY generated_at DESC LIMIT 1`
+  );
+}
+
+async function deleteExtraWorkout() {
+  return dbRun(`DELETE FROM extra_workouts`);
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -572,4 +577,4 @@ async function generatePlan(checkin = null) {
   return parsed;
 }
 
-module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights, generateExtraWorkout, getLatestExtraWorkout };
+module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights, generateExtraWorkout, getLatestExtraWorkout, deleteExtraWorkout };

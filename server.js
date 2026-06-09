@@ -462,6 +462,15 @@ app.get('/api/coach/extra-workout', async (req, res) => {
   }
 });
 
+app.delete('/api/coach/extra-workout', async (req, res) => {
+  try {
+    await coach.deleteExtraWorkout();
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al eliminar el entreno adicional.' });
+  }
+});
+
 app.post('/api/coach/extra-workout', async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(503).json({ error: 'API key no configurada.' });

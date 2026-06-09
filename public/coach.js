@@ -383,7 +383,16 @@ function renderExtraWorkoutDay(workout) {
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           ${timeChip}
-          <span style="font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:4px;background:rgba(255,193,7,.15);color:#ffc107;border:1px solid rgba(255,193,7,.35);">✦ Complementario</span>
+          <a href="/sessions?playfocus=${encodeURIComponent(workout.focus || 'Extra')}"
+             onclick="event.stopPropagation()"
+             style="font-size:.75rem;font-weight:700;padding:4px 12px;border-radius:4px;background:rgba(255,193,7,.85);color:#000;text-decoration:none;white-space:nowrap;transition:opacity 150ms;"
+             onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
+            ▶ Registrar
+          </a>
+          <button id="extra-delete-btn" onclick="event.stopPropagation()"
+                  style="font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:4px;background:transparent;color:#e5303a;border:1px solid rgba(229,48,58,.4);cursor:pointer;line-height:1.4;white-space:nowrap;">
+            × Eliminar
+          </button>
         </div>
       </div>
       <div id="extra-body" class="collapse-body" style="max-height:0;opacity:0;">
@@ -514,6 +523,20 @@ async function generateExtraWorkout(btn) {
 
 document.getElementById('extra-workout-btn')?.addEventListener('click', function () { generateExtraWorkout(this); });
 document.getElementById('extra-workout-regen-btn')?.addEventListener('click', function () { generateExtraWorkout(this); });
+
+document.getElementById('extra-workout-slot')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('#extra-delete-btn');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.textContent = 'Eliminando…';
+  try {
+    await fetch('/api/coach/extra-workout', { method: 'DELETE' });
+    await load();
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = '× Eliminar';
+  }
+});
 
 document.getElementById('weekly-weights-btn')?.addEventListener('click', async () => {
   const btn      = document.getElementById('weekly-weights-btn');
