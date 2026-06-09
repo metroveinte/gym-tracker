@@ -128,6 +128,15 @@ db.serialize(() => {
       weights_json TEXT NOT NULL
     )
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS extra_workouts (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      week_start   TEXT NOT NULL UNIQUE,
+      generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      workout_json TEXT NOT NULL
+    )
+  `);
 });
 
 module.exports = db;

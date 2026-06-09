@@ -455,6 +455,94 @@ async function getLatestWeeklyWeights() {
   return dbGet('SELECT * FROM weekly_weights WHERE week_start = ?', [weekStart]);
 }
 
+// ── Extra workout ─────────────────────────────────────────────────────────────
+
+function buildExtraWorkoutPrompt(plan, ctx) {
+  const { muscleStats, muscleExerciseMap } = ctx;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const planDays = (plan.weekly_plan?.days || []).map(d =>
+    `  ${d.day} — ${d.focus}: ${(d.exercises || []).map(e => e.name).join(', ')}`
+  ).join('\n');
+
+  const avg = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+  const muscleText = Object.entries(muscleStats).map(([g, s]) => {
+    const avgW = avg(s.weights);
+    const exList = muscleExerciseMap[g]
+      ? ' → ' + Object.entries(muscleExerciseMap[g])
+          .sort((a, b) => b[1] - a[1])
+          .map(([name, sets]) => `${name} (${sets} series)`)
+          .join(', ')
+      : '';
+    return `  ${g}: ${s.sessions} entrenos | ${s.totalSets} series${avgW ? ` | media ${avgW}kg` : ''}${exList}`;
+  }).join('\n') || '  Sin datos recientes.';
+
+  return `Eres un entrenador personal experto en biomecánica e hipertrofia, siempre basado en evidencia científica.
+
+El usuario tiene el siguiente plan semanal activo y quiere hacer un entrenamiento adicional no planificado.
+
+HOY: ${today}
+
+=== PLAN SEMANAL ACTIVO ===
+${planDays}
+
+=== VOLUMEN POR GRUPO MUSCULAR (últimos 30 días) ===
+${muscleText}
+
+=== INSTRUCCIONES ===
+Diseña UN ÚNICO entreno complementario que:
+1. Trabaje los grupos musculares más retrasados o con menor volumen en el plan actual.
+2. No repita los mismos ejercicios principales del plan (solo si son imprescindibles).
+3. Sea equilibrado y realista para una sesión extra de gimnasio.
+4. Tenga entre 4 y 7 ejercicios.
+5. Aplica los mismos criterios de doble progresión y esquemas de sets que en el plan principal.
+
+Responde SOLO con JSON (sin texto adicional), con exactamente esta estructura:
+
+{
+  "day": "Entreno adicional",
+  "focus": "descripción corta del enfoque (ej: Piernas + Core)",
+  "estimated_minutes": 55,
+  "exercises": [
+    {
+      "name": "Nombre ejercicio",
+      "sets": 3,
+      "reps": "10-12",
+      "notes": "nota opcional",
+      "alternative": "ejercicio alternativo",
+      "set_scheme": "rectas",
+      "set_scheme_note": "Rango 10-12: cuando completes todas las series en 12 reps, sube 2.5kg.",
+      "session_weights_week1": ["20kg","20kg","20kg"],
+      "progression_note": "Breve explicación del peso elegido."
+    }
+  ]
+}`;
+}
+
+async function generateExtraWorkout() {
+  const planRow = await getLatestPlan();
+  if (!planRow) throw new Error('No hay plan activo. Genera un plan primero.');
+
+  const plan   = JSON.parse(planRow.plan_json);
+  const ctx    = await buildContext();
+  const prompt = buildExtraWorkoutPrompt(plan, ctx);
+  const { parsed } = await callClaude(prompt);
+
+  const weekStart = getWeekMonday();
+  await dbRun(
+    `INSERT OR REPLACE INTO extra_workouts (week_start, generated_at, workout_json)
+     VALUES (?, CURRENT_TIMESTAMP, ?)`,
+    [weekStart, JSON.stringify(parsed)]
+  );
+
+  return parsed;
+}
+
+async function getLatestExtraWorkout() {
+  const weekStart = getWeekMonday();
+  return dbGet('SELECT * FROM extra_workouts WHERE week_start = ?', [weekStart]);
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 async function getLatestPlan() {
@@ -473,6 +561,7 @@ async function generatePlan(checkin = null) {
     new Date(Date.now() + PLAN_DAYS * 86400000).toISOString().slice(0, 10);
 
   await dbRun('DELETE FROM weekly_weights WHERE week_start = ?', [getWeekMonday()]);
+  await dbRun('DELETE FROM extra_workouts WHERE week_start = ?', [getWeekMonday()]);
 
   await dbRun(
     `INSERT INTO coach_plans (generated_at, valid_until, plan_json, raw_response)
@@ -483,4 +572,4 @@ async function generatePlan(checkin = null) {
   return parsed;
 }
 
-module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights };
+module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights, generateExtraWorkout, getLatestExtraWorkout };

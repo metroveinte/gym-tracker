@@ -99,6 +99,22 @@
             </div>
           </div>
         </div>
+
+        <!-- Entreno adicional -->
+        <div id="extra-workout-bar" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <span style="color:#888; font-size:0.78rem;">Entreno adicional</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span id="extra-workout-done" style="display:none; font-size:.75rem; color:#ffc107; font-weight:600;">✦ Generado</span>
+              <button id="extra-workout-btn" class="btn-secondary" style="display:none; width:auto; margin:0; padding:5px 14px; font-size:.78rem;">
+                ✦ Generar entreno
+              </button>
+              <button id="extra-workout-regen-btn" class="btn-secondary" style="display:none; width:auto; margin:0; padding:5px 14px; font-size:.78rem;">
+                Regenerar
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Análisis -->
@@ -134,6 +150,7 @@
         <p id="plan-structure" style="color:#888; font-size:0.85rem; margin-bottom:4px;"></p>
         <p id="plan-rationale" style="color:#666; font-size:0.82rem; margin-bottom:20px;"></p>
         <div id="plan-days" style="display:flex; flex-direction:column; gap:12px;"></div>
+        <div id="extra-workout-slot"></div>
       </div>
 
       <!-- Progresión -->

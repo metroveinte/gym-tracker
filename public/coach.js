@@ -317,6 +317,103 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
   show('state-plan');
 }
 
+// ── Extra workout ─────────────────────────────────────────────────────────────
+
+function renderExtraWorkoutDay(workout) {
+  const slot = document.getElementById('extra-workout-slot');
+  if (!slot || !workout) return;
+
+  const mins = workout.estimated_minutes;
+  const timeChip = mins
+    ? `<span style="background:rgba(255,193,7,.15);color:#ffc107;border:1px solid rgba(255,193,7,.4);border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700;">⏱ ~${mins} min</span>`
+    : '';
+
+  const exerciseRows = (workout.exercises || []).map(ex => {
+    const sw1 = ex.session_weights_week1 || [];
+    const setsRow = sw1.length ? `
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;align-items:center;">
+        <span style="font-size:.7rem;color:#555;margin-right:2px;">esta sem:</span>
+        ${sw1.map((w, i) => `
+          <span style="font-size:.75rem;padding:2px 7px;border-radius:4px;background:var(--bg-raised);border:1px solid var(--border);color:#ccc;">
+            Set${i+1} <strong style="color:var(--text);">${w}</strong>
+          </span>`).join('')}
+      </div>` : '';
+
+    const altInline = ex.alternative
+      ? `<div style="text-align:right;margin-top:3px;word-break:break-word;overflow-wrap:break-word;">
+          <span style="font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:#ffc107;font-weight:700;">Alternativa:</span>
+          <span style="font-size:.76rem;color:#888;margin-left:4px;">${ex.alternative}</span>
+        </div>`
+      : '';
+
+    const schemeNote = ex.set_scheme_note
+      ? `<div style="color:#555;font-size:.76rem;margin-top:4px;line-height:1.4;font-style:italic;word-break:break-word;overflow-wrap:break-word;">${ex.set_scheme_note}</div>`
+      : '';
+
+    const progressionNote = ex.progression_note
+      ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(255,193,7,.06);border-left:3px solid rgba(255,193,7,.4);border-radius:0 6px 6px 0;">
+          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:#ffc107;font-weight:700;margin-bottom:3px;">📈 Análisis del coach</div>
+          <div style="font-size:.82rem;color:#bbb;line-height:1.55;word-break:break-word;overflow-wrap:break-word;">${ex.progression_note}</div>
+        </div>`
+      : '';
+
+    return `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:4px;">
+          <span style="color:var(--text);font-size:.88rem;font-weight:600;flex:1;min-width:0;word-break:break-word;">${ex.name}</span>
+          <div style="text-align:right;min-width:0;max-width:100%;">
+            <div style="color:#888;font-size:.82rem;word-break:break-word;">${ex.sets}×${ex.reps}${ex.notes ? ' · <em style=color:#666>' + ex.notes + '</em>' : ''}</div>
+            ${altInline}
+          </div>
+        </div>
+        ${schemeNote}
+        ${setsRow}
+        ${progressionNote}
+      </div>`;
+  }).join('');
+
+  slot.innerHTML = `
+    <div style="border:1px solid rgba(255,193,7,.35);border-radius:var(--r-sm);overflow:hidden;margin-top:4px;">
+      <div class="collapse-header" onclick="toggleCollapse('extra-body','extra-chev')"
+           style="background:rgba(255,193,7,.07);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <svg id="extra-chev" class="collapse-chevron is-collapsed" viewBox="0 0 24 24" fill="none" stroke="#ffc107" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><polyline points="6 9 12 15 18 9"/></svg>
+          <span style="font-weight:700;font-size:.95rem;">${workout.day || 'Entreno adicional'}</span>
+          <span style="color:#ffc107;font-size:.82rem;">${workout.focus || ''}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          ${timeChip}
+          <span style="font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:4px;background:rgba(255,193,7,.15);color:#ffc107;border:1px solid rgba(255,193,7,.35);">✦ Complementario</span>
+        </div>
+      </div>
+      <div id="extra-body" class="collapse-body" style="max-height:0;opacity:0;">
+        ${exerciseRows.length
+          ? `<div style="padding:4px 14px 10px;">${exerciseRows}</div>`
+          : `<div style="padding:10px 14px;color:#555;font-size:.85rem;">Sin ejercicios.</div>`}
+      </div>
+    </div>`;
+}
+
+function renderExtraWorkoutBar(hasWorkout) {
+  const bar      = document.getElementById('extra-workout-bar');
+  const btn      = document.getElementById('extra-workout-btn');
+  const done     = document.getElementById('extra-workout-done');
+  const regenBtn = document.getElementById('extra-workout-regen-btn');
+  if (!bar) return;
+
+  bar.style.display = '';
+
+  if (hasWorkout) {
+    btn.style.display      = 'none';
+    done.style.display     = '';
+    regenBtn.style.display = '';
+  } else {
+    btn.style.display      = '';
+    done.style.display     = 'none';
+    regenBtn.style.display = 'none';
+  }
+}
+
 // ── Weekly weights bar ────────────────────────────────────────────────────────
 
 function renderWeeklyWeightsBar(ww) {
@@ -370,11 +467,17 @@ async function load() {
       return;
     }
 
-    const wwRes = await fetch('/api/coach/weekly-weights');
-    const ww    = wwRes.ok ? await wwRes.json() : null;
+    const [wwRes, ewRes] = await Promise.all([
+      fetch('/api/coach/weekly-weights'),
+      fetch('/api/coach/extra-workout'),
+    ]);
+    const ww = wwRes.ok ? await wwRes.json() : null;
+    const ew = ewRes.ok ? await ewRes.json() : null;
 
     renderPlan(data.plan_json, data.generated_at, data.valid_until, ww?.weights_json || null);
     renderWeeklyWeightsBar(ww);
+    renderExtraWorkoutBar(!!ew);
+    if (ew) renderExtraWorkoutDay(ew.workout_json);
   } catch (e) {
     show('state-no-data');
   }
@@ -385,6 +488,32 @@ async function load() {
 document.getElementById('generate-btn')?.addEventListener('click', () => generate(false));
 document.getElementById('pdf-btn')?.addEventListener('click', () => window.print());
 document.getElementById('regenerate-btn')?.addEventListener('click', () => generate(true));
+
+async function generateExtraWorkout(btn) {
+  const origText = btn.textContent;
+  btn.textContent = 'Generando…';
+  btn.disabled    = true;
+  try {
+    const res = await fetch('/api/coach/extra-workout', { method: 'POST' });
+    if (res.status === 503) {
+      await showAlert('Sin API key', '<p style="color:#ccc;">API key no configurada en el servidor.</p>');
+      btn.textContent = origText;
+      btn.disabled    = false;
+      return;
+    }
+    const data = await readSSE(res);
+    if (!data) throw new Error('Sin respuesta del servidor.');
+    if (data.error) throw new Error(data.error);
+    await load();
+  } catch (e) {
+    btn.textContent = origText;
+    btn.disabled    = false;
+    await showAlert('Error al generar', `<p style="color:#ccc;">${e.message}</p>`);
+  }
+}
+
+document.getElementById('extra-workout-btn')?.addEventListener('click', function () { generateExtraWorkout(this); });
+document.getElementById('extra-workout-regen-btn')?.addEventListener('click', function () { generateExtraWorkout(this); });
 
 document.getElementById('weekly-weights-btn')?.addEventListener('click', async () => {
   const btn      = document.getElementById('weekly-weights-btn');
