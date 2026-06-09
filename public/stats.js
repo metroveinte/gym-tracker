@@ -3,6 +3,9 @@ let currentFilter = 'all';
 let progressChart = null;
 let topExercisesChart = null;
 let muscleGroupChart = null;
+let currentHistoryPage = 0;
+let currentFilteredSessions = [];
+const HISTORY_PAGE_SIZE = 15;
 
 function updateButtonMode() {
   const isMobile = window.innerWidth <= 768;
@@ -237,6 +240,7 @@ function updateStats() {
   document.getElementById('top-muscle').textContent = topMuscle || '-';
   document.getElementById('top-exercise').textContent = topExercise || '-';
 
+  currentHistoryPage = 0;
   renderHistory(filtered);
   renderProgressChart(filtered);
   renderTopExercisesChart(filtered);
@@ -346,18 +350,25 @@ function groupSessionsByDate(sessions) {
 }
 
 function renderHistory(sessions) {
+  currentFilteredSessions = sessions || [];
   const body = document.getElementById('sessions-body');
   const noRecords = document.getElementById('no-records');
 
   if (!sessions || sessions.length === 0) {
     body.innerHTML = '';
     noRecords.style.display = 'block';
+    renderHistoryPagination(0, 0);
     updateSelectionUI();
     return;
   }
 
   noRecords.style.display = 'none';
-  const groups = groupSessionsByDate(sessions);
+  const allGroups = groupSessionsByDate(sessions);
+  const totalPages = Math.ceil(allGroups.length / HISTORY_PAGE_SIZE);
+  if (currentHistoryPage >= totalPages) currentHistoryPage = totalPages - 1;
+  if (currentHistoryPage < 0) currentHistoryPage = 0;
+  const start = currentHistoryPage * HISTORY_PAGE_SIZE;
+  const groups = allGroups.slice(start, start + HISTORY_PAGE_SIZE);
 
   body.innerHTML = groups.map(({ date, daySessions }) => {
     const batchId = daySessions[0].batch_id || `${date}-${daySessions[0].id}`;
@@ -396,7 +407,34 @@ function renderHistory(sessions) {
     btn.addEventListener('click', () => openWorkoutModal(btn.dataset.date, btn.dataset.batchId, sessions));
   });
 
+  renderHistoryPagination(currentHistoryPage, Math.ceil(allGroups.length / HISTORY_PAGE_SIZE));
   updateSelectionUI();
+}
+
+function renderHistoryPagination(page, totalPages) {
+  const container = document.getElementById('history-pagination');
+  if (!container) return;
+  if (totalPages <= 1) { container.innerHTML = ''; return; }
+  const isFirst = page === 0;
+  const isLast  = page >= totalPages - 1;
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px;">
+      <button onclick="goHistoryPage(${page - 1})" ${isFirst ? 'disabled' : ''}
+              style="width:auto;margin:0;padding:5px 16px;font-size:.8rem;text-transform:none;letter-spacing:0;${isFirst ? 'opacity:.35;cursor:not-allowed;' : ''}">
+        ← Anterior
+      </button>
+      <span style="color:#888;font-size:.82rem;min-width:90px;text-align:center;">Página ${page + 1} de ${totalPages}</span>
+      <button onclick="goHistoryPage(${page + 1})" ${isLast ? 'disabled' : ''}
+              style="width:auto;margin:0;padding:5px 16px;font-size:.8rem;text-transform:none;letter-spacing:0;${isLast ? 'opacity:.35;cursor:not-allowed;' : ''}">
+        Siguiente →
+      </button>
+    </div>`;
+}
+
+function goHistoryPage(page) {
+  currentHistoryPage = page;
+  renderHistory(currentFilteredSessions);
+  document.getElementById('history-pagination')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function openWorkoutModal(date, batchId, sessions) {
