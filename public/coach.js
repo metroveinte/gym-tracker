@@ -375,13 +375,13 @@ function renderExtraWorkoutDay(workout) {
   slot.innerHTML = `
     <div style="border:1px solid rgba(255,193,7,.35);border-radius:var(--r-sm);overflow:hidden;margin-top:4px;">
       <div class="collapse-header" onclick="toggleCollapse('extra-body','extra-chev')"
-           style="background:rgba(255,193,7,.07);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <svg id="extra-chev" class="collapse-chevron is-collapsed" viewBox="0 0 24 24" fill="none" stroke="#ffc107" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><polyline points="6 9 12 15 18 9"/></svg>
-          <span style="font-weight:700;font-size:.95rem;">${workout.day || 'Entreno adicional'}</span>
-          <span style="color:#ffc107;font-size:.82rem;">${workout.focus || ''}</span>
+           style="background:rgba(255,193,7,.07);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:nowrap;">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden;">
+          <svg id="extra-chev" class="collapse-chevron is-collapsed" viewBox="0 0 24 24" fill="none" stroke="#ffc107" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+          <span style="font-weight:700;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${workout.day || 'Entreno adicional'}</span>
+          <span style="color:#ffc107;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${workout.focus || ''}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;">
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:nowrap;">
           ${timeChip}
           <a href="/sessions?plandia=extra&playfocus=${encodeURIComponent(workout.focus || '')}"
              onclick="event.stopPropagation()"
@@ -487,7 +487,12 @@ async function load() {
     renderPlan(data.plan_json, data.generated_at, data.valid_until, ww?.weights_json || null);
     renderWeeklyWeightsBar(ww);
     renderExtraWorkoutBar(!!ew);
-    if (ew) renderExtraWorkoutDay(ew.workout_json);
+    if (ew) {
+      renderExtraWorkoutDay(ew.workout_json);
+    } else {
+      const slot = document.getElementById('extra-workout-slot');
+      if (slot) slot.innerHTML = '';
+    }
   } catch (e) {
     show('state-no-data');
   }

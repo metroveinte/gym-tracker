@@ -325,6 +325,7 @@ async function callClaude(prompt) {
     body: JSON.stringify({
       model:      CLAUDE_MODEL,
       max_tokens: 16000,
+      thinking:   { type: 'adaptive' },
       messages:   [{ role: 'user', content: prompt }],
     }),
   });
@@ -496,6 +497,7 @@ Diseña UN ÚNICO entreno complementario que:
 3. Sea equilibrado y realista para una sesión extra de gimnasio.
 4. Tenga entre 4 y 7 ejercicios.
 5. Aplica los mismos criterios de doble progresión y esquemas de sets que en el plan principal.
+6. Para estimated_minutes: calcula (sets_totales × 1.5 min de ejecución) + (sets_totales × 2.5 min de descanso) + 12 min de overhead (calentamiento, buscar máquinas, transiciones). Redondea a múltiplos de 5.
 
 Responde SOLO con JSON (sin texto adicional), con exactamente esta estructura:
 
