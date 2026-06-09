@@ -165,6 +165,69 @@
     });
   };
 
+  // Exercise search: empty input + live-filter list. Returns Promise<string|null>
+  window.showExerciseSearch = (title, exerciseList) => {
+    return new Promise(resolve => {
+      const e = _els();
+      e.title.textContent = title || 'Cambiar ejercicio';
+      e.body.innerHTML = `
+        <input type="text" id="_dlg_ex_search" autocomplete="off"
+          placeholder="Buscar ejercicio…" style="width:100%; margin:0 0 10px;" />
+        <div id="_dlg_ex_results" style="max-height:220px; overflow-y:auto; border:1px solid #333; border-radius:6px;"></div>
+      `;
+      e.ok.style.display = 'none';
+      e.cancel.style.display = '';
+      e.cancel.textContent = 'Cancelar';
+
+      e.overlay.classList.remove('hidden');
+      e.modal.classList.remove('hidden');
+
+      const searchInput = document.getElementById('_dlg_ex_search');
+      const resultsDiv  = document.getElementById('_dlg_ex_results');
+      searchInput.focus();
+
+      function esc(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      function renderResults(query) {
+        const lower = query.toLowerCase();
+        const matches = query
+          ? exerciseList.filter(n => n.toLowerCase().includes(lower))
+          : exerciseList;
+        const items = matches.slice(0, 25);
+        resultsDiv.innerHTML = items.length
+          ? items.map(n =>
+              `<div class="dropdown-item" data-name="${esc(n)}"
+                style="padding:10px 14px; cursor:pointer; border-bottom:1px solid #1e1e1e; font-size:.9rem;">
+                ${esc(n)}
+              </div>`).join('')
+          : `<div style="padding:10px 14px; color:#555; font-size:.85rem;">Sin resultados</div>`;
+        resultsDiv.querySelectorAll('.dropdown-item').forEach(item => {
+          item.addEventListener('click', () => done(item.dataset.name));
+        });
+      }
+
+      searchInput.addEventListener('input', () => renderResults(searchInput.value.trim()));
+      renderResults('');
+
+      const done = (name) => {
+        e.overlay.classList.add('hidden');
+        e.modal.classList.add('hidden');
+        e.ok.style.display = '';
+        e.ok.onclick     = null;
+        e.cancel.onclick = null;
+        e.close.onclick  = null;
+        e.overlay.onclick = null;
+        resolve(name || null);
+      };
+
+      e.cancel.onclick  = () => done(null);
+      e.close.onclick   = () => done(null);
+      e.overlay.onclick = (ev) => { if (ev.target === e.overlay) done(null); };
+    });
+  };
+
   // Muscle group selector. Returns Promise<string|null>
   window.showMuscleGroupSelect = (groups) => {
     return new Promise(resolve => {

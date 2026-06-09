@@ -13,7 +13,7 @@
   <header class="header">
     <nav>
       <a href="/" class="nav-link">Inicio</a>
-      <a href="/sessions" class="nav-link">Sesiones</a>
+      <a href="/sessions" class="nav-link">Entrenos</a>
       <a href="/stats" class="nav-link">Estadísticas</a>
       <a href="/nutrition" class="nav-link active">Nutrición</a>
       <a href="/coach" class="nav-link">Planificación</a>
@@ -33,6 +33,10 @@
         <p>Registra tu evolución de peso con historial, gráficos y comentarios.</p>
       </a>
     </div>
+
+    <div class="card" id="macros-card" style="margin-top:24px;">
+      <p style="color:#555; text-align:center;">Cargando…</p>
+    </div>
   </main>
   <nav class="bottom-nav">
     <a href="/" class="bottom-nav-item">
@@ -41,7 +45,7 @@
     </a>
     <a href="/sessions" class="bottom-nav-item">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></svg>
-      <span>Sesiones</span>
+      <span>Entrenos</span>
     </a>
     <a href="/stats" class="bottom-nav-item">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zM16.2 13h2.8v6h-2.8v-6z"/></svg>
@@ -56,5 +60,6 @@
       <span>Plan</span>
     </a>
   </nav>
+  <script src="nutrition.js"></script>
 </body>
 </html>

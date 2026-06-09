@@ -13,7 +13,7 @@
   <header class="header">
     <nav>
       <a href="/" class="nav-link">Inicio</a>
-      <a href="/sessions" class="nav-link">Sesiones</a>
+      <a href="/sessions" class="nav-link">Entrenos</a>
       <a href="/stats" class="nav-link">Estadísticas</a>
       <a href="/nutrition" class="nav-link">Nutrición</a>
       <a href="/coach" class="nav-link active">Planificación</a>
@@ -77,6 +77,44 @@
             <div id="plan-progress-bar" style="height:100%; background:var(--accent); border-radius:4px; transition:width 600ms var(--ease-out);"></div>
           </div>
         </div>
+
+        <!-- Pesos semanales -->
+        <div id="weekly-weights-bar" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <span style="color:#888; font-size:0.78rem;">Pesos esta semana</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span id="weekly-weights-done" style="display:none; font-size:.75rem; color:#4caf50; font-weight:600;">✦ Calculados</span>
+              <button id="weekly-weights-btn" class="btn-secondary" style="display:none; width:auto; margin:0; padding:5px 14px; font-size:.78rem;">
+                ✦ Sugerir pesos
+              </button>
+            </div>
+          </div>
+          <div id="weekly-validity-wrap" style="display:none; margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span id="weekly-validity-label" style="color:#666; font-size:0.75rem;"></span>
+              <span id="weekly-days-left" style="color:#888; font-size:0.75rem;"></span>
+            </div>
+            <div style="background:var(--bg-raised); border-radius:4px; height:4px; overflow:hidden;">
+              <div id="weekly-progress-bar" style="height:100%; background:#4caf50; border-radius:4px; transition:width 600ms var(--ease-out);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Entreno adicional -->
+        <div id="extra-workout-bar" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <span style="color:#888; font-size:0.78rem;">Entreno adicional</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span id="extra-workout-done" style="display:none; font-size:.75rem; color:#ffc107; font-weight:600;">✦ Generado</span>
+              <button id="extra-workout-btn" class="btn-secondary" style="display:none; width:auto; margin:0; padding:5px 14px; font-size:.78rem;">
+                ✦ Generar entreno
+              </button>
+              <button id="extra-workout-regen-btn" class="btn-secondary" style="display:none; width:auto; margin:0; padding:5px 14px; font-size:.78rem;">
+                Regenerar
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Análisis -->
@@ -88,7 +126,7 @@
         <div id="analysis-body" class="collapse-body" style="max-height:0;opacity:0;">
           <div style="padding-top:16px;">
             <p id="analysis-summary" style="color:#ccc; line-height:1.6; margin-bottom:20px;"></p>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:12px;">
               <div>
                 <p style="color:#4caf50; font-size:0.78rem; font-weight:700; margin-bottom:8px; text-transform:uppercase; letter-spacing:.05em;">Puntos fuertes</p>
                 <ul id="analysis-strengths" style="list-style:none; padding:0; margin:0;"></ul>
@@ -112,6 +150,7 @@
         <p id="plan-structure" style="color:#888; font-size:0.85rem; margin-bottom:4px;"></p>
         <p id="plan-rationale" style="color:#666; font-size:0.82rem; margin-bottom:20px;"></p>
         <div id="plan-days" style="display:flex; flex-direction:column; gap:12px;"></div>
+        <div id="extra-workout-slot"></div>
       </div>
 
       <!-- Progresión -->
@@ -143,7 +182,7 @@
     </a>
     <a href="/sessions" class="bottom-nav-item">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></svg>
-      <span>Sesiones</span>
+      <span>Entrenos</span>
     </a>
     <a href="/stats" class="bottom-nav-item">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zM16.2 13h2.8v6h-2.8v-6z"/></svg>

@@ -398,12 +398,100 @@ app.post('/api/coach/generate', async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(503).json({ error: 'API key no configurada. Añade ANTHROPIC_API_KEY al entorno.' });
   }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  const heartbeat = setInterval(() => res.write(': ping\n\n'), 15000);
+
   try {
     const plan = await coach.generatePlan(req.body?.checkin || null);
-    res.json(plan);
+    clearInterval(heartbeat);
+    res.write(`data: ${JSON.stringify({ plan })}\n\n`);
   } catch (e) {
+    clearInterval(heartbeat);
     console.error('Coach error:', e.message);
-    res.status(500).json({ error: e.message });
+    res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+  } finally {
+    res.end();
+  }
+});
+
+app.get('/api/coach/weekly-weights', async (req, res) => {
+  try {
+    const row = await coach.getLatestWeeklyWeights();
+    if (!row) return res.json(null);
+    res.json({ ...row, weights_json: JSON.parse(row.weights_json) });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al cargar pesos semanales.' });
+  }
+});
+
+app.post('/api/coach/weekly-weights', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(503).json({ error: 'API key no configurada.' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  const heartbeat = setInterval(() => res.write(': ping\n\n'), 15000);
+
+  try {
+    const result = await coach.generateWeeklyWeights();
+    clearInterval(heartbeat);
+    res.write(`data: ${JSON.stringify(result)}\n\n`);
+  } catch (e) {
+    clearInterval(heartbeat);
+    console.error('Weekly weights error:', e.message);
+    res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+  } finally {
+    res.end();
+  }
+});
+
+app.get('/api/coach/extra-workout', async (req, res) => {
+  try {
+    const row = await coach.getLatestExtraWorkout();
+    if (!row) return res.json(null);
+    res.json({ ...row, workout_json: JSON.parse(row.workout_json) });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al cargar el entreno adicional.' });
+  }
+});
+
+app.delete('/api/coach/extra-workout', async (req, res) => {
+  try {
+    await coach.deleteExtraWorkout();
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Error al eliminar el entreno adicional.' });
+  }
+});
+
+app.post('/api/coach/extra-workout', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(503).json({ error: 'API key no configurada.' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  const heartbeat = setInterval(() => res.write(': ping\n\n'), 15000);
+
+  try {
+    const workout = await coach.generateExtraWorkout();
+    clearInterval(heartbeat);
+    res.write(`data: ${JSON.stringify({ workout })}\n\n`);
+  } catch (e) {
+    clearInterval(heartbeat);
+    console.error('Extra workout error:', e.message);
+    res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+  } finally {
+    res.end();
   }
 });
 
