@@ -5,27 +5,35 @@
 
 /* ── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
-  /* Backgrounds */
-  --bg:           #0b0b0b;
-  --bg-surface:   #131313;
-  --bg-raised:    #1a1a1a;
-  --bg-input:     #0f0f0f;
+  /* Backgrounds — slightly blue-tinted darks for depth */
+  --bg:           #09090e;
+  --bg-surface:   #0f0f15;
+  --bg-raised:    #17171f;
+  --bg-input:     #0c0c12;
 
   /* Borders */
-  --border:       #222222;
-  --border-mid:   #2c2c2c;
-  --border-light: #383838;
+  --border:       #1d1d2a;
+  --border-mid:   #272738;
+  --border-light: #333348;
 
   /* Text */
-  --text:         #efefef;
-  --text-sec:     #737373;
-  --text-muted:   #3d3d3d;
+  --text:         #f0f0f5;
+  --text-sec:     #68687e;
+  --text-muted:   #2e2e3e;
 
   /* Accent */
   --accent:       #e5303a;
   --accent-h:     #ff3d47;
   --accent-dim:   rgba(229, 48, 58, 0.14);
   --accent-dimmer:rgba(229, 48, 58, 0.07);
+
+  /* Amber — coach / AI features */
+  --amber:        #ffc107;
+  --amber-dim:    rgba(255, 193, 7, 0.12);
+
+  /* Green — success / records */
+  --green:        #27c96a;
+  --green-dim:    rgba(39, 201, 106, 0.12);
 
   /* Danger / warn */
   --danger:       #6e0000;
@@ -55,6 +63,12 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
+  /* Subtle grid texture — gives depth on inner pages */
+  background-image:
+    radial-gradient(ellipse 70% 30% at 50% 0%, rgba(229,48,58,0.06) 0%, transparent 60%),
+    linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px);
+  background-size: 100% 100%, 44px 44px, 44px 44px;
 }
 
 /* ── Hero ───────────────────────────────────────────────────────────────────── */
@@ -161,6 +175,7 @@ body {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+  box-shadow: 0 2px 14px rgba(229,48,58,0.38), inset 0 1px 0 rgba(255,255,255,0.1);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -168,6 +183,7 @@ body {
     background: var(--accent-h);
     border-color: var(--accent-h);
     transform: translateY(-1px);
+    box-shadow: 0 4px 24px rgba(229,48,58,0.55), inset 0 1px 0 rgba(255,255,255,0.15);
   }
 }
 
@@ -182,6 +198,7 @@ body {
   color: var(--text-muted);
   cursor: not-allowed;
   opacity: 0.5;
+  box-shadow: none;
 }
 
 /* ── Features grid ──────────────────────────────────────────────────────────── */
@@ -261,9 +278,9 @@ body {
 
 /* ── Header nav (desktop) ───────────────────────────────────────────────────── */
 .header {
-  background: rgba(11,11,11,0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(9,9,14,0.90);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
   border-bottom: 1px solid var(--border);
   padding: 0;
   position: sticky;
@@ -290,17 +307,19 @@ body {
   letter-spacing: 1px;
   padding: 8px 16px;
   border-radius: var(--r-xs);
-  transition: color 160ms ease, background 160ms ease;
+  border: 1px solid transparent;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
 }
 
-.nav-link:hover,
-.nav-link.active {
+.nav-link:hover {
   color: var(--text);
-  background: var(--accent-dimmer);
+  background: rgba(255,255,255,0.04);
 }
 
 .nav-link.active {
   color: var(--accent);
+  background: rgba(229,48,58,0.1);
+  border-color: rgba(229,48,58,0.22);
 }
 
 /* ── Layout ─────────────────────────────────────────────────────────────────── */
@@ -368,11 +387,21 @@ h2, h3 {
 /* ── Cards ──────────────────────────────────────────────────────────────────── */
 .card {
   background: var(--bg-surface);
+  background-image: linear-gradient(140deg, rgba(255,255,255,0.025) 0%, transparent 55%);
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: 28px;
   margin-bottom: 24px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.03) inset,
+    0 4px 20px rgba(0,0,0,0.45),
+    0 1px 3px rgba(0,0,0,0.5);
+}
+
+/* Coach / AI card — amber accent on top */
+#plan-header-card {
+  background-image: linear-gradient(140deg, rgba(255,255,255,0.025) 0%, rgba(255,193,7,0.04) 100%);
+  border-top: 2px solid var(--amber);
 }
 
 /* ── Form elements ──────────────────────────────────────────────────────────── */
@@ -446,6 +475,7 @@ button {
   text-transform: uppercase;
   letter-spacing: 1px;
   font-size: 0.9rem;
+  box-shadow: 0 2px 10px rgba(229,48,58,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
   transition: background 160ms ease, transform 160ms var(--ease-out), box-shadow 160ms ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -454,7 +484,10 @@ button {
 button:active { transform: scale(0.97); }
 
 @media (hover: hover) and (pointer: fine) {
-  button:hover { background: var(--accent-h); }
+  button:hover {
+    background: var(--accent-h);
+    box-shadow: 0 4px 18px rgba(229,48,58,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
 }
 
 .btn-primary {
@@ -540,8 +573,21 @@ th {
 
 tr:last-child td { border-bottom: none; }
 
+/* Alternating rows */
+tbody tr:nth-child(odd) { background: rgba(255,255,255,0.013); }
+
 @media (hover: hover) and (pointer: fine) {
-  tbody tr:hover td { background: rgba(255,255,255,0.02); }
+  tbody tr:hover td { background: rgba(229,48,58,0.06); }
+}
+
+/* Dates and counts in stats table use monospace */
+.stats-table td:nth-child(2) {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+}
+.stats-table td:nth-child(4),
+.stats-table td:nth-child(5) {
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* ── Inline icon / action buttons ───────────────────────────────────────────── */
@@ -796,16 +842,19 @@ tr:last-child td { border-bottom: none; }
 
 .stat-item {
   background: var(--bg-raised);
+  background-image: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 65%);
   border: 1px solid var(--border);
+  border-top: 2px solid var(--accent);
   border-radius: var(--r-sm);
   padding: 18px 14px;
   text-align: center;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  transition: border-color 200ms ease;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
   /* Stagger entrance */
   animation: statFadeUp 320ms var(--ease-out) both;
+  transition: transform 180ms var(--ease-out), box-shadow 180ms ease;
 }
 
 .stat-item:nth-child(1) { animation-delay:  0ms; }
@@ -899,14 +948,17 @@ tr:last-child td { border-bottom: none; }
 .collapse-chevron {
   flex-shrink: 0;
   transition: transform 280ms cubic-bezier(0.23,1,0.32,1);
-  color: #555;
+  color: var(--text-sec);
 }
 .collapse-chevron.is-collapsed {
   transform: rotate(-90deg);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .stat-item:hover { border-color: var(--border-mid); }
+  .stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.5), 0 0 0 1px rgba(229,48,58,0.15);
+  }
 }
 
 .stat-label {
@@ -1200,23 +1252,23 @@ input[type="checkbox"]:disabled {
   font-weight: 700;
   letter-spacing: 0.3px;
   margin: 2px 2px 2px 0;
-  color: #fff;
+  border: 1px solid transparent;
 }
 
-.muscle-pecho          { background: #c0392b; }
-.muscle-dorsal         { background: #2471a3; }
-.muscle-espalda-media  { background: #1a5276; }
-.muscle-lumbar         { background: #0d3349; }
-.muscle-hombros        { background: #7d3c98; }
-.muscle-deltoides-post { background: #5b2c6f; }
-.muscle-biceps         { background: #1e8449; }
-.muscle-triceps        { background: #148f77; }
-.muscle-cuadriceps     { background: #ca6f1e; }
-.muscle-isquios        { background: #a04000; }
-.muscle-gluteos        { background: #d35400; }
-.muscle-gemelos        { background: #784212; }
-.muscle-core           { background: #616a6b; }
-.muscle-other          { background: #3a3a3a; }
+.muscle-pecho          { background: rgba(192,57,43,0.18);  border-color: rgba(192,57,43,0.45);  color: #e06050; }
+.muscle-dorsal         { background: rgba(36,113,163,0.18); border-color: rgba(36,113,163,0.45); color: #5aade0; }
+.muscle-espalda-media  { background: rgba(26,82,118,0.2);   border-color: rgba(26,82,118,0.45);  color: #4a8ab5; }
+.muscle-lumbar         { background: rgba(13,51,73,0.25);   border-color: rgba(13,51,73,0.5);    color: #4a7a94; }
+.muscle-hombros        { background: rgba(125,60,152,0.18); border-color: rgba(125,60,152,0.45); color: #b57fd4; }
+.muscle-deltoides-post { background: rgba(91,44,111,0.2);   border-color: rgba(91,44,111,0.45);  color: #9a68b8; }
+.muscle-biceps         { background: rgba(30,132,73,0.18);  border-color: rgba(30,132,73,0.45);  color: #4fcb7e; }
+.muscle-triceps        { background: rgba(20,143,119,0.18); border-color: rgba(20,143,119,0.45); color: #3dcfb1; }
+.muscle-cuadriceps     { background: rgba(202,111,30,0.18); border-color: rgba(202,111,30,0.45); color: #f5a625; }
+.muscle-isquios        { background: rgba(160,64,0,0.2);    border-color: rgba(160,64,0,0.45);   color: #e07830; }
+.muscle-gluteos        { background: rgba(211,84,0,0.18);   border-color: rgba(211,84,0,0.45);   color: #f08040; }
+.muscle-gemelos        { background: rgba(120,66,18,0.2);   border-color: rgba(120,66,18,0.45);  color: #c09060; }
+.muscle-core           { background: rgba(97,106,107,0.18); border-color: rgba(97,106,107,0.45); color: #9ab0b3; }
+.muscle-other          { background: rgba(58,58,58,0.25);   border-color: rgba(58,58,58,0.45);   color: #888; }
 
 /* ── Bottom navigation ───────────────────────────────────────────────────────── */
 .bottom-nav { display: none; }
@@ -1247,9 +1299,9 @@ input[type="checkbox"]:disabled {
     display: flex;
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background: rgba(10,10,10,0.95);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: rgba(9,9,14,0.95);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
     border-top: 1px solid var(--border);
     z-index: 50;
     padding-bottom: env(safe-area-inset-bottom);

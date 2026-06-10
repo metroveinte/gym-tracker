@@ -222,7 +222,7 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
   document.getElementById('plan-days').innerHTML = (wp.days || []).map((d, dayIdx) => {
     const mins = d.estimated_minutes;
     const timeChip = mins
-      ? `<span style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700;">⏱ ~${mins} min</span>`
+      ? `<span style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700;font-family:'JetBrains Mono',monospace;">⏱ ~${mins} min</span>`
       : '';
 
     const exerciseRows = (d.exercises || []).map(ex => {
@@ -237,7 +237,7 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;align-items:center;">
           <span style="font-size:.7rem;color:${isAdj ? '#4caf50' : '#555'};margin-right:2px;">${isAdj ? '✦ ajustado:' : 'esta sem:'}</span>
           ${setsToShow.map((w, i) => `
-            <span style="font-size:.75rem;padding:2px 7px;border-radius:4px;background:${isAdj ? 'rgba(76,175,80,0.12)' : 'var(--bg-raised)'};border:1px solid ${isAdj ? 'rgba(76,175,80,0.35)' : 'var(--border)'};color:${isAdj ? '#a5d6a7' : '#ccc'};">
+            <span style="font-size:.75rem;padding:2px 7px;border-radius:4px;background:${isAdj ? 'rgba(76,175,80,0.12)' : 'var(--bg-raised)'};border:1px solid ${isAdj ? 'rgba(76,175,80,0.35)' : 'var(--border)'};color:${isAdj ? '#a5d6a7' : '#ccc'};font-family:'JetBrains Mono',monospace;">
               Set${i+1} <strong style="color:${isAdj ? '#c8e6c9' : 'var(--text)'};">${w}</strong>
             </span>`).join('')}
         </div>` : '';
@@ -325,7 +325,7 @@ function renderExtraWorkoutDay(workout) {
 
   const mins = workout.estimated_minutes;
   const timeChip = mins
-    ? `<span style="background:rgba(255,193,7,.12);color:#ffc107;border:1px solid rgba(255,193,7,.5);border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700;white-space:nowrap;">⏱ ~${mins} min</span>`
+    ? `<span style="background:rgba(255,193,7,.12);color:#ffc107;border:1px solid rgba(255,193,7,.5);border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700;white-space:nowrap;font-family:'JetBrains Mono',monospace;">⏱ ~${mins} min</span>`
     : '';
 
   const exerciseRows = (workout.exercises || []).map(ex => {
@@ -334,7 +334,7 @@ function renderExtraWorkoutDay(workout) {
       <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;align-items:center;">
         <span style="font-size:.7rem;color:#555;margin-right:2px;">esta sem:</span>
         ${sw1.map((w, i) => `
-          <span style="font-size:.75rem;padding:2px 7px;border-radius:4px;background:var(--bg-raised);border:1px solid var(--border);color:#ccc;">
+          <span style="font-size:.75rem;padding:2px 7px;border-radius:4px;background:var(--bg-raised);border:1px solid var(--border);color:#ccc;font-family:'JetBrains Mono',monospace;">
             Set${i+1} <strong style="color:var(--text);">${w}</strong>
           </span>`).join('')}
       </div>` : '';
