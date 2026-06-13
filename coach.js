@@ -258,7 +258,7 @@ REGLAS IMPORTANTES:
 - peso de activación: para ejercicios con esquema "calentamiento_trabajo", la serie de activación se carga siempre al 65-70% del peso de trabajo actual. Este porcentaje es fijo y escala automáticamente: si el peso de trabajo sube de 60 kg a 65 kg, la activación pasa de ~40 kg a ~43 kg sin necesidad de recalcular. Indica este porcentaje en el set_scheme_note y en progression_note para que el usuario lo tenga claro.
 - session_weights_week1: array con el peso exacto de cada set en la semana 1 (longitud = sets). Para "rectas" todos iguales. Para pirámide, mostrar la progresión real. Para "calentamiento_trabajo": el primer elemento es el peso de activación (~65-70% del peso de trabajo), los demás son el peso de trabajo. Usa siempre la unidad (kg o "PC").
 - progression_note: 1-2 frases explicando la lógica de peso para este ejercicio. Cuando haya activación, exprésala como porcentaje del peso de trabajo (no como valor fijo) para que escale automáticamente al subir de peso. Ejemplo: "Media 9.8 reps a 60 kg en series de trabajo → ya domina el peso. Subimos a 62.5 kg de trabajo; activación siempre al ~65% (~40 kg). Cuando completes todas las series de trabajo a 10 reps, sube a 65 kg el mes que viene."
-- alternative: nombre de UN ejercicio alternativo que trabaje el mismo músculo y se pueda hacer con equipamiento diferente (por si la máquina no está libre). Ejemplo: si el principal es "Press banca", el alternativo podría ser "Press mancuernas inclinado". Una sola frase corta, sin más detalles.
+- alternative: nombre de UN ejercicio alternativo que trabaje el mismo músculo y se pueda hacer con equipamiento diferente (por si la máquina no está libre). IMPORTANTE: el alternativo NO puede ser ningún ejercicio que ya esté incluido en el plan (en ningún día), y dos ejercicios no pueden ser alternativas mutuas entre sí. Ejemplo: si el principal es "Press banca", el alternativo podría ser "Press mancuernas inclinado". Una sola frase corta, sin más detalles.
 
 {
   "analysis": {
@@ -497,6 +497,7 @@ Diseña UN ÚNICO entreno complementario que:
 4. Tenga entre 4 y 7 ejercicios.
 5. Aplica los mismos criterios de doble progresión y esquemas de sets que en el plan principal.
 6. Para estimated_minutes: calcula (sets_totales × 1.5 min de ejecución) + (sets_totales × 2.5 min de descanso) + 12 min de overhead (calentamiento, buscar máquinas, transiciones). Redondea a múltiplos de 5.
+7. El campo "alternative" de cada ejercicio NO puede ser ningún ejercicio que ya aparezca en este entreno ni en el plan semanal activo, y dos ejercicios no pueden ser alternativas mutuas entre sí.
 
 Responde SOLO con JSON (sin texto adicional), con exactamente esta estructura:
 
