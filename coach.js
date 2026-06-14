@@ -128,7 +128,47 @@ async function buildContext() {
   // All sessions from the last 30 days (no arbitrary cap)
   const recentSessionsFull = allSessions.filter(s => s.date >= cutoff);
 
-  return { profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights };
+  // Stagnation detection: exercises with no max-weight improvement in 3+ consecutive weeks
+  const STAGNATION_WEEKS = 3;
+  const stagnantExercises = [];
+  const now = Date.now();
+
+  for (const [name] of Object.entries(exerciseStats)) {
+    const exSessions = allSessions
+      .filter(s => s.exercise === name && s.series.some(sr => sr.weight > 0))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (exSessions.length === 0) continue;
+
+    const weekBuckets = {};
+    for (const s of exSessions) {
+      const daysAgo = Math.floor((now - new Date(s.date).getTime()) / 86400000);
+      if (daysAgo > 56) continue;
+      const bucket = Math.floor(daysAgo / 7);
+      const sessionMax = Math.max(...s.series.filter(sr => sr.weight > 0).map(sr => sr.weight));
+      if (!weekBuckets[bucket] || sessionMax > weekBuckets[bucket]) weekBuckets[bucket] = sessionMax;
+    }
+
+    const sortedWeeks = Object.entries(weekBuckets)
+      .map(([w, max]) => ({ week: Number(w), max }))
+      .sort((a, b) => a.week - b.week); // index 0 = most recent week
+
+    if (sortedWeeks.length < STAGNATION_WEEKS) continue;
+
+    const currentMax = sortedWeeks[0].max;
+    const referenceMax = sortedWeeks[STAGNATION_WEEKS - 1].max;
+
+    if (currentMax <= referenceMax) {
+      let plateauWeeks = STAGNATION_WEEKS;
+      for (let i = STAGNATION_WEEKS; i < sortedWeeks.length; i++) {
+        if (sortedWeeks[i].max >= currentMax) plateauWeeks++;
+        else break;
+      }
+      stagnantExercises.push({ name, weeks: plateauWeeks, maxWeight: currentMax });
+    }
+  }
+
+  return { profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights, stagnantExercises };
 }
 
 // ── Prompt builder ────────────────────────────────────────────────────────────
@@ -154,7 +194,7 @@ function formatCheckin(checkin) {
 }
 
 function buildPrompt(ctx, checkin) {
-  const { profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights } = ctx;
+  const { profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights, stagnantExercises } = ctx;
   const today  = new Date().toISOString().slice(0, 10);
   const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
 
@@ -231,6 +271,11 @@ ${muscleText}
 === EJERCICIOS PRINCIPALES (por volumen acumulado; con reps reales del último mes) ===
 NOTA: medias de peso y reps calculadas sobre series de trabajo. La primera serie por ejercicio (activación/calentamiento) está excluida de estas medias pero sí cuenta en el volumen total.
 ${exerciseLines || '  Ninguno registrado.'}
+${stagnantExercises.length > 0 ? `
+=== EJERCICIOS ESTANCADOS (sin mejora de peso máximo en 3+ semanas) ===
+${stagnantExercises.map(ex => `  - ${ex.name}: máx ${ex.maxWeight}kg sin progresar desde hace ${ex.weeks} semanas`).join('\n')}
+
+Para cada uno de estos ejercicios incluye en el plan una intervención explícita: deload (bajar peso 10-15% y subir reps), cambio de rep range, periodización ondulatoria, o variante del ejercicio. Señala el motivo en las notas del día correspondiente.` : ''}
 
 === ÚLTIMAS 20 SESIONES ===
 ${recentSessions || '  Sin sesiones registradas aún.'}
