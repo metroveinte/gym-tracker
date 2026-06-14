@@ -263,3 +263,24 @@
     });
   };
 })();
+
+window.showToast = function (text, type = 'error', duration = 3500) {
+  let container = document.getElementById('_toast_container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = '_toast_container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = text;
+  container.appendChild(toast);
+
+  const dismiss = () => {
+    toast.classList.add('toast-out');
+    toast.addEventListener('animationend', () => toast.remove(), { once: true });
+  };
+
+  setTimeout(dismiss, duration);
+};

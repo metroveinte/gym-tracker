@@ -1,5 +1,4 @@
 const form = document.getElementById('session-form');
-const messageDiv = document.getElementById('message');
 const exerciseInput = document.getElementById('exercise-input');
 const exerciseDropdown = document.getElementById('exercise-dropdown');
 const addExerciseBtn = document.getElementById('add-exercise-btn');
@@ -64,10 +63,7 @@ let selectedMuscleGroup = null;
 let isNewExercise = false;
 
 function showMessage(text, type = 'error') {
-  messageDiv.textContent = text;
-  messageDiv.className = `message ${type}`;
-  messageDiv.classList.remove('hidden');
-  setTimeout(() => messageDiv.classList.add('hidden'), 5000);
+  window.showToast(text, type);
 }
 
 function formatValue(value) {
