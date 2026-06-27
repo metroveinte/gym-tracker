@@ -193,6 +193,22 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
   document.getElementById('plan-days-left').textContent    =
     daysLeft > 0 ? `${daysLeft} días restantes` : 'Plan vencido';
 
+  // Current week indicator
+  const currentWeek = Math.min(4, Math.max(1, Math.floor(elapsed / 7) + 1));
+  const weekIndicator = document.getElementById('plan-week-indicator');
+  if (weekIndicator && daysLeft > 0) {
+    const weekStart = new Date(genTime.getTime() + (currentWeek - 1) * 7 * 86400000);
+    const weekEnd   = new Date(weekStart.getTime() + 6 * 86400000);
+    const fmtShort  = d => d.toLocaleDateString('es-ES', { day:'numeric', month:'short' });
+    weekIndicator.style.display = '';
+    weekIndicator.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="background:var(--accent);color:#fff;font-size:.72rem;font-weight:700;letter-spacing:.08em;padding:3px 10px;border-radius:20px;white-space:nowrap;">SEMANA ${currentWeek} DE 4</span>
+        <span style="color:var(--text-sec);font-size:.8rem;">${fmtShort(weekStart)} — ${fmtShort(weekEnd)}</span>
+        <span style="margin-left:auto;color:var(--text-muted);font-size:.75rem;">${(currentWeek - 1) * 7 + 1}–${Math.min(currentWeek * 7, 28)} / 28 días</span>
+      </div>`;
+  }
+
   // Always visible for testing; restrict to daysLeft <= 0 in production
   document.getElementById('regenerate-btn').style.display = '';
 
@@ -227,19 +243,44 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
 
     const exerciseRows = (d.exercises || []).map(ex => {
       const sw1 = ex.session_weights_week1 || [];
+      const ww  = ex.weekly_weights || {};
 
-      // Per-set weights: weekly suggestion overrides plan weights when available
+      // Resolve plan weights for the current week
+      const parseKg = s => s && s !== 'PC' ? parseFloat(s) : null;
+      const weekKey  = `week${currentWeek}`;
+      const prevKey  = currentWeek > 1 ? `week${currentWeek - 1}` : null;
+      let planWeights;
+      if (currentWeek === 1 || !ww[weekKey]) {
+        planWeights = sw1;
+      } else {
+        const count = sw1.length || 1;
+        planWeights = Array(count).fill(ww[weekKey]);
+      }
+
+      // Progression delta vs previous week
+      let deltaChip = '';
+      if (prevKey && ww[weekKey] && ww[prevKey] && ww[weekKey] !== ww[prevKey]) {
+        const curr = parseKg(ww[weekKey]), prev = parseKg(ww[prevKey]);
+        if (curr !== null && prev !== null) {
+          const diff = Math.round((curr - prev) * 10) / 10;
+          const up   = diff > 0;
+          deltaChip  = `<span style="font-size:.68rem;padding:1px 7px;border-radius:10px;background:${up ? 'rgba(39,201,106,.12)' : 'rgba(229,48,58,.1)'};border:1px solid ${up ? 'rgba(39,201,106,.3)' : 'rgba(229,48,58,.3)'};color:${up ? '#4cde85' : '#ff7070'};font-family:'JetBrains Mono',monospace;">${up ? '↑' : '↓'} ${up ? '+' : ''}${diff}kg</span>`;
+        }
+      }
+
+      // Per-set weights: manual weekly suggestion overrides plan weights
       const weeklyW    = weeklyMap?.[ex.name.toLowerCase()];
-      const setsToShow = (weeklyW && weeklyW.length) ? weeklyW : sw1;
+      const setsToShow = (weeklyW && weeklyW.length) ? weeklyW : planWeights;
       const isAdj      = !!(weeklyW && weeklyW.length);
 
       const setsRow = setsToShow.length ? `
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;align-items:center;">
-          <span style="font-size:.7rem;color:${isAdj ? '#4caf50' : '#555'};margin-right:2px;">${isAdj ? '✦ ajustado:' : 'esta sem:'}</span>
+          <span style="font-size:.7rem;color:${isAdj ? '#4caf50' : 'var(--text-sec)'};margin-right:2px;">${isAdj ? '✦ ajustado:' : `sem ${currentWeek}:`}</span>
           ${setsToShow.map((w, i) => `
             <span style="font-size:.75rem;padding:2px 7px;border-radius:4px;background:${isAdj ? 'rgba(76,175,80,0.12)' : 'var(--bg-raised)'};border:1px solid ${isAdj ? 'rgba(76,175,80,0.35)' : 'var(--border)'};color:${isAdj ? '#a5d6a7' : '#ccc'};font-family:'JetBrains Mono',monospace;">
               Set${i+1} <strong style="color:${isAdj ? '#c8e6c9' : 'var(--text)'};">${w}</strong>
             </span>`).join('')}
+          ${deltaChip}
         </div>` : '';
 
       // Alternative exercise
@@ -307,11 +348,16 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
 
   const prog = plan.progression || {};
   document.getElementById('progression-weeks').innerHTML =
-    ['week1','week2','week3','week4'].map((k,i) => `
-      <div style="display:flex;gap:12px;align-items:flex-start;">
-        <span style="min-width:72px;color:var(--accent);font-size:.8rem;font-weight:700;padding-top:2px;">Semana ${i+1}</span>
-        <span style="color:#ccc;font-size:.88rem;line-height:1.5;">${prog[k] || ''}</span>
-      </div>`).join('');
+    ['week1','week2','week3','week4'].map((k,i) => {
+      const isCurrentWeek = (i + 1) === currentWeek && daysLeft > 0;
+      return `
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:6px 8px;border-radius:6px;${isCurrentWeek ? 'background:rgba(229,48,58,.07);border:1px solid rgba(229,48,58,.18);' : ''}">
+        <span style="min-width:72px;color:${isCurrentWeek ? 'var(--accent)' : '#555'};font-size:.8rem;font-weight:700;padding-top:2px;white-space:nowrap;">
+          Semana ${i+1}${isCurrentWeek ? ' ←' : ''}
+        </span>
+        <span style="color:${isCurrentWeek ? '#ddd' : '#666'};font-size:.88rem;line-height:1.5;">${prog[k] || ''}</span>
+      </div>`;
+    }).join('');
 
   hide('generate-block');
   show('state-plan');
