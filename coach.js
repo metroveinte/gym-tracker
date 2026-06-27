@@ -61,12 +61,13 @@ async function buildContext() {
   }
   const allSessions = Array.from(sessionMap.values());
 
-  // Volume stats per muscle group (last 30 days)
+  // Volume stats per muscle group (last 90 days)
   // First series per exercise is treated as activation (skipped for weight averages)
-  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const cutoff30 = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const cutoff90 = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
   const muscleStats = {};
   for (const s of allSessions) {
-    if (s.date < cutoff) continue;
+    if (s.date < cutoff90) continue;
     const mg = s.muscle_group;
     if (!muscleStats[mg]) muscleStats[mg] = { sessions: 0, totalSets: 0, weights: [] };
     muscleStats[mg].sessions++;
@@ -90,7 +91,7 @@ async function buildContext() {
         recentSets: 0, recentWeights: [], recentReps: [],
       };
     }
-    const isRecent = s.date >= cutoff;
+    const isRecent = s.date >= cutoff90;
     for (let i = 0; i < s.series.length; i++) {
       const serie = s.series[i];
       const isActivation = i === 0 && s.series.length > 1;
@@ -110,23 +111,23 @@ async function buildContext() {
     }
     if (s.date > exerciseStats[name].lastDate) exerciseStats[name].lastDate = s.date;
   }
-  // All exercises done in the last 30 days — no limit, sorted by tonnage
+  // All exercises done in the last 90 days — no limit, sorted by tonnage
   const recentExerciseStats = Object.entries(exerciseStats)
     .filter(([, s]) => s.recentSets > 0)
     .sort((a, b) => b[1].tonnage - a[1].tonnage);
 
-  // Per-muscle-group exercise breakdown for the last 30 days
+  // Per-muscle-group exercise breakdown for the last 90 days
   const muscleExerciseMap = {};
   for (const s of allSessions) {
-    if (s.date < cutoff || !s.exercise) continue;
+    if (s.date < cutoff90 || !s.exercise) continue;
     const mg = s.muscle_group || 'Sin clasificar';
     if (!muscleExerciseMap[mg]) muscleExerciseMap[mg] = {};
     const sets = s.series.reduce((sum, se) => sum + (se.sets || 1), 0);
     muscleExerciseMap[mg][s.exercise] = (muscleExerciseMap[mg][s.exercise] || 0) + sets;
   }
 
-  // All sessions from the last 30 days (no arbitrary cap)
-  const recentSessionsFull = allSessions.filter(s => s.date >= cutoff);
+  // Detailed session listing: last 30 days (kept short to avoid bloating the prompt)
+  const recentSessionsFull = allSessions.filter(s => s.date >= cutoff30);
 
   // Stagnation detection: exercises with no max-weight improvement in 3+ consecutive weeks
   const STAGNATION_WEEKS = 3;
@@ -168,7 +169,48 @@ async function buildContext() {
     }
   }
 
-  return { profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights, stagnantExercises };
+  // ── Nivel 1 analytics ────────────────────────────────────────────────────────
+
+  // 1. Adherencia: sesiones/semana promedio (últimos 90 días)
+  const uniqueTrainingDays = new Set(allSessions.filter(s => s.date >= cutoff90).map(s => s.date));
+  const avgSessionsPerWeek = Math.round((uniqueTrainingDays.size / 90) * 7 * 10) / 10;
+
+  // 2. Balance push/pull (últimos 90 días)
+  const PUSH_GROUPS = ['Pecho', 'Hombros', 'Tríceps'];
+  const PULL_GROUPS = ['Dorsal', 'Espalda media', 'Bíceps', 'Deltoides posterior'];
+  let pushSets = 0, pullSets = 0;
+  for (const [mg, s] of Object.entries(muscleStats)) {
+    if (PUSH_GROUPS.includes(mg)) pushSets += s.totalSets;
+    if (PULL_GROUPS.includes(mg)) pullSets += s.totalSets;
+  }
+  const pushPullRatio = pullSets > 0 ? Math.round((pushSets / pullSets) * 100) / 100 : null;
+  let pushPullNote;
+  if (pushPullRatio === null) pushPullNote = 'Sin datos suficientes';
+  else if (pushPullRatio > 1.3) pushPullNote = `Desequilibrado hacia PUSH (${pushSets} series empuje vs ${pullSets} tracción — ratio ${pushPullRatio}:1). Priorizar tirón.`;
+  else if (pushPullRatio < 0.7) pushPullNote = `Desequilibrado hacia PULL (${pullSets} series tracción vs ${pushSets} empuje — ratio ${pushPullRatio}:1). Priorizar empuje.`;
+  else pushPullNote = `Equilibrado (${pushSets} empuje / ${pullSets} tracción — ratio ${pushPullRatio}:1)`;
+
+  // 3. Grupos poco trabajados (< 10 series/mes equivalente en 90 días = < 30 series)
+  const MAIN_GROUPS = ['Pecho', 'Dorsal', 'Hombros', 'Bíceps', 'Tríceps', 'Cuádriceps', 'Isquiosurales', 'Glúteos'];
+  const underworkedGroups = [];
+  for (const mg of MAIN_GROUPS) {
+    const sets = muscleStats[mg]?.totalSets ?? 0;
+    if (sets < 30) underworkedGroups.push({ group: mg, sets, setsPerWeek: Math.round((sets / 90) * 7 * 10) / 10 });
+  }
+
+  // 4. Variedad de ejercicios por grupo muscular (últimos 90 días)
+  const exerciseVariety = {};
+  for (const [mg, exMap] of Object.entries(muscleExerciseMap)) {
+    exerciseVariety[mg] = Object.keys(exMap).length;
+  }
+  const lowVarietyGroups = MAIN_GROUPS
+    .filter(mg => exerciseVariety[mg] !== undefined && exerciseVariety[mg] <= 2)
+    .map(mg => ({ group: mg, count: exerciseVariety[mg] }));
+
+  return {
+    profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights,
+    stagnantExercises, avgSessionsPerWeek, pushPullNote, underworkedGroups, lowVarietyGroups,
+  };
 }
 
 // ── Prompt builder ────────────────────────────────────────────────────────────
@@ -194,9 +236,9 @@ function formatCheckin(checkin) {
 }
 
 function buildPrompt(ctx, checkin) {
-  const { profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights, stagnantExercises } = ctx;
-  const today  = new Date().toISOString().slice(0, 10);
-  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const { profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights,
+          stagnantExercises, avgSessionsPerWeek, pushPullNote, underworkedGroups, lowVarietyGroups } = ctx;
+  const today = new Date().toISOString().slice(0, 10);
 
   const profileText = profile ? `
 - Sexo: ${profile.gender === 'male' ? 'Hombre' : 'Mujer'}
@@ -225,7 +267,7 @@ function buildPrompt(ctx, checkin) {
           : '';
         return `  ${g}: ${s.sessions} entrenos | ${s.totalSets} series totales${weightStr}${exList}`;
       }).join('\n')
-    : '  Sin entrenos en los últimos 30 días.';
+    : '  Sin entrenos en los últimos 90 días.';
 
   const weightTrend = weights.length >= 2
     ? `Peso inicial: ${weights[weights.length - 1].weight_kg} kg (${weights[weights.length - 1].date}) → Último: ${weights[0].weight_kg} kg (${weights[0].date})`
@@ -247,7 +289,7 @@ function buildPrompt(ctx, checkin) {
       const avgR = avgDec(s.recentReps);
       const maxR = max(s.recentReps);
       const minR = min(s.recentReps);
-      repsStr = ` | reps último mes: ${minR}-${maxR} (media ${avgR})`;
+      repsStr = ` | reps últimos 3 meses: ${minR}-${maxR} (media ${avgR})`;
     }
     return `  ${name}: ${s.totalSets} series totales${weightStr}${repsStr} | último ${s.lastDate}`;
   }).join('\n');
@@ -265,10 +307,16 @@ ${checkinText || '  No especificadas.'}
 === TENDENCIA DE PESO (últimas mediciones) ===
 ${weightTrend}
 
-=== VOLUMEN POR GRUPO MUSCULAR (últimos 30 días) ===
+=== VOLUMEN POR GRUPO MUSCULAR (últimos 90 días) ===
 ${muscleText}
 
-=== EJERCICIOS PRINCIPALES (por volumen acumulado; con reps reales del último mes) ===
+=== ANÁLISIS DE PATRONES DE ENTRENAMIENTO ===
+- Frecuencia media: ${avgSessionsPerWeek} sesiones/semana (últimos 90 días)
+- Balance push/pull: ${pushPullNote}${underworkedGroups.length > 0 ? `
+- Grupos poco trabajados: ${underworkedGroups.map(g => `${g.group} (${g.setsPerWeek} series/semana)`).join(', ')} — incorporar o priorizar en el plan` : ''}${lowVarietyGroups.length > 0 ? `
+- Baja variedad de ejercicios en: ${lowVarietyGroups.map(g => `${g.group} (solo ${g.count} ejercicio${g.count === 1 ? '' : 's'})`).join(', ')} — introducir variantes si procede` : ''}
+
+=== EJERCICIOS PRINCIPALES (por volumen acumulado; con reps reales de los últimos 90 días) ===
 NOTA: medias de peso y reps calculadas sobre series de trabajo. La primera serie por ejercicio (activación/calentamiento) está excluida de estas medias pero sí cuenta en el volumen total.
 ${exerciseLines || '  Ninguno registrado.'}
 ${stagnantExercises.length > 0 ? `
@@ -277,7 +325,7 @@ ${stagnantExercises.map(ex => `  - ${ex.name}: máx ${ex.maxWeight}kg sin progre
 
 Para cada uno de estos ejercicios incluye en el plan una intervención explícita: deload (bajar peso 10-15% y subir reps), cambio de rep range, periodización ondulatoria, o variante del ejercicio. Señala el motivo en las notas del día correspondiente.` : ''}
 
-=== ÚLTIMAS 20 SESIONES ===
+=== SESIONES RECIENTES (últimos 30 días) ===
 ${recentSessions || '  Sin sesiones registradas aún.'}
 
 === INSTRUCCIONES ===
