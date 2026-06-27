@@ -190,13 +190,25 @@ async function buildContext() {
   else if (pushPullRatio < 0.7) pushPullNote = `Desequilibrado hacia PULL (${pullSets} series tracción vs ${pushSets} empuje — ratio ${pushPullRatio}:1). Priorizar empuje.`;
   else pushPullNote = `Equilibrado (${pushSets} empuje / ${pullSets} tracción — ratio ${pushPullRatio}:1)`;
 
-  // 3. Grupos poco trabajados (< 10 series/mes equivalente en 90 días = < 30 series)
+  // 3. Estado de volumen MEV/MRV por grupo muscular (últimos 90 días)
   const MAIN_GROUPS = ['Pecho', 'Dorsal', 'Hombros', 'Bíceps', 'Tríceps', 'Cuádriceps', 'Isquiosurales', 'Glúteos'];
-  const underworkedGroups = [];
-  for (const mg of MAIN_GROUPS) {
-    const sets = muscleStats[mg]?.totalSets ?? 0;
-    if (sets < 30) underworkedGroups.push({ group: mg, sets, setsPerWeek: Math.round((sets / 90) * 7 * 10) / 10 });
-  }
+  const MEV_MRV = {
+    'Pecho':         { mev: 8,  mrv: 20 },
+    'Dorsal':        { mev: 8,  mrv: 22 },
+    'Hombros':       { mev: 6,  mrv: 20 },
+    'Bíceps':        { mev: 6,  mrv: 18 },
+    'Tríceps':       { mev: 6,  mrv: 18 },
+    'Cuádriceps':    { mev: 8,  mrv: 20 },
+    'Isquiosurales': { mev: 6,  mrv: 20 },
+    'Glúteos':       { mev: 4,  mrv: 16 },
+  };
+  const volumeStatus = MAIN_GROUPS.map(mg => {
+    const setsTotal = muscleStats[mg]?.totalSets ?? 0;
+    const spw = Math.round((setsTotal / 90) * 7 * 10) / 10;
+    const ref = MEV_MRV[mg] || { mev: 6, mrv: 18 };
+    const status = spw < ref.mev ? 'BAJO_MEV' : spw >= ref.mrv * 0.85 ? 'CERCA_MRV' : 'OK';
+    return { group: mg, setsPerWeek: spw, mev: ref.mev, mrv: ref.mrv, status };
+  });
 
   // 4. Variedad de ejercicios por grupo muscular (últimos 90 días)
   const exerciseVariety = {};
@@ -209,7 +221,7 @@ async function buildContext() {
 
   return {
     profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights,
-    stagnantExercises, avgSessionsPerWeek, pushPullNote, underworkedGroups, lowVarietyGroups,
+    stagnantExercises, avgSessionsPerWeek, pushPullNote, volumeStatus, lowVarietyGroups,
   };
 }
 
@@ -237,7 +249,7 @@ function formatCheckin(checkin) {
 
 function buildPrompt(ctx, checkin) {
   const { profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights,
-          stagnantExercises, avgSessionsPerWeek, pushPullNote, underworkedGroups, lowVarietyGroups } = ctx;
+          stagnantExercises, avgSessionsPerWeek, pushPullNote, volumeStatus, lowVarietyGroups } = ctx;
   const today = new Date().toISOString().slice(0, 10);
 
   const profileText = profile ? `
@@ -312,8 +324,9 @@ ${muscleText}
 
 === ANÁLISIS DE PATRONES DE ENTRENAMIENTO ===
 - Frecuencia media: ${avgSessionsPerWeek} sesiones/semana (últimos 90 días)
-- Balance push/pull: ${pushPullNote}${underworkedGroups.length > 0 ? `
-- Grupos poco trabajados: ${underworkedGroups.map(g => `${g.group} (${g.setsPerWeek} series/semana)`).join(', ')} — incorporar o priorizar en el plan` : ''}${lowVarietyGroups.length > 0 ? `
+- Balance push/pull: ${pushPullNote}
+- Estado de volumen por grupo muscular (MEV = mínimo efectivo | MRV = máximo recuperable, series/semana):
+${volumeStatus.map(v => `  ${v.group}: ${v.setsPerWeek} series/sem [MEV ${v.mev} | MRV ${v.mrv}] → ${v.status}`).join('\n')}${lowVarietyGroups.length > 0 ? `
 - Baja variedad de ejercicios en: ${lowVarietyGroups.map(g => `${g.group} (solo ${g.count} ejercicio${g.count === 1 ? '' : 's'})`).join(', ')} — introducir variantes si procede` : ''}
 
 === EJERCICIOS PRINCIPALES (por volumen acumulado; con reps reales de los últimos 90 días) ===
@@ -323,7 +336,7 @@ ${stagnantExercises.length > 0 ? `
 === EJERCICIOS ESTANCADOS (sin mejora de peso máximo en 3+ semanas) ===
 ${stagnantExercises.map(ex => `  - ${ex.name}: máx ${ex.maxWeight}kg sin progresar desde hace ${ex.weeks} semanas`).join('\n')}
 
-Para cada uno de estos ejercicios incluye en el plan una intervención explícita: deload (bajar peso 10-15% y subir reps), cambio de rep range, periodización ondulatoria, o variante del ejercicio. Señala el motivo en las notas del día correspondiente.` : ''}
+Para cada uno de estos ejercicios aplica la herramienta de progresión adecuada de la jerarquía definida en INSTRUCCIONES (Herramientas 4, 5 o 6 según adherencia y semanas de estancamiento). Señala la intervención elegida en las notas del día.` : ''}
 
 === SESIONES RECIENTES (últimos 30 días) ===
 ${recentSessions || '  Sin sesiones registradas aún.'}
@@ -334,14 +347,36 @@ Genera una respuesta JSON con exactamente esta estructura (sin texto fuera del J
 REGLAS IMPORTANTES:
 - day: usa siempre nombres genéricos "Día 1", "Día 2", "Día 3"… (nunca días de la semana como Lunes, Martes, etc.), ya que el usuario puede entrenar cualquier día.
 - estimated_minutes: calcula el tiempo real de sesión sumando (sets_totales × 1.5 min de ejecución) + (sets_totales × 2.5 min de descanso) + 12 min de overhead (calentamiento, buscar máquinas, transiciones). Redondea a múltiplos de 5.
-- weekly_weights + doble progresión: Aplica el modelo de DOBLE PROGRESIÓN para decidir los pesos:
-    1. Analiza las reps reales del último mes por ejercicio (columna "reps último mes"):
-       • media de reps ≥ máximo del rango - 0.5: el usuario domina ese peso → SUBE el peso de partida (semana 1) respecto al último registrado: +2.5-5 kg compuestos, +1.25-2.5 kg aislamiento.
-       • media de reps < máximo del rango: el usuario aún no llega al techo → MANTÉN el mismo peso; el objetivo este mes es subir reps, no peso.
-       • Sin datos de reps recientes: usa el último peso registrado (o peso conservador si ejercicio nuevo).
-    2. Semanas 2-4 del plan: solo aplica subida semanal si en semana 1 ya se parte de un peso consolidado. Si el peso se mantiene, semanas 2-4 también mantienen (progreso = reps, no kg).
-    3. Semana 4 = continúa la progresión normalmente (NO hagas semana de descarga) salvo que el usuario lo haya pedido explícitamente (en ese caso semana 4 = 60% de semana 3).
-    4. Para ejercicios de peso corporal usa "PC". Incluye siempre la unidad (kg).
+- JERARQUÍA DE PROGRESIÓN — Aplica las herramientas en orden de prioridad para cada ejercicio:
+    HERRAMIENTA 1 — Subir reps (progresión primaria):
+      Si media de reps < máximo del rango → mantén el peso; asigna reps objetivo más altas este mes.
+      Objetivo: dominar el peso actual antes de subir. El weekly_weight permanece igual semanas 1-4.
+    HERRAMIENTA 2 — Subir peso (cuando se domina el rango):
+      Si media de reps ≥ máximo del rango - 0.5 → sube el peso de semana 1:
+        +2.5-5 kg en compuestos (press, sentadilla, peso muerto, remo…)
+        +1.25-2.5 kg en aislamientos (curl, extensión, lateral…)
+      Semanas 2-4: aplica subida progresiva solo si semana 1 parte de un peso ya consolidado.
+    HERRAMIENTA 3 — Añadir series (cuando el grupo está BAJO_MEV):
+      Si el estado de volumen del grupo muscular del ejercicio es BAJO_MEV → añade 1-2 series extra
+      al ejercicio hasta alcanzar el MEV mínimo. Prioriza esto antes de subir peso.
+    HERRAMIENTA 4 — Deload de reps (reduce reps, mantiene peso):
+      Condición: ejercicio en lista de estancados Y adherencia ≥ 3 sesiones/semana.
+      Acción: baja el rango de reps 2-3 puntos al mismo peso (ej: 8-10 → 5-7) para generar nuevo
+      estímulo de fuerza. Semanas 3-4 recuperan el rango original. Señala en las notas del día.
+    HERRAMIENTA 5 — Semana de deload completa:
+      Condición: ejercicio estancado Y adherencia < 2.5 sesiones/semana (fatiga acumulada probable).
+      Acción: semana 1 = 60% del peso habitual, mismas series, sin fallo. Semanas 2-4 regresan
+      progresivamente al peso de trabajo. Señala en las notas del día.
+    HERRAMIENTA 6 — Periodización ondulatoria:
+      Condición: ejercicio estancado 4+ semanas Y adherencia 2.5-3.5 sesiones/semana.
+      Acción: alterna estímulos semanales:
+        Sem 1 = 5-7 reps al ~90% del peso habitual (fuerza)
+        Sem 2 = 10-12 reps al ~75% (hipertrofia)
+        Sem 3 = 13-15 reps al ~65% (resistencia muscular)
+        Sem 4 = 8-10 reps al ~80% (consolidación)
+    SIN DATOS DE REPS: usa el último peso registrado, o peso conservador si el ejercicio es nuevo.
+    SEMANA 4: continúa la progresión normalmente SALVO activación de Herramienta 5 (sem 1 ya es el deload).
+- Para ejercicios de peso corporal usa "PC". Incluye siempre la unidad (kg).
 - set_scheme: elige el esquema adecuado para cada ejercicio según su posición en la sesión y el objetivo:
     "rectas" → todos los sets al mismo peso (ejercicios de aislamiento, accesorios)
     "piramide_asc" → peso creciente set a set, últimos 2 sets son los de trabajo (ejercicios compuestos principales)
