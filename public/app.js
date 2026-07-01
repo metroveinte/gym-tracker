@@ -439,8 +439,8 @@ async function addSerieToExercise(exerciseIdx) {
     showMessage('Repeticiones debe ser un número positivo', 'error');
     return;
   }
-  if (weight !== null && (isNaN(weight) || weight < 0)) {
-    showMessage('Peso debe ser un número positivo o nulo', 'error');
+  if (weight === null || weight === undefined || isNaN(weight) || weight < 0) {
+    showMessage('Introduce el peso (usa 0 para peso corporal)', 'error');
     return;
   }
 
@@ -488,13 +488,16 @@ modalConfirmBtn.addEventListener('click', async () => {
     return;
   }
 
-  let weight = null;
-  if (firstWeightInput.value) {
-    weight = parseFloat(firstWeightInput.value);
-    if (isNaN(weight) || weight < 0) {
-      showMessage('Peso debe ser un número positivo', 'error');
-      return;
-    }
+  if (firstWeightInput.value === '' || firstWeightInput.value === null) {
+    showMessage('Introduce el peso (usa 0 para peso corporal)', 'error');
+    firstWeightInput.focus();
+    return;
+  }
+  const weight = parseFloat(firstWeightInput.value);
+  if (isNaN(weight) || weight < 0) {
+    showMessage('Peso debe ser un número positivo (0 para peso corporal)', 'error');
+    firstWeightInput.focus();
+    return;
   }
 
   // Si es un nuevo ejercicio, guardarlo en la BD con el grupo muscular

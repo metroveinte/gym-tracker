@@ -131,8 +131,8 @@
           <input type="number" id="_dlg_reps" min="1" placeholder="Ej: 10" style="width:100%; margin-top:6px;" />
         </label>
         <label style="display:block;">
-          Peso en kg <span style="font-weight:400; color:#999;">(Opcional)</span>
-          <input type="number" id="_dlg_weight" min="0" step="0.5" placeholder="Ej: 20" style="width:100%; margin-top:6px;" />
+          Peso en kg <span style="font-weight:400; color:#999;">(0 = peso corporal)</span>
+          <input type="number" id="_dlg_weight" min="0" step="0.5" placeholder="0 para peso corporal" style="width:100%; margin-top:6px;" />
         </label>
       `;
       e.ok.textContent = 'Agregar serie';
@@ -145,17 +145,38 @@
       document.getElementById('_dlg_reps').focus();
 
       const done = (confirmed) => {
+        if (confirmed) {
+          const reps = parseInt(document.getElementById('_dlg_reps').value, 10);
+          const wInput = document.getElementById('_dlg_weight');
+          const wVal = wInput.value;
+          if (wVal === '' || wVal === null) {
+            wInput.style.borderColor = 'var(--accent, #e5303a)';
+            wInput.placeholder = '⚠ Obligatorio (0 = peso corporal)';
+            wInput.focus();
+            return; // keep modal open
+          }
+          const weight = parseFloat(wVal);
+          if (isNaN(weight) || weight < 0) {
+            wInput.style.borderColor = 'var(--accent, #e5303a)';
+            wInput.focus();
+            return;
+          }
+          e.overlay.classList.add('hidden');
+          e.modal.classList.add('hidden');
+          e.ok.onclick = null;
+          e.cancel.onclick = null;
+          e.close.onclick = null;
+          e.overlay.onclick = null;
+          resolve({ reps, weight });
+          return;
+        }
         e.overlay.classList.add('hidden');
         e.modal.classList.add('hidden');
         e.ok.onclick = null;
         e.cancel.onclick = null;
         e.close.onclick = null;
         e.overlay.onclick = null;
-        if (!confirmed) { resolve(null); return; }
-        const reps = parseInt(document.getElementById('_dlg_reps').value, 10);
-        const wVal = document.getElementById('_dlg_weight').value;
-        const weight = wVal !== '' ? parseFloat(wVal) : null;
-        resolve({ reps, weight });
+        resolve(null);
       };
 
       e.ok.onclick     = () => done(true);
