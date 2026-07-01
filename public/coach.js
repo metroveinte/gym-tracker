@@ -253,8 +253,35 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
       if (currentWeek === 1 || !ww[weekKey]) {
         planWeights = sw1;
       } else {
-        const count = sw1.length || 1;
-        planWeights = Array(count).fill(ww[weekKey]);
+        const scheme  = ex.set_scheme || 'rectas';
+        const weekNW  = ww[weekKey];
+        const weekNKg = parseKg(weekNW);
+        const count   = sw1.length || 1;
+
+        if (!weekNKg || !sw1.length) {
+          // PC or no week-1 data → same for all sets
+          planWeights = Array(count).fill(weekNW);
+        } else if (scheme === 'calentamiento_trabajo') {
+          // First set is activation (~65% of working weight), rest are working sets
+          const actKg = Math.round((weekNKg * 0.65) / 2.5) * 2.5;
+          planWeights = [actKg + 'kg', ...Array(Math.max(count - 1, 0)).fill(weekNW)];
+        } else if (scheme === 'piramide_asc' || scheme === 'piramide_desc') {
+          // Scale each set proportionally from week-1 structure
+          const refKg = parseKg(ww['week1']) || parseKg(sw1[sw1.length - 1]);
+          if (!refKg || refKg === weekNKg) {
+            planWeights = Array(count).fill(weekNW);
+          } else {
+            planWeights = sw1.map(w => {
+              const kg = parseKg(w);
+              if (kg === null) return w; // bodyweight
+              const rounded = Math.round((kg * weekNKg / refKg) / 2.5) * 2.5;
+              return rounded + 'kg';
+            });
+          }
+        } else {
+          // rectas y esquemas desconocidos → todos igual
+          planWeights = Array(count).fill(weekNW);
+        }
       }
 
       // Progression delta vs previous week
