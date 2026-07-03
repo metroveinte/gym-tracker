@@ -319,6 +319,101 @@ async function computeAdherence(plan, allSessions, generatedAt) {
   return { weeksElapsed, perMuscleGroup, neverLogged, overallAdherencePct, overallSetsCompleted, overallSetsPlanned };
 }
 
+// Cumplimiento acumulado de los últimos N ciclos de plan (por defecto 3, ~3 meses).
+// Reutiliza la misma agregación por grupo muscular que computeAdherence, pero sumando
+// varios ciclos: cada ciclo tiene su propia ventana (desde que se generó ese plan hasta
+// que se generó el siguiente, o hasta hoy/28 días si es el plan activo).
+const GENERAL_ADHERENCE_CYCLES = 3;
+
+async function computeGeneralAdherence(allSessions) {
+  const plans = await dbAll(
+    'SELECT * FROM coach_plans ORDER BY generated_at DESC LIMIT ?',
+    [GENERAL_ADHERENCE_CYCLES]
+  );
+  if (plans.length === 0) return null;
+
+  const exerciseRows = await dbAll('SELECT name, muscle_group FROM exercises');
+  const muscleGroupByName = {};
+  for (const row of exerciseRows) {
+    muscleGroupByName[row.name.toLowerCase()] = row.muscle_group || 'Sin clasificar';
+  }
+
+  const sorted = [...plans].sort((a, b) => new Date(a.generated_at) - new Date(b.generated_at));
+  const now = Date.now();
+
+  const perGroupTotals = {};
+  const plannedExercises = new Map(); // lowercase -> nombre original
+  const oldestGenTime = new Date(sorted[0].generated_at).getTime();
+
+  for (let i = 0; i < sorted.length; i++) {
+    const planRow = sorted[i];
+    const plan = JSON.parse(planRow.plan_json);
+    const genTime = new Date(planRow.generated_at).getTime();
+    const nextGenTime = i + 1 < sorted.length ? new Date(sorted[i + 1].generated_at).getTime() : now;
+    const cycleEnd = Math.min(nextGenTime, genTime + PLAN_DAYS * 86400000);
+    const weeksElapsedThisCycle = Math.min(4, Math.max(0, Math.ceil((cycleEnd - genTime) / 86400000 / 7)));
+    if (weeksElapsedThisCycle < 1) continue;
+
+    const plannedPerGroupThisCycle = {};
+    for (const day of (plan.weekly_plan?.days || [])) {
+      for (const ex of (day.exercises || [])) {
+        if (!ex.name) continue;
+        const key = ex.name.toLowerCase();
+        const group = muscleGroupByName[key] || 'Sin clasificar';
+        plannedPerGroupThisCycle[group] = (plannedPerGroupThisCycle[group] || 0) + (ex.sets || 0);
+        if (!plannedExercises.has(key)) plannedExercises.set(key, ex.name);
+      }
+    }
+
+    const completedPerGroupThisCycle = {};
+    for (const s of allSessions) {
+      if (!s.exercise) continue;
+      const t = new Date(s.date).getTime();
+      if (t < genTime || t >= cycleEnd) continue;
+      const sets = s.series.reduce((sum, se) => sum + (se.sets || 1), 0);
+      const group = s.muscle_group || 'Sin clasificar';
+      completedPerGroupThisCycle[group] = (completedPerGroupThisCycle[group] || 0) + sets;
+    }
+
+    for (const [group, setsPerWeek] of Object.entries(plannedPerGroupThisCycle)) {
+      perGroupTotals[group] = perGroupTotals[group] || { planned: 0, completed: 0 };
+      perGroupTotals[group].planned += setsPerWeek * weeksElapsedThisCycle;
+      perGroupTotals[group].completed += completedPerGroupThisCycle[group] || 0;
+    }
+  }
+
+  // "Nunca registrado" en todo el rango combinado: ¿se ha logueado ese ejercicio alguna vez
+  // desde el ciclo más antiguo considerado hasta hoy, sea cual sea el ciclo en el que estaba planificado?
+  const everCompletedExerciseNames = new Set();
+  for (const s of allSessions) {
+    if (!s.exercise) continue;
+    const t = new Date(s.date).getTime();
+    if (t < oldestGenTime || t > now) continue;
+    everCompletedExerciseNames.add(s.exercise.toLowerCase());
+  }
+  const neverLogged = [...plannedExercises.entries()]
+    .filter(([key]) => !everCompletedExerciseNames.has(key))
+    .map(([, name]) => name);
+
+  const perMuscleGroup = Object.entries(perGroupTotals).map(([group, { planned, completed }]) => {
+    const adherencePct = planned > 0 ? Math.round((completed / planned) * 100) : 0;
+    const status = adherencePct > 100 ? 'over' : adherencePct >= 85 ? 'on_track' : 'behind';
+    return { group, totalPlanned: planned, totalCompleted: completed, adherencePct, status };
+  });
+
+  const overallSetsPlanned = perMuscleGroup.reduce((sum, g) => sum + g.totalPlanned, 0);
+  const overallSetsCompleted = perMuscleGroup.reduce((sum, g) => sum + g.totalCompleted, 0);
+  const overallAdherencePct = overallSetsPlanned > 0
+    ? Math.round((overallSetsCompleted / overallSetsPlanned) * 100)
+    : 0;
+
+  return {
+    cyclesConsidered: sorted.length,
+    perMuscleGroup, neverLogged,
+    overallAdherencePct, overallSetsCompleted, overallSetsPlanned,
+  };
+}
+
 // ── Prompt builder ────────────────────────────────────────────────────────────
 
 const CHECKIN_LABELS = {
@@ -827,4 +922,4 @@ async function generatePlan(checkin = null) {
   return parsed;
 }
 
-module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights, generateExtraWorkout, getLatestExtraWorkout, deleteExtraWorkout, buildContext, computeAdherence };
+module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights, generateExtraWorkout, getLatestExtraWorkout, deleteExtraWorkout, buildContext, computeAdherence, computeGeneralAdherence };
