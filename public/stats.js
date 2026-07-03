@@ -1,4 +1,5 @@
 let allSessions = [];
+let weightLog = [];
 let currentFilter = 'all';
 let progressChart = null;
 let topExercisesChart = null;
@@ -84,6 +85,7 @@ async function loadStats() {
   try {
     allSessions = await fetch('/api/sessions').then(r => r.json());
     const exercisesRes = await fetch('/api/exercises').then(r => r.json());
+    weightLog = await fetch('/api/weight').then(r => r.json()).catch(() => []);
 
     exercisesRes.forEach(ex => {
       if (typeof ex === 'object' && ex.name && ex.muscle_group) {
@@ -143,6 +145,81 @@ function getFilteredSessions() {
 
     return true;
   });
+}
+
+// ── Recap motivacional mes a mes ─────────────────────────────────────────────
+
+function computeMonthlyRecap(sessions, weights) {
+  const now = new Date();
+  const curY = now.getFullYear(), curM = now.getMonth();
+  let prevY = curY, prevM = curM - 1;
+  if (prevM < 0) { prevM = 11; prevY = curY - 1; }
+
+  const inMonth = (dateStr, y, m) => {
+    const d = new Date(dateStr);
+    return d.getFullYear() === y && d.getMonth() === m;
+  };
+
+  const daysThisMonth = new Set(sessions.filter(s => inMonth(s.date, curY, curM)).map(s => s.date)).size;
+  const daysLastMonth = new Set(sessions.filter(s => inMonth(s.date, prevY, prevM)).map(s => s.date)).size;
+
+  const thisMonthWeights = weights.filter(w => inMonth(w.date, curY, curM)).sort((a, b) => a.date.localeCompare(b.date));
+  const lastMonthWeights = weights.filter(w => inMonth(w.date, prevY, prevM)).sort((a, b) => a.date.localeCompare(b.date));
+
+  let weightDelta = null;
+  if (thisMonthWeights.length) {
+    const latestThis = thisMonthWeights[thisMonthWeights.length - 1].weight_kg;
+    let baseline = null;
+    if (lastMonthWeights.length) {
+      baseline = lastMonthWeights[lastMonthWeights.length - 1].weight_kg;
+    } else if (thisMonthWeights.length > 1) {
+      baseline = thisMonthWeights[0].weight_kg;
+    }
+    if (baseline !== null) {
+      weightDelta = Math.round((latestThis - baseline) * 10) / 10;
+    }
+  }
+
+  return { daysThisMonth, daysLastMonth, weightDelta };
+}
+
+function renderMonthlyRecap(recap) {
+  const el = document.getElementById('monthly-recap');
+  if (!el) return;
+
+  const lines = [];
+
+  if (recap.daysLastMonth > 0) {
+    const diff = recap.daysThisMonth - recap.daysLastMonth;
+    if (diff > 0) {
+      lines.push(`💪 Entrenaste <strong>${recap.daysThisMonth} días</strong> este mes (${recap.daysLastMonth} el mes pasado) — ¡vas mejor que el mes pasado!`);
+    } else if (diff < 0) {
+      lines.push(`💪 Entrenaste <strong>${recap.daysThisMonth} días</strong> este mes (${recap.daysLastMonth} el mes pasado) — un poco menos que el mes pasado, ¡a por el próximo!`);
+    } else {
+      lines.push(`💪 Entrenaste <strong>${recap.daysThisMonth} días</strong> este mes, igual que el mes pasado.`);
+    }
+  } else if (recap.daysThisMonth > 0) {
+    lines.push(`💪 Entrenaste <strong>${recap.daysThisMonth} días</strong> este mes.`);
+  }
+
+  if (recap.weightDelta !== null) {
+    const d = recap.weightDelta;
+    if (Math.abs(d) < 0.1) {
+      lines.push(`⚖️ Tu peso se mantuvo estable este mes.`);
+    } else if (d < 0) {
+      lines.push(`⚖️ Tu peso bajó <strong>${Math.abs(d)} kg</strong> este mes.`);
+    } else {
+      lines.push(`⚖️ Tu peso subió <strong>${d} kg</strong> este mes.`);
+    }
+  }
+
+  if (lines.length === 0) {
+    el.style.display = 'none';
+    return;
+  }
+
+  el.style.display = '';
+  el.innerHTML = lines.map(l => `<p style="margin:4px 0; color:#ccc; font-size:.9rem;">${l}</p>`).join('');
 }
 
 function setupSelectors() {
@@ -245,6 +322,7 @@ function updateStats() {
   renderProgressChart(filtered);
   renderTopExercisesChart(filtered);
   renderMuscleGroupChart(filtered);
+  renderMonthlyRecap(computeMonthlyRecap(allSessions, weightLog));
 }
 
 function calculateStreak(sessions) {

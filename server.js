@@ -388,7 +388,10 @@ app.get('/api/coach/plan', async (req, res) => {
   try {
     const plan = await coach.getLatestPlan();
     if (!plan) return res.json(null);
-    res.json({ ...plan, plan_json: JSON.parse(plan.plan_json) });
+    const planJson = JSON.parse(plan.plan_json);
+    const ctx = await coach.buildContext();
+    const adherence = coach.computeAdherence(planJson, ctx.allSessions, plan.generated_at);
+    res.json({ ...plan, plan_json: planJson, adherence });
   } catch (e) {
     res.status(500).json({ error: 'Error al cargar el plan.' });
   }
