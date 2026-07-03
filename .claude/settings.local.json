@@ -9,7 +9,29 @@
       "PowerShell(node --check server.js)",
       "PowerShell(node --check db.js)",
       "PowerShell(node --check public/app.js)",
-      "PowerShell(node --check public/stats.js)"
+      "PowerShell(node --check public/stats.js)",
+      "Bash(node -c /home/user/gym-tracker/public/stats.js)",
+      "Bash(node -c /home/user/gym-tracker/coach.js)",
+      "Bash(node -c /home/user/gym-tracker/server.js)",
+      "Bash(node -c /home/user/gym-tracker/public/coach.js)",
+      "Bash(node -c coach.js)",
+      "Bash(node -c server.js)",
+      "Bash(node -c public/stats.js)",
+      "Bash(node -c public/coach.js)",
+      "Bash(cat /tmp/gym-server.log)",
+      "Bash(npm install *)",
+      "Bash(node -e \"console.log\\(require\\('sqlite3'\\)\\)\")",
+      "Bash(curl -s http://localhost:3005/api/sessions)",
+      "Bash(curl -s http://localhost:3005/api/weight)",
+      "Bash(curl -s http://localhost:3005/api/coach/plan)",
+      "Bash(pkill -f \"node server.js\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3005/stats)",
+      "Bash(rm -f /tmp/test_adherence.js /tmp/test_recap.js /tmp/test_recap_logic.js /tmp/cleanup_test_data.js /tmp/screenshot_coach.js /tmp/gym-server.log)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git check-ignore *)",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }
