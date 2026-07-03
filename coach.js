@@ -249,6 +249,9 @@ async function computeAdherence(plan, allSessions, generatedAt) {
   }
 
   // Series planificadas por semana, por grupo muscular (suma de "sets" de todos los ejercicios del grupo)
+  // "Sin clasificar" se excluye de los cálculos de grupo (no es un grupo muscular real, solo
+  // indica que el ejercicio no está registrado en el catálogo), pero el ejercicio sigue
+  // rastreado para la lista de "nunca registrados".
   const plannedSetsPerGroup = {};
   const plannedExercises = [];
   const seenExerciseNames = new Set();
@@ -256,8 +259,10 @@ async function computeAdherence(plan, allSessions, generatedAt) {
     for (const ex of (day.exercises || [])) {
       if (!ex.name) continue;
       const key = ex.name.toLowerCase();
-      const group = muscleGroupByName[key] || 'Sin clasificar';
-      plannedSetsPerGroup[group] = (plannedSetsPerGroup[group] || 0) + (ex.sets || 0);
+      const group = muscleGroupByName[key];
+      if (group && group !== 'Sin clasificar') {
+        plannedSetsPerGroup[group] = (plannedSetsPerGroup[group] || 0) + (ex.sets || 0);
+      }
       if (!seenExerciseNames.has(key)) {
         seenExerciseNames.add(key);
         plannedExercises.push(ex.name);
@@ -277,8 +282,10 @@ async function computeAdherence(plan, allSessions, generatedAt) {
     const sets = s.series.reduce((sum, se) => sum + (se.sets || 1), 0);
     const group = s.muscle_group || 'Sin clasificar';
 
-    completedByGroup[group] = completedByGroup[group] || {};
-    completedByGroup[group][week] = (completedByGroup[group][week] || 0) + sets;
+    if (group !== 'Sin clasificar') {
+      completedByGroup[group] = completedByGroup[group] || {};
+      completedByGroup[group][week] = (completedByGroup[group][week] || 0) + sets;
+    }
 
     const exKey = s.exercise.toLowerCase();
     completedSetsByExerciseName[exKey] = (completedSetsByExerciseName[exKey] || 0) + sets;
@@ -359,8 +366,10 @@ async function computeGeneralAdherence(allSessions) {
       for (const ex of (day.exercises || [])) {
         if (!ex.name) continue;
         const key = ex.name.toLowerCase();
-        const group = muscleGroupByName[key] || 'Sin clasificar';
-        plannedPerGroupThisCycle[group] = (plannedPerGroupThisCycle[group] || 0) + (ex.sets || 0);
+        const group = muscleGroupByName[key];
+        if (group && group !== 'Sin clasificar') {
+          plannedPerGroupThisCycle[group] = (plannedPerGroupThisCycle[group] || 0) + (ex.sets || 0);
+        }
         if (!plannedExercises.has(key)) plannedExercises.set(key, ex.name);
       }
     }
@@ -372,7 +381,9 @@ async function computeGeneralAdherence(allSessions) {
       if (t < genTime || t >= cycleEnd) continue;
       const sets = s.series.reduce((sum, se) => sum + (se.sets || 1), 0);
       const group = s.muscle_group || 'Sin clasificar';
-      completedPerGroupThisCycle[group] = (completedPerGroupThisCycle[group] || 0) + sets;
+      if (group !== 'Sin clasificar') {
+        completedPerGroupThisCycle[group] = (completedPerGroupThisCycle[group] || 0) + sets;
+      }
     }
 
     for (const [group, setsPerWeek] of Object.entries(plannedPerGroupThisCycle)) {
