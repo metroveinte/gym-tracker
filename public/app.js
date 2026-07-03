@@ -390,9 +390,19 @@ function renderExercises() {
 
   // Event listeners para eliminar ejercicios
   document.querySelectorAll('.delete-exercise-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       e.preventDefault();
       const idx = parseInt(e.target.dataset.idx);
+      const exercise = currentExercises[idx];
+      if (exercise.series.length > 0) {
+        const confirmed = await showConfirm({
+          title: 'Eliminar ejercicio',
+          body: `<p style="color:#ccc;">Se eliminará <strong>${escapeHtml(exercise.name)}</strong> y sus ${exercise.series.length} serie${exercise.series.length !== 1 ? 's' : ''} registradas.</p>`,
+          okText: 'Eliminar',
+          danger: true,
+        });
+        if (!confirmed) return;
+      }
       currentExercises.splice(idx, 1);
       renderExercises();
     });

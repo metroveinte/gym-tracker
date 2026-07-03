@@ -478,6 +478,13 @@ function closeWorkoutModal() {
   document.getElementById('workout-modal').classList.add('hidden');
 }
 
+function toggleChartEmptyState(canvasId, isEmpty) {
+  const canvas = document.getElementById(canvasId);
+  const empty  = document.getElementById(`${canvasId}-empty`);
+  if (canvas) canvas.style.display = isEmpty ? 'none' : '';
+  if (empty)  empty.style.display  = isEmpty ? '' : 'none';
+}
+
 function renderProgressChart(sessions = null) {
   const filtered = sessions || getFilteredSessions();
   const exerciseSelect = document.getElementById('exercise-select');
@@ -487,6 +494,12 @@ function renderProgressChart(sessions = null) {
 
   if (exerciseSessions.length === 0) {
     exerciseSessions = filtered;
+  }
+
+  toggleChartEmptyState('progressChart', exerciseSessions.length === 0);
+  if (exerciseSessions.length === 0) {
+    if (progressChart) { progressChart.destroy(); progressChart = null; }
+    return;
   }
 
   exerciseSessions.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -555,6 +568,12 @@ function renderTopExercisesChart(sessions) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10);
 
+  toggleChartEmptyState('topExercisesChart', sorted.length === 0);
+  if (sorted.length === 0) {
+    if (topExercisesChart) { topExercisesChart.destroy(); topExercisesChart = null; }
+    return;
+  }
+
   const labels = sorted.map(e => e[0]);
   const data = sorted.map(e => e[1]);
   const backgroundColors = sorted.map(e => muscleGroupColor(getMuscleGroup(e[0])));
@@ -619,6 +638,12 @@ function renderMuscleGroupChart(sessions) {
 
   const sorted = Array.from(muscleCounts.entries())
     .sort((a, b) => b[1] - a[1]);
+
+  toggleChartEmptyState('muscleGroupChart', total === 0);
+  if (total === 0) {
+    if (muscleGroupChart) { muscleGroupChart.destroy(); muscleGroupChart = null; }
+    return;
+  }
 
   const labels = sorted.map(e => `${e[0]} (${((e[1] / total) * 100).toFixed(0)}%)`);
   const data = sorted.map(e => e[1]);
@@ -753,14 +778,21 @@ document.getElementById('delete-selected-btn').addEventListener('click', async (
     danger: true
   });
   if (!ok) return;
+  const btn = document.getElementById('delete-selected-btn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
   try {
-    for (const id of ids) {
-      const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+    for (let i = 0; i < ids.length; i++) {
+      btn.textContent = `Borrando ${i + 1}/${ids.length}…`;
+      const res = await fetch(`/api/sessions/${ids[i]}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Error al borrar');
     }
     loadStats();
   } catch (error) {
     showAlert('Error', error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
 });
 
@@ -784,14 +816,21 @@ document.getElementById('delete-all-btn').addEventListener('click', async () => 
   });
   if (!second) return;
 
+  const btn = document.getElementById('delete-all-btn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
   try {
-    for (const session of allSessions) {
-      const res = await fetch(`/api/sessions/${session.id}`, { method: 'DELETE' });
+    for (let i = 0; i < allSessions.length; i++) {
+      btn.textContent = `Borrando ${i + 1}/${allSessions.length}…`;
+      const res = await fetch(`/api/sessions/${allSessions[i].id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Error al borrar');
     }
     loadStats();
   } catch (error) {
     showAlert('Error', error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
 });
 
@@ -890,8 +929,19 @@ function renderEditExercises() {
   });
 
   container.querySelectorAll('.edit-delete-exercise').forEach(btn => {
-    btn.addEventListener('click', () => {
-      editingExercises.splice(parseInt(btn.dataset.ex), 1);
+    btn.addEventListener('click', async () => {
+      const exIdx = parseInt(btn.dataset.ex);
+      const exercise = editingExercises[exIdx];
+      if (exercise.series.length > 0) {
+        const confirmed = await showConfirm({
+          title: 'Eliminar ejercicio',
+          body: `<p style="color:#ccc;">Se eliminará <strong>${escapeHtml(exercise.name)}</strong> y sus ${exercise.series.length} serie${exercise.series.length !== 1 ? 's' : ''} de este entreno. Los cambios no se aplican hasta que pulses Guardar.</p>`,
+          okText: 'Eliminar',
+          danger: true,
+        });
+        if (!confirmed) return;
+      }
+      editingExercises.splice(exIdx, 1);
       renderEditExercises();
     });
   });
@@ -979,11 +1029,17 @@ editExerciseInput.addEventListener('input', () => {
         if (isNew) {
           const muscleGroup = await showMuscleGroupSelect(MUSCLE_GROUPS);
           if (!muscleGroup) return;
-          await fetch('/api/exercises', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, muscle_group: muscleGroup }),
-          });
+          try {
+            const res = await fetch('/api/exercises', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name, muscle_group: muscleGroup }),
+            });
+            if (!res.ok) throw new Error('Error al guardar el ejercicio');
+          } catch (err) {
+            showToast('Error al crear el ejercicio: ' + err.message, 'error');
+            return;
+          }
           editExerciseOptions.push(name);
           exercisesMuscleData[name] = muscleGroup;
         }
@@ -992,6 +1048,7 @@ editExerciseInput.addEventListener('input', () => {
         if (!result) return;
         editingExercises.push({ name, series: [{ sets: 1, reps: result.reps, weight: result.weight }], notes: '' });
         renderEditExercises();
+        showToast(`"${name}" añadido al entreno`, 'success');
       });
     });
   } else {
