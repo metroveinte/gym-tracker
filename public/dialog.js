@@ -146,7 +146,13 @@
 
       const done = (confirmed) => {
         if (confirmed) {
-          const reps = parseInt(document.getElementById('_dlg_reps').value, 10);
+          const rInput = document.getElementById('_dlg_reps');
+          const reps = parseInt(rInput.value, 10);
+          if (isNaN(reps) || reps <= 0) {
+            rInput.style.borderColor = 'var(--accent, #e5303a)';
+            rInput.focus();
+            return; // keep modal open
+          }
           const wInput = document.getElementById('_dlg_weight');
           const wVal = wInput.value;
           if (wVal === '' || wVal === null) {

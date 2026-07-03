@@ -449,7 +449,7 @@ function openWorkoutModal(date, batchId, sessions) {
           <tr>
             <td style="color:#aaa; font-size:0.85rem;">Serie ${i + 1}</td>
             <td>${s.reps} reps</td>
-            <td>${s.weight != null ? s.weight + ' kg' : '-'}</td>
+            <td>${formatWeight(s.weight)}</td>
           </tr>`).join('')
       : '<tr><td colspan="3" style="color:#666;">Sin series registradas</td></tr>';
 
@@ -660,6 +660,12 @@ function formatValue(value) {
   return value;
 }
 
+function formatWeight(value) {
+  if (value === null || value === undefined || value === '') return '-';
+  if (value === 0) return 'PC';
+  return value + ' kg';
+}
+
 function escapeHtml(value) {
   if (value === null || value === undefined) return '';
   return String(value)
@@ -839,7 +845,7 @@ function renderEditExercises() {
       <tr>
         <td style="color:#aaa; font-size:0.85rem;">Serie ${sIdx + 1}</td>
         <td>${s.reps}</td>
-        <td>${s.weight != null ? s.weight : '-'}</td>
+        <td>${formatWeight(s.weight)}</td>
         <td class="row-actions">
           <button type="button" class="icon-btn edit-repeat-serie" data-ex="${exIdx}" data-ser="${sIdx}" title="Repetir serie">🔁</button>
           <button type="button" class="icon-btn icon-btn-danger edit-delete-serie" data-ex="${exIdx}" data-ser="${sIdx}" title="Eliminar serie">🗑</button>

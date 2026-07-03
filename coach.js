@@ -265,6 +265,8 @@ function buildPrompt(ctx, checkin) {
   const avgDec = arr => arr.length ? +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : null;
   const max    = arr => arr.length ? Math.max(...arr) : null;
   const min    = arr => arr.length ? Math.min(...arr) : null;
+  // null (legacy rows) y 0 (peso corporal explícito) representan lo mismo: sin carga externa.
+  const fmtSerieWeight = w => (w === null || w === undefined || w === 0) ? 'PC' : `${w}kg`;
 
   const muscleText = Object.keys(muscleStats).length
     ? Object.entries(muscleStats).map(([g, s]) => {
@@ -287,7 +289,7 @@ function buildPrompt(ctx, checkin) {
 
   const recentSessions = recentSessionsFull
     .map(s =>
-      `  ${s.date} | ${s.exercise} (${s.muscle_group}) | ${s.series.map(se => `${se.sets}x${se.reps}@${se.weight ?? 'BW'}kg`).join(', ') || 'sin series'}`
+      `  ${s.date} | ${s.exercise} (${s.muscle_group}) | ${s.series.map(se => `${se.sets}x${se.reps}@${fmtSerieWeight(se.weight)}`).join(', ') || 'sin series'}`
     ).join('\n');
 
   const checkinText = formatCheckin(checkin);
@@ -525,7 +527,7 @@ async function buildWeeklyPrompt(plan, allSessions) {
 
     const histLines = sessions.length
       ? sessions.map(s => {
-          const sr = s.series.map(se => `${se.sets}x${se.reps}@${se.weight ?? 'PC'}kg`).join(', ');
+          const sr = s.series.map(se => `${se.sets}x${se.reps}@${(se.weight === null || se.weight === undefined || se.weight === 0) ? 'PC' : se.weight + 'kg'}`).join(', ');
           return `  ${s.date}: ${sr}`;
         }).join('\n')
       : '  Sin historial.';

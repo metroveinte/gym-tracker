@@ -71,6 +71,12 @@ function formatValue(value) {
   return value;
 }
 
+function formatWeight(value) {
+  if (value === null || value === undefined || value === '') return '-';
+  if (value === 0) return 'PC';
+  return value + ' kg';
+}
+
 function escapeHtml(value) {
   if (value === null || value === undefined) return '';
   return String(value)
@@ -361,7 +367,7 @@ function renderExercises() {
         <tr>
           <td><strong>Serie ${serieIdx + 1}</strong></td>
           <td>${escapeHtml(serie.reps)}</td>
-          <td>${escapeHtml(formatValue(serie.weight))}</td>
+          <td>${escapeHtml(formatWeight(serie.weight))}</td>
           <td class="row-actions">
             <button type="button" class="icon-btn repeat-serie-btn" data-ex="${exIdx}" data-ser="${serieIdx}" title="Repetir serie">🔁</button>
             <button type="button" class="icon-btn icon-btn-danger delete-serie-btn" data-ex="${exIdx}" data-ser="${serieIdx}" title="Eliminar serie">🗑</button>
