@@ -483,7 +483,7 @@ function renderAdherence(adherence) {
   const card = document.getElementById('adherence-card');
   if (!card) return;
 
-  if (!adherence || adherence.weeksElapsed < 1 || adherence.perExercise.length === 0) {
+  if (!adherence || adherence.weeksElapsed < 1 || adherence.perMuscleGroup.length === 0) {
     card.classList.add('hidden');
     return;
   }
@@ -491,9 +491,9 @@ function renderAdherence(adherence) {
   card.classList.remove('hidden');
 
   const statusColor = status =>
-    status === 'on_track' ? '#4caf50' : status === 'never_logged' ? 'var(--accent)' : '#f0b429';
+    status === 'on_track' ? '#4caf50' : status === 'over' ? '#f0b429' : 'var(--accent)';
   const statusLabel = status =>
-    status === 'on_track' ? 'Al día' : status === 'never_logged' ? 'Nunca registrado' : 'Por debajo';
+    status === 'on_track' ? 'Al día' : status === 'over' ? 'Por encima' : 'Por debajo';
 
   const overallColor = adherence.overallAdherencePct >= 85 ? '#4caf50'
     : adherence.overallAdherencePct >= 50 ? '#f0b429' : 'var(--accent)';
@@ -503,11 +503,11 @@ function renderAdherence(adherence) {
   document.getElementById('adherence-note').textContent =
     `${adherence.overallSetsCompleted} de ${adherence.overallSetsPlanned} series planificadas, semana ${adherence.weeksElapsed} de 4.`;
 
-  document.getElementById('adherence-exercises').innerHTML = adherence.perExercise.map(e => `
+  document.getElementById('adherence-exercises').innerHTML = adherence.perMuscleGroup.map(g => `
     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border);">
-      <span style="color:var(--text); font-size:.85rem; flex:1; min-width:0;">${e.name}</span>
-      <span style="color:#888; font-size:.78rem; font-family:'JetBrains Mono',monospace;">${e.totalCompletedSoFar}/${e.totalPlannedSoFar}</span>
-      <span style="font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:10px; color:#fff; background:${statusColor(e.status)}; white-space:nowrap;">${statusLabel(e.status)}</span>
+      <span style="color:var(--text); font-size:.85rem; flex:1; min-width:0;">${g.group}</span>
+      <span style="color:#888; font-size:.78rem; font-family:'JetBrains Mono',monospace;">${g.totalCompletedSoFar}/${g.totalPlannedSoFar}</span>
+      <span style="font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:10px; color:#fff; background:${statusColor(g.status)}; white-space:nowrap;">${statusLabel(g.status)}</span>
     </div>`).join('');
 
   const neverLoggedBlock = document.getElementById('adherence-never-logged');

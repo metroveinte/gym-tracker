@@ -230,49 +230,69 @@ async function buildContext() {
 // desde que se generó (generatedAt) hasta hoy. Asume que cada "Día N" del plan
 // es una plantilla de microciclo que se repite una vez por semana durante las
 // 4 semanas del plan (igual que asume el indicador de semana en public/coach.js).
+// Se agrega por GRUPO MUSCULAR (no por ejercicio exacto): si el usuario sustituye
+// un ejercicio por su alternativa (u otro ejercicio del mismo grupo), el volumen
+// sigue contando como cumplido. La lista de "nunca registrados" sí es por
+// ejercicio exacto, para detectar ejercicios concretos que nunca se llegaron a hacer.
 
-function computeAdherence(plan, allSessions, generatedAt) {
+async function computeAdherence(plan, allSessions, generatedAt) {
   const genTime = new Date(generatedAt).getTime();
   const now = Date.now();
 
   const weeksElapsed = Math.min(4, Math.max(0, Math.ceil((now - genTime) / 86400000 / 7)));
 
-  // Series planificadas por semana, por ejercicio (suma de "sets" en todos los días del microciclo)
-  const plannedSetsPerExercise = {};
+  // Catálogo de ejercicios → grupo muscular (fuente de verdad, incluye ejercicios aún no logueados)
+  const exerciseRows = await dbAll('SELECT name, muscle_group FROM exercises');
+  const muscleGroupByName = {};
+  for (const row of exerciseRows) {
+    muscleGroupByName[row.name.toLowerCase()] = row.muscle_group || 'Sin clasificar';
+  }
+
+  // Series planificadas por semana, por grupo muscular (suma de "sets" de todos los ejercicios del grupo)
+  const plannedSetsPerGroup = {};
+  const plannedExercises = [];
+  const seenExerciseNames = new Set();
   for (const day of (plan.weekly_plan?.days || [])) {
     for (const ex of (day.exercises || [])) {
       if (!ex.name) continue;
       const key = ex.name.toLowerCase();
-      plannedSetsPerExercise[key] = plannedSetsPerExercise[key] || { name: ex.name, setsPerWeek: 0 };
-      plannedSetsPerExercise[key].setsPerWeek += (ex.sets || 0);
+      const group = muscleGroupByName[key] || 'Sin clasificar';
+      plannedSetsPerGroup[group] = (plannedSetsPerGroup[group] || 0) + (ex.sets || 0);
+      if (!seenExerciseNames.has(key)) {
+        seenExerciseNames.add(key);
+        plannedExercises.push(ex.name);
+      }
     }
   }
 
-  // Series realmente logueadas por ejercicio, en semanas desde generatedAt (bucket 0..3)
-  const completedByExercise = {};
+  // Series logueadas por grupo muscular (cualquier ejercicio de ese grupo cuenta) y por ejercicio exacto
+  const completedByGroup = {};
+  const completedSetsByExerciseName = {};
   for (const s of allSessions) {
     if (!s.exercise) continue;
     const sessionTime = new Date(s.date).getTime();
     if (sessionTime < genTime) continue;
     const week = Math.floor((sessionTime - genTime) / 86400000 / 7);
     if (week < 0 || week > 3) continue;
-    const key = s.exercise.toLowerCase();
     const sets = s.series.reduce((sum, se) => sum + (se.sets || 1), 0);
-    completedByExercise[key] = completedByExercise[key] || {};
-    completedByExercise[key][week] = (completedByExercise[key][week] || 0) + sets;
+    const group = s.muscle_group || 'Sin clasificar';
+
+    completedByGroup[group] = completedByGroup[group] || {};
+    completedByGroup[group][week] = (completedByGroup[group][week] || 0) + sets;
+
+    const exKey = s.exercise.toLowerCase();
+    completedSetsByExerciseName[exKey] = (completedSetsByExerciseName[exKey] || 0) + sets;
   }
 
-  const perExercise = [];
-  const neverLogged = [];
+  const perMuscleGroup = [];
   let overallSetsCompleted = 0;
   let overallSetsPlanned = 0;
 
-  for (const { name, setsPerWeek } of Object.values(plannedSetsPerExercise)) {
-    const key = name.toLowerCase();
+  for (const [group, setsPerWeek] of Object.entries(plannedSetsPerGroup)) {
     const completedSets = [];
     let totalCompletedSoFar = 0;
     for (let w = 0; w < weeksElapsed; w++) {
-      const sets = completedByExercise[key]?.[w] || 0;
+      const sets = completedByGroup[group]?.[w] || 0;
       completedSets.push(sets);
       totalCompletedSoFar += sets;
     }
@@ -281,26 +301,22 @@ function computeAdherence(plan, allSessions, generatedAt) {
       ? Math.round((totalCompletedSoFar / totalPlannedSoFar) * 100)
       : 0;
 
-    let status;
-    if (weeksElapsed >= 1 && totalCompletedSoFar === 0) {
-      status = 'never_logged';
-      neverLogged.push(name);
-    } else if (adherencePct >= 85) {
-      status = 'on_track';
-    } else {
-      status = 'behind';
-    }
+    const status = adherencePct > 100 ? 'over' : adherencePct >= 85 ? 'on_track' : 'behind';
 
-    perExercise.push({ name, plannedSetsPerWeek: setsPerWeek, completedSets, totalPlannedSoFar, totalCompletedSoFar, adherencePct, status });
+    perMuscleGroup.push({ group, plannedSetsPerWeek: setsPerWeek, completedSets, totalPlannedSoFar, totalCompletedSoFar, adherencePct, status });
     overallSetsCompleted += totalCompletedSoFar;
     overallSetsPlanned += totalPlannedSoFar;
   }
+
+  const neverLogged = weeksElapsed >= 1
+    ? plannedExercises.filter(name => !completedSetsByExerciseName[name.toLowerCase()])
+    : [];
 
   const overallAdherencePct = overallSetsPlanned > 0
     ? Math.round((overallSetsCompleted / overallSetsPlanned) * 100)
     : 0;
 
-  return { weeksElapsed, perExercise, neverLogged, overallAdherencePct, overallSetsCompleted, overallSetsPlanned };
+  return { weeksElapsed, perMuscleGroup, neverLogged, overallAdherencePct, overallSetsCompleted, overallSetsPlanned };
 }
 
 // ── Prompt builder ────────────────────────────────────────────────────────────
@@ -387,10 +403,10 @@ function buildPrompt(ctx, checkin, adherence = null) {
   }).join('\n');
 
   const adherenceText = (adherence && adherence.weeksElapsed >= 1) ? `
-=== CUMPLIMIENTO DEL PLAN ANTERIOR (semanas transcurridas: ${adherence.weeksElapsed}/4) ===
+=== CUMPLIMIENTO DEL PLAN ANTERIOR (semanas transcurridas: ${adherence.weeksElapsed}/4, por grupo muscular — cuenta cualquier ejercicio del grupo, incluidas alternativas) ===
 - Cumplimiento global: ${adherence.overallAdherencePct}% (${adherence.overallSetsCompleted}/${adherence.overallSetsPlanned} series)
-${adherence.perExercise.map(e => `  - ${e.name}: ${e.adherencePct}% (${e.totalCompletedSoFar}/${e.totalPlannedSoFar} series) → ${e.status}`).join('\n')}
-${adherence.neverLogged.length > 0 ? `- NUNCA REGISTRADOS: ${adherence.neverLogged.join(', ')} — el usuario no llegó a hacer estos ejercicios en absoluto.` : ''}
+${adherence.perMuscleGroup.map(g => `  - ${g.group}: ${g.adherencePct}% (${g.totalCompletedSoFar}/${g.totalPlannedSoFar} series) → ${g.status}`).join('\n')}
+${adherence.neverLogged.length > 0 ? `- EJERCICIOS CONCRETOS NUNCA REGISTRADOS (con ese nombre exacto): ${adherence.neverLogged.join(', ')}.` : ''}
 ` : '';
 
   return `Eres un entrenador personal experto en biomecánica e hipertrofia, siempre basado en evidencia científica. Analiza el historial de entrenamiento real del usuario y genera un plan de 4 semanas adaptado a su objetivo.
@@ -463,12 +479,14 @@ REGLAS IMPORTANTES:
         Sem 4 = 8-10 reps al ~80% (consolidación)
     SIN DATOS DE REPS: usa el último peso registrado, o peso conservador si el ejercicio es nuevo.
     SEMANA 4: continúa la progresión normalmente SALVO activación de Herramienta 5 (sem 1 ya es el deload).
-- CUMPLIMIENTO DEL PLAN ANTERIOR (si aparece la sección correspondiente más arriba):
+- CUMPLIMIENTO DEL PLAN ANTERIOR (si aparece la sección correspondiente más arriba, por grupo muscular):
     Si el cumplimiento global fue < 60% → prioriza CONSISTENCIA sobre progresión: reduce el número de
     ejercicios/series del nuevo plan, sustituye los ejercicios marcados como "NUNCA REGISTRADOS" por
-    alternativas más simples o accesibles, y no apliques Herramienta 2 (subir peso) salvo en ejercicios
-    con cumplimiento individual ≥ 80%.
+    alternativas más simples o accesibles, y no apliques Herramienta 2 (subir peso) salvo en grupos
+    musculares con estado "on_track" o "over".
     Si el cumplimiento global fue ≥ 85% → progresa con normalidad según las herramientas 1-3.
+    Grupos con estado "over" (por encima de lo planificado) → no añadas más volumen ahí aunque el
+    estado MEV/MRV lo sugiera; ya se está entrenando por encima de lo prescrito.
     Si hay contradicción entre esta sección y la respuesta del check-in "¿cómo fue el plan anterior?",
     señálalo en analysis.gaps sin acusar al usuario, con tacto.
 - Para ejercicios de peso corporal usa "PC". Incluye siempre la unidad (kg).
@@ -788,7 +806,7 @@ async function generatePlan(checkin = null) {
   let adherence = null;
   const prevPlan = await getLatestPlan();
   if (prevPlan) {
-    adherence = computeAdherence(JSON.parse(prevPlan.plan_json), ctx.allSessions, prevPlan.generated_at);
+    adherence = await computeAdherence(JSON.parse(prevPlan.plan_json), ctx.allSessions, prevPlan.generated_at);
   }
 
   const prompt = buildPrompt(ctx, checkin, adherence);
