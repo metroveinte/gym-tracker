@@ -967,11 +967,11 @@ async function generatePlan(checkin = null) {
         ]
       );
     }
-    // Igual que con la adherencia: si el plan anterior es demasiado reciente (varias
-    // regeneraciones seguidas el mismo día), sus objetivos de reps no son una referencia
-    // fiable — usar el fallback de tendencia pura en vez del objetivo de ese plan concreto.
-    const meaningfulPrevPlan = prevPlanAgeDays >= MIN_ADHERENCE_REVIEW_DAYS ? prevPlanJson : null;
-    stagnantExercises = computeStagnantExercises(meaningfulPrevPlan, ctx.allSessions, prevPlan.generated_at);
+    // A diferencia de la adherencia (que mide cumplimiento acumulado y sí necesita que
+    // haya pasado tiempo real), el objetivo de reps del plan anterior es solo un dato fijo
+    // a leer — sigue siendo válido aunque ese plan se haya generado hace minutos. No se
+    // aplica aquí el filtro de "plan demasiado reciente".
+    stagnantExercises = computeStagnantExercises(prevPlanJson, ctx.allSessions, prevPlan.generated_at);
   } else {
     stagnantExercises = computeStagnantExercises(null, ctx.allSessions, null);
   }
