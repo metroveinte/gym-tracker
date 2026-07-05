@@ -569,11 +569,13 @@ REGLAS IMPORTANTES:
     HERRAMIENTA 4 — Deload de reps (reduce reps, mantiene peso):
       Condición: ejercicio en lista de estancados Y adherencia ≥ 3 sesiones/semana.
       Acción: baja el rango de reps 2-3 puntos al mismo peso (ej: 8-10 → 5-7) para generar nuevo
-      estímulo de fuerza. Semanas 3-4 recuperan el rango original. Señala en las notas del día.
+      estímulo de fuerza. Semanas 3-4 recuperan el rango original. Refleja el cambio en weekly_reps
+      (semanas 1-2 bajo, 3-4 original) y pon active_tool = "Deload de reps".
     HERRAMIENTA 5 — Semana de deload completa:
       Condición: ejercicio estancado Y adherencia < 2.5 sesiones/semana (fatiga acumulada probable).
       Acción: semana 1 = 60% del peso habitual, mismas series, sin fallo. Semanas 2-4 regresan
-      progresivamente al peso de trabajo. Señala en las notas del día.
+      progresivamente al peso de trabajo. Refleja el 60% en weekly_weights.week1 y pon
+      active_tool = "Deload completo".
     HERRAMIENTA 6 — Periodización ondulatoria:
       Condición: ejercicio estancado 4+ semanas Y adherencia 2.5-3.5 sesiones/semana.
       Acción: alterna estímulos semanales:
@@ -581,6 +583,11 @@ REGLAS IMPORTANTES:
         Sem 2 = 10-12 reps al ~75% (hipertrofia)
         Sem 3 = 13-15 reps al ~65% (resistencia muscular)
         Sem 4 = 8-10 reps al ~80% (consolidación)
+      Rellena weekly_reps Y weekly_weights con las 4 semanas. Pon active_tool = "Periodización ondulatoria".
+      IMPORTANTE: no repitas este desglose semana a semana en notes, set_scheme_note ni progression_note
+      — ya es visible en la tabla semanal (weekly_reps/weekly_weights) y en el badge (active_tool).
+      progression_note en este caso solo debe explicar el porqué (diagnóstico + cuándo se revisará), en
+      1-2 frases cortas, SIN repetir los números de cada semana.
     SIN DATOS DE REPS: usa el último peso registrado, o peso conservador si el ejercicio es nuevo.
     SEMANA 4: continúa la progresión normalmente SALVO activación de Herramienta 5 (sem 1 ya es el deload).
 - CUMPLIMIENTO DEL PLAN ANTERIOR (si aparece la sección correspondiente más arriba, por grupo muscular):
@@ -599,10 +606,13 @@ REGLAS IMPORTANTES:
     "piramide_asc" → peso creciente set a set, últimos 2 sets son los de trabajo (ejercicios compuestos principales)
     "piramide_desc" → primer set al peso máximo, va bajando (fuerza/potencia)
     "calentamiento_trabajo" → 1-2 sets ligeros de activación + sets de trabajo al peso objetivo
-- set_scheme_note: frase corta (1 línea) con la regla de ejecución y progresión. Ejemplo: "Rango 8-10: cuando completes todas las series en 10 reps, sube 2.5kg el mes siguiente."
-- peso de activación: para ejercicios con esquema "calentamiento_trabajo", la serie de activación se carga siempre al 65-70% del peso de trabajo actual. Este porcentaje es fijo y escala automáticamente: si el peso de trabajo sube de 60 kg a 65 kg, la activación pasa de ~40 kg a ~43 kg sin necesidad de recalcular. Indica este porcentaje en el set_scheme_note y en progression_note para que el usuario lo tenga claro.
+- set_scheme_note: UNA frase corta (máx. 15 palabras) con la regla de ejecución básica. Ejemplo: "Cuando completes todas las series en el límite superior, sube peso el mes siguiente." NUNCA incluyas aquí un desglose semana a semana — eso va en weekly_reps/weekly_weights.
+- peso de activación: para ejercicios con esquema "calentamiento_trabajo", la serie de activación se carga siempre al 65-70% del peso de trabajo actual. Este porcentaje es fijo y escala automáticamente: si el peso de trabajo sube de 60 kg a 65 kg, la activación pasa de ~40 kg a ~43 kg sin necesidad de recalcular. Indica este porcentaje UNA sola vez, en el set_scheme_note.
 - session_weights_week1: array con el peso exacto de cada set en la semana 1 (longitud = sets). Para "rectas" todos iguales. Para pirámide, mostrar la progresión real. Para "calentamiento_trabajo": el primer elemento es el peso de activación (~65-70% del peso de trabajo), los demás son el peso de trabajo. Usa siempre la unidad (kg o "PC").
-- progression_note: 1-2 frases explicando la lógica de peso para este ejercicio. Cuando haya activación, exprésala como porcentaje del peso de trabajo (no como valor fijo) para que escale automáticamente al subir de peso. Ejemplo: "Media 9.8 reps a 60 kg en series de trabajo → ya domina el peso. Subimos a 62.5 kg de trabajo; activación siempre al ~65% (~40 kg). Cuando completes todas las series de trabajo a 10 reps, sube a 65 kg el mes que viene."
+- active_tool: SOLO cuando se aplique una Herramienta 4, 5 o 6 (deload de reps, deload completo o periodización ondulatoria), pon aquí su nombre corto exacto ("Deload de reps", "Deload completo" o "Periodización ondulatoria"). Para Herramientas 1-3 (progresión normal), omite este campo o ponlo a null — no le pongas nombre a la progresión estándar.
+- weekly_reps: SOLO cuando las reps objetivo cambian de una semana a otra (Herramientas 4 o 6), un objeto {week1,week2,week3,week4} con el rango de reps de cada semana (mismo formato que "reps", ej. "5-7"). Si las reps no cambian de semana a semana, omite este campo por completo — no lo repitas igual a "reps" en las 4 semanas.
+- progression_note: 1-2 frases (máx. 40 palabras) explicando SOLO el porqué de la decisión (diagnóstico + qué se hará en la próxima revisión). NO repitas los pesos exactos de cada set (ya están en las chips de la semana) ni el desglose semana a semana (ya está en weekly_reps/weekly_weights) — sería redundante. Cuando haya activación, exprésala como porcentaje del peso de trabajo. Ejemplo normal: "Media 9.8 reps a 60 kg → ya domina el peso, subimos a 62.5 kg." Ejemplo con periodización: "Máximo bloqueado 6 semanas; aplicamos ondulación semanal para romper el estancamiento. Revisión en la próxima planificación."
+- notes: nota opcional MUY breve (máx. 8-10 palabras), solo para avisos puntuales de ejecución (ej. "cuidado con el hombro", "usar cinturón"). NUNCA expliques aquí la herramienta de progresión ni ningún desglose semanal — para eso están active_tool, weekly_reps y progression_note. Omite este campo si no hay nada puntual que avisar.
 - alternative: nombre de UN ejercicio alternativo que trabaje el mismo músculo y se pueda hacer con equipamiento diferente (por si la máquina no está libre). IMPORTANTE: el alternativo NO puede ser otro ejercicio que ya esté en el mismo día, y dentro del mismo día dos ejercicios no pueden ser alternativas mutuas entre sí. Sí se permite que el alternativo aparezca en otro día del plan. Ejemplo: si el principal es "Press banca", el alternativo podría ser "Press mancuernas inclinado". Una sola frase corta, sin más detalles.
 
 {
@@ -628,8 +638,9 @@ REGLAS IMPORTANTES:
             "notes": "nota opcional",
             "alternative": "Nombre del ejercicio alternativo",
             "set_scheme": "rectas",
-            "set_scheme_note": "Rango 8-10: cuando completes todas las series en 10 reps, sube 2.5kg el mes siguiente.",
-            "progression_note": "Media 9.8 reps a 60kg el mes pasado → ya domina el peso. Subimos a 62.5kg. Cuando completes 4×10, sube a 65kg el mes que viene.",
+            "set_scheme_note": "Cuando completes todas las series en 10 reps, sube 2.5kg el mes siguiente.",
+            "active_tool": null,
+            "progression_note": "Media 9.8 reps a 60kg el mes pasado → ya domina el peso. Subimos a 62.5kg.",
             "session_weights_week1": ["62.5kg","62.5kg","62.5kg","62.5kg"],
             "weekly_weights": {
               "week1": "62.5kg",

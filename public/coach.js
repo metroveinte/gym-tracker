@@ -329,6 +329,22 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
           </div>`
         : '';
 
+      // Tool badge (only for Herramientas 4-6: deload/periodización)
+      const toolBadge = ex.active_tool
+        ? `<span style="font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(240,180,41,.15);border:1px solid rgba(240,180,41,.4);color:#f0b429;white-space:nowrap;">⚙ ${ex.active_tool}</span>`
+        : '';
+
+      // Weekly reps/weight overview (only when reps vary week to week, e.g. periodización)
+      const weeklyReps = ex.weekly_reps || null;
+      const weeklyTable = weeklyReps ? `
+        <div style="margin-top:6px;display:flex;flex-direction:column;gap:2px;background:var(--bg-raised);border:1px solid var(--border);border-radius:6px;padding:6px 10px;">
+          ${['week1','week2','week3','week4'].map((wk, i) => `
+            <div style="display:flex;justify-content:space-between;font-size:.75rem;">
+              <span style="color:#888;">Sem ${i + 1}</span>
+              <span style="color:var(--text);font-family:'JetBrains Mono',monospace;">${weeklyReps[wk] || ex.reps} reps @ ${ww[wk] || sw1[0] || '—'}</span>
+            </div>`).join('')}
+        </div>` : '';
+
       // Scheme execution note
       const schemeNote = ex.set_scheme_note
         ? `<div style="color:#555;font-size:.76rem;margin-top:4px;line-height:1.4;font-style:italic;word-break:break-word;overflow-wrap:break-word;">${ex.set_scheme_note}</div>`
@@ -345,13 +361,14 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
       return `
         <div style="padding:8px 0;border-bottom:1px solid var(--border);">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:4px;">
-            <span style="color:var(--text);font-size:.88rem;font-weight:600;flex:1;min-width:0;word-break:break-word;">${ex.name}</span>
+            <span style="color:var(--text);font-size:.88rem;font-weight:600;flex:1;min-width:0;word-break:break-word;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${ex.name}${toolBadge}</span>
             <div style="text-align:right;min-width:0;max-width:100%;">
               <div style="color:#888;font-size:.82rem;word-break:break-word;">${ex.sets}×${ex.reps}${ex.notes ? ' · <em style=color:#666>' + ex.notes + '</em>' : ''}</div>
               ${altInline}
             </div>
           </div>
           ${schemeNote}
+          ${weeklyTable}
           ${setsRow}
           ${progressionNote}
         </div>`;
