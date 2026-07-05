@@ -29,6 +29,18 @@ function dbRun(sql, params = []) {
     db.run(sql, params, function (err) { err ? rej(err) : res(this); }));
 }
 
+// SQLite's CURRENT_TIMESTAMP produce "YYYY-MM-DD HH:MM:SS" en UTC, sin 'T' ni 'Z'.
+// `new Date(...)` sobre ese formato lo interpreta como hora LOCAL del servidor, no
+// UTC — en un servidor fuera de UTC esto desplaza generated_at varias horas.
+// Normalizamos explícitamente antes de parsear para evitarlo.
+function parseUTC(dateStr) {
+  if (!dateStr) return null;
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateStr)
+    ? dateStr.replace(' ', 'T') + 'Z'
+    : dateStr;
+  return new Date(normalized);
+}
+
 // ── Context builder ───────────────────────────────────────────────────────────
 
 async function buildContext() {
@@ -215,7 +227,7 @@ function parseRepsTargetMax(reps) {
 
 function computeStagnantExercises(plan, allSessions, generatedAt) {
   const now = Date.now();
-  const genTime = generatedAt ? new Date(generatedAt).getTime() : null;
+  const genTime = generatedAt ? parseUTC(generatedAt).getTime() : null;
 
   // Objetivo de reps por ejercicio, según el plan que se acaba de cumplir (o está en curso).
   const targetRepsByExercise = {};
@@ -302,7 +314,7 @@ function computeStagnantExercises(plan, allSessions, generatedAt) {
 // ejercicio exacto, para detectar ejercicios concretos que nunca se llegaron a hacer.
 
 async function computeAdherence(plan, allSessions, generatedAt) {
-  const genTime = new Date(generatedAt).getTime();
+  const genTime = parseUTC(generatedAt).getTime();
   const now = Date.now();
 
   const weeksElapsed = Math.min(4, Math.max(0, Math.ceil((now - genTime) / 86400000 / 7)));
@@ -411,18 +423,18 @@ async function computeGeneralAdherence(allSessions) {
     muscleGroupByName[row.name.toLowerCase()] = row.muscle_group || 'Sin clasificar';
   }
 
-  const sorted = [...plans].sort((a, b) => new Date(a.generated_at) - new Date(b.generated_at));
+  const sorted = [...plans].sort((a, b) => parseUTC(a.generated_at) - parseUTC(b.generated_at));
   const now = Date.now();
 
   const perGroupTotals = {};
   const plannedExercises = new Map(); // lowercase -> nombre original
-  const oldestGenTime = new Date(sorted[0].generated_at).getTime();
+  const oldestGenTime = parseUTC(sorted[0].generated_at).getTime();
 
   for (let i = 0; i < sorted.length; i++) {
     const planRow = sorted[i];
     const plan = JSON.parse(planRow.plan_json);
-    const genTime = new Date(planRow.generated_at).getTime();
-    const nextGenTime = i + 1 < sorted.length ? new Date(sorted[i + 1].generated_at).getTime() : now;
+    const genTime = parseUTC(planRow.generated_at).getTime();
+    const nextGenTime = i + 1 < sorted.length ? parseUTC(sorted[i + 1].generated_at).getTime() : now;
     const cycleEnd = Math.min(nextGenTime, genTime + PLAN_DAYS * 86400000);
     const weeksElapsedThisCycle = Math.min(4, Math.max(0, Math.ceil((cycleEnd - genTime) / 86400000 / 7)));
     if (weeksElapsedThisCycle < 1) continue;
@@ -990,6 +1002,12 @@ async function getLatestPlan() {
   `);
 }
 
+// Si el plan anterior lleva menos de esto activo (p. ej. se regeneró varias veces
+// seguidas en el mismo día para pruebas), no ha habido tiempo real de generar
+// ninguna señal de cumplimiento fiable — inyectar un "0%" en ese caso sería
+// engañoso, no un reflejo real de la constancia del usuario.
+const MIN_ADHERENCE_REVIEW_DAYS = 3;
+
 async function generatePlan(checkin = null) {
   const ctx = await buildContext();
 
@@ -998,7 +1016,10 @@ async function generatePlan(checkin = null) {
   const prevPlan = await getLatestPlan();
   if (prevPlan) {
     const prevPlanJson = JSON.parse(prevPlan.plan_json);
-    adherence = await computeAdherence(prevPlanJson, ctx.allSessions, prevPlan.generated_at);
+    const prevPlanAgeDays = (Date.now() - parseUTC(prevPlan.generated_at).getTime()) / 86400000;
+    if (prevPlanAgeDays >= MIN_ADHERENCE_REVIEW_DAYS) {
+      adherence = await computeAdherence(prevPlanJson, ctx.allSessions, prevPlan.generated_at);
+    }
     stagnantExercises = computeStagnantExercises(prevPlanJson, ctx.allSessions, prevPlan.generated_at);
   } else {
     stagnantExercises = computeStagnantExercises(null, ctx.allSessions, null);

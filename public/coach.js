@@ -42,9 +42,20 @@ function fmt(dateStr) {
 
 function fmtDatetime(dtStr) {
   if (!dtStr) return '—';
-  const d = new Date(dtStr.replace(' ', 'T') + 'Z');
+  const d = parseUTC(dtStr);
   return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
     + ' ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+}
+
+// SQLite's CURRENT_TIMESTAMP produce "YYYY-MM-DD HH:MM:SS" en UTC, sin 'T' ni 'Z'.
+// El navegador interpretaría ese formato como hora LOCAL del usuario si se parsea
+// directamente — normalizamos igual que en el backend para evitar el desfase.
+function parseUTC(dateStr) {
+  if (!dateStr) return null;
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateStr)
+    ? dateStr.replace(' ', 'T') + 'Z'
+    : dateStr;
+  return new Date(normalized);
 }
 
 // ── Check-in modal ────────────────────────────────────────────────────────────
@@ -184,7 +195,7 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
     `Generado el ${genDate} · Válido hasta ${validDate}`;
 
   const today    = new Date();
-  const genTime  = new Date(generatedAt);
+  const genTime  = parseUTC(generatedAt);
   const validEnd = new Date(validUntil + 'T00:00:00');
   const elapsed  = (today - genTime) / 86400000;
   const pct      = Math.max(0, Math.min(100, (elapsed / PLAN_DAYS) * 100));
