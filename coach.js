@@ -61,6 +61,16 @@ async function buildContext() {
   }
   const allSessions = Array.from(sessionMap.values());
 
+  // Ventana real disponible para tasas "por semana": si el usuario lleva usando la app
+  // menos de 90 días, dividir siempre entre 90 infravalora la frecuencia/volumen real
+  // (parecería que hay "huecos" de inactividad cuando en realidad no hay datos porque
+  // el seguimiento aún no llevaba tanto tiempo).
+  const oldestSessionDate = allSessions.reduce((min, s) => (!min || s.date < min) ? s.date : min, null);
+  const daysSinceFirstSession = oldestSessionDate
+    ? Math.max(1, Math.round((Date.now() - new Date(oldestSessionDate).getTime()) / 86400000) + 1)
+    : 90;
+  const windowDays90 = Math.min(90, daysSinceFirstSession);
+
   // Volume stats per muscle group (last 90 days)
   // First series per exercise is treated as activation (skipped for weight averages)
   const cutoff30 = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
@@ -173,7 +183,7 @@ async function buildContext() {
 
   // 1. Adherencia: sesiones/semana promedio (últimos 90 días)
   const uniqueTrainingDays = new Set(allSessions.filter(s => s.date >= cutoff90).map(s => s.date));
-  const avgSessionsPerWeek = Math.round((uniqueTrainingDays.size / 90) * 7 * 10) / 10;
+  const avgSessionsPerWeek = Math.round((uniqueTrainingDays.size / windowDays90) * 7 * 10) / 10;
 
   // 2. Balance push/pull (últimos 90 días)
   const PUSH_GROUPS = ['Pecho', 'Hombros', 'Tríceps'];
@@ -204,7 +214,7 @@ async function buildContext() {
   };
   const volumeStatus = MAIN_GROUPS.map(mg => {
     const setsTotal = muscleStats[mg]?.totalSets ?? 0;
-    const spw = Math.round((setsTotal / 90) * 7 * 10) / 10;
+    const spw = Math.round((setsTotal / windowDays90) * 7 * 10) / 10;
     const ref = MEV_MRV[mg] || { mev: 6, mrv: 18 };
     const status = spw < ref.mev ? 'BAJO_MEV' : spw >= ref.mrv * 0.85 ? 'CERCA_MRV' : 'OK';
     return { group: mg, setsPerWeek: spw, mev: ref.mev, mrv: ref.mrv, status };
@@ -222,6 +232,7 @@ async function buildContext() {
   return {
     profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights,
     stagnantExercises, avgSessionsPerWeek, pushPullNote, volumeStatus, lowVarietyGroups, allSessions,
+    windowDays90,
   };
 }
 
@@ -449,7 +460,7 @@ function formatCheckin(checkin) {
 
 function buildPrompt(ctx, checkin, adherence = null) {
   const { profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights,
-          stagnantExercises, avgSessionsPerWeek, pushPullNote, volumeStatus, lowVarietyGroups } = ctx;
+          stagnantExercises, avgSessionsPerWeek, pushPullNote, volumeStatus, lowVarietyGroups, windowDays90 } = ctx;
   const today = new Date().toISOString().slice(0, 10);
 
   const profileText = profile ? `
@@ -481,7 +492,7 @@ function buildPrompt(ctx, checkin, adherence = null) {
           : '';
         return `  ${g}: ${s.sessions} entrenos | ${s.totalSets} series totales${weightStr}${exList}`;
       }).join('\n')
-    : '  Sin entrenos en los últimos 90 días.';
+    : `  Sin entrenos en los últimos ${windowDays90} días.`;
 
   const weightTrend = weights.length >= 2
     ? `Peso inicial: ${weights[weights.length - 1].weight_kg} kg (${weights[weights.length - 1].date}) → Último: ${weights[0].weight_kg} kg (${weights[0].date})`
@@ -528,11 +539,11 @@ ${checkinText || '  No especificadas.'}
 === TENDENCIA DE PESO (últimas mediciones) ===
 ${weightTrend}
 
-=== VOLUMEN POR GRUPO MUSCULAR (últimos 90 días) ===
+=== VOLUMEN POR GRUPO MUSCULAR (últimos ${windowDays90} días) ===
 ${muscleText}
 
 === ANÁLISIS DE PATRONES DE ENTRENAMIENTO ===
-- Frecuencia media: ${avgSessionsPerWeek} sesiones/semana (últimos 90 días)
+${windowDays90 < 90 ? `NOTA: el usuario solo lleva ${windowDays90} días registrando entrenos en la app (no 90) — todas las tasas "por semana" de esta sección ya están calculadas sobre esa ventana real, no hay huecos de inactividad previos, simplemente aún no hay más historial.\n` : ''}- Frecuencia media: ${avgSessionsPerWeek} sesiones/semana (últimos ${windowDays90} días)
 - Balance push/pull: ${pushPullNote}
 - Estado de volumen por grupo muscular (MEV = mínimo efectivo | MRV = máximo recuperable, series/semana):
 ${volumeStatus.map(v => `  ${v.group}: ${v.setsPerWeek} series/sem [MEV ${v.mev} | MRV ${v.mrv}] → ${v.status}`).join('\n')}${lowVarietyGroups.length > 0 ? `
