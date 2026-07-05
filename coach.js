@@ -404,103 +404,23 @@ async function computeAdherence(plan, allSessions, generatedAt) {
   return { weeksElapsed, perMuscleGroup, neverLogged, overallAdherencePct, overallSetsCompleted, overallSetsPlanned };
 }
 
-// Cumplimiento acumulado de los últimos N ciclos de plan (por defecto 3, ~3 meses).
-// Reutiliza la misma agregación por grupo muscular que computeAdherence, pero sumando
-// varios ciclos: cada ciclo tiene su propia ventana (desde que se generó ese plan hasta
-// que se generó el siguiente, o hasta hoy/28 días si es el plan activo).
-const GENERAL_ADHERENCE_CYCLES = 3;
-
-async function computeGeneralAdherence(allSessions) {
-  const plans = await dbAll(
-    'SELECT * FROM coach_plans ORDER BY generated_at DESC LIMIT ?',
-    [GENERAL_ADHERENCE_CYCLES]
+// Histórico de cumplimiento: una fila por ciclo de plan ya finalizado (ver
+// generatePlan(), que inserta el snapshot al sustituir un plan por uno nuevo).
+async function getAdherenceHistory() {
+  const rows = await dbAll(
+    'SELECT * FROM adherence_history ORDER BY plan_generated_at ASC'
   );
-  if (plans.length === 0) return null;
-
-  const exerciseRows = await dbAll('SELECT name, muscle_group FROM exercises');
-  const muscleGroupByName = {};
-  for (const row of exerciseRows) {
-    muscleGroupByName[row.name.toLowerCase()] = row.muscle_group || 'Sin clasificar';
-  }
-
-  const sorted = [...plans].sort((a, b) => parseUTC(a.generated_at) - parseUTC(b.generated_at));
-  const now = Date.now();
-
-  const perGroupTotals = {};
-  const plannedExercises = new Map(); // lowercase -> nombre original
-  const oldestGenTime = parseUTC(sorted[0].generated_at).getTime();
-
-  for (let i = 0; i < sorted.length; i++) {
-    const planRow = sorted[i];
-    const plan = JSON.parse(planRow.plan_json);
-    const genTime = parseUTC(planRow.generated_at).getTime();
-    const nextGenTime = i + 1 < sorted.length ? parseUTC(sorted[i + 1].generated_at).getTime() : now;
-    const cycleEnd = Math.min(nextGenTime, genTime + PLAN_DAYS * 86400000);
-    const weeksElapsedThisCycle = Math.min(4, Math.max(0, Math.ceil((cycleEnd - genTime) / 86400000 / 7)));
-    if (weeksElapsedThisCycle < 1) continue;
-
-    const plannedPerGroupThisCycle = {};
-    for (const day of (plan.weekly_plan?.days || [])) {
-      for (const ex of (day.exercises || [])) {
-        if (!ex.name) continue;
-        const key = ex.name.toLowerCase();
-        const group = muscleGroupByName[key];
-        if (group && group !== 'Sin clasificar') {
-          plannedPerGroupThisCycle[group] = (plannedPerGroupThisCycle[group] || 0) + (ex.sets || 0);
-        }
-        if (!plannedExercises.has(key)) plannedExercises.set(key, ex.name);
-      }
-    }
-
-    const completedPerGroupThisCycle = {};
-    for (const s of allSessions) {
-      if (!s.exercise) continue;
-      const t = new Date(s.date).getTime();
-      if (t < genTime || t >= cycleEnd) continue;
-      const sets = s.series.reduce((sum, se) => sum + (se.sets || 1), 0);
-      const group = s.muscle_group || 'Sin clasificar';
-      if (group !== 'Sin clasificar') {
-        completedPerGroupThisCycle[group] = (completedPerGroupThisCycle[group] || 0) + sets;
-      }
-    }
-
-    for (const [group, setsPerWeek] of Object.entries(plannedPerGroupThisCycle)) {
-      perGroupTotals[group] = perGroupTotals[group] || { planned: 0, completed: 0 };
-      perGroupTotals[group].planned += setsPerWeek * weeksElapsedThisCycle;
-      perGroupTotals[group].completed += completedPerGroupThisCycle[group] || 0;
-    }
-  }
-
-  // "Nunca registrado" en todo el rango combinado: ¿se ha logueado ese ejercicio alguna vez
-  // desde el ciclo más antiguo considerado hasta hoy, sea cual sea el ciclo en el que estaba planificado?
-  const everCompletedExerciseNames = new Set();
-  for (const s of allSessions) {
-    if (!s.exercise) continue;
-    const t = new Date(s.date).getTime();
-    if (t < oldestGenTime || t > now) continue;
-    everCompletedExerciseNames.add(s.exercise.toLowerCase());
-  }
-  const neverLogged = [...plannedExercises.entries()]
-    .filter(([key]) => !everCompletedExerciseNames.has(key))
-    .map(([, name]) => name);
-
-  const perMuscleGroup = Object.entries(perGroupTotals).map(([group, { planned, completed }]) => {
-    const adherencePct = planned > 0 ? Math.round((completed / planned) * 100) : 0;
-    const status = adherencePct > 100 ? 'over' : adherencePct >= 85 ? 'on_track' : 'behind';
-    return { group, totalPlanned: planned, totalCompleted: completed, adherencePct, status };
-  });
-
-  const overallSetsPlanned = perMuscleGroup.reduce((sum, g) => sum + g.totalPlanned, 0);
-  const overallSetsCompleted = perMuscleGroup.reduce((sum, g) => sum + g.totalCompleted, 0);
-  const overallAdherencePct = overallSetsPlanned > 0
-    ? Math.round((overallSetsCompleted / overallSetsPlanned) * 100)
-    : 0;
-
-  return {
-    cyclesConsidered: sorted.length,
-    perMuscleGroup, neverLogged,
-    overallAdherencePct, overallSetsCompleted, overallSetsPlanned,
-  };
+  return rows.map(row => ({
+    id: row.id,
+    planId: row.plan_id,
+    planGeneratedAt: row.plan_generated_at,
+    recordedAt: row.recorded_at,
+    overallAdherencePct: row.overall_adherence_pct,
+    overallSetsCompleted: row.overall_sets_completed,
+    overallSetsPlanned: row.overall_sets_planned,
+    perMuscleGroup: JSON.parse(row.per_muscle_group_json),
+    neverLogged: JSON.parse(row.never_logged_json),
+  }));
 }
 
 // ── Prompt builder ────────────────────────────────────────────────────────────
@@ -1019,6 +939,18 @@ async function generatePlan(checkin = null) {
     const prevPlanAgeDays = (Date.now() - parseUTC(prevPlan.generated_at).getTime()) / 86400000;
     if (prevPlanAgeDays >= MIN_ADHERENCE_REVIEW_DAYS) {
       adherence = await computeAdherence(prevPlanJson, ctx.allSessions, prevPlan.generated_at);
+      // Guarda una foto fija del cumplimiento de este ciclo que termina, para poder
+      // ver la evolución a lo largo de los meses (no solo recalcular en caliente).
+      await dbRun(
+        `INSERT OR IGNORE INTO adherence_history
+           (plan_id, plan_generated_at, overall_adherence_pct, overall_sets_completed, overall_sets_planned, per_muscle_group_json, never_logged_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          prevPlan.id, prevPlan.generated_at,
+          adherence.overallAdherencePct, adherence.overallSetsCompleted, adherence.overallSetsPlanned,
+          JSON.stringify(adherence.perMuscleGroup), JSON.stringify(adherence.neverLogged),
+        ]
+      );
     }
     stagnantExercises = computeStagnantExercises(prevPlanJson, ctx.allSessions, prevPlan.generated_at);
   } else {
@@ -1047,4 +979,4 @@ async function generatePlan(checkin = null) {
   return parsed;
 }
 
-module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights, generateExtraWorkout, getLatestExtraWorkout, deleteExtraWorkout, buildContext, computeAdherence, computeGeneralAdherence, computeStagnantExercises };
+module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights, generateExtraWorkout, getLatestExtraWorkout, deleteExtraWorkout, buildContext, computeAdherence, computeStagnantExercises, getAdherenceHistory };

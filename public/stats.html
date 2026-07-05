@@ -63,6 +63,28 @@
       </div>
     </div>
 
+    <div id="adherence-card" class="card hidden" style="margin-bottom:16px;">
+      <div id="adherence-current-wrap" class="hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <h2 style="margin:0;">Cumplimiento del plan</h2>
+          <span id="adherence-overall-badge" style="font-size:.85rem; font-weight:700; padding:4px 12px; border-radius:20px; color:#fff;"></span>
+        </div>
+        <p id="adherence-note" style="color:#888; font-size:.78rem; margin-bottom:14px;"></p>
+        <div id="adherence-exercises"></div>
+        <div id="adherence-never-logged" class="hidden" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+          <p style="color:var(--accent); font-size:0.78rem; font-weight:700; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;">Nunca registrados</p>
+          <p id="adherence-never-logged-list" style="color:#ccc; font-size:.85rem; margin:0;"></p>
+        </div>
+      </div>
+
+      <div id="adherence-history-wrap" class="hidden" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+        <h2 style="font-size:1rem; margin-bottom:12px;">Evolución del cumplimiento</h2>
+        <div class="chart-container" style="height:220px;">
+          <canvas id="adherenceHistoryChart"></canvas>
+        </div>
+      </div>
+    </div>
+
     <div class="charts-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(350px, 1fr)); gap:30px;">
       <div class="card">
         <h2>Top 10 Ejercicios</h2>

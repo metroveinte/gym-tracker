@@ -4,6 +4,7 @@ let currentFilter = 'all';
 let progressChart = null;
 let topExercisesChart = null;
 let muscleGroupChart = null;
+let adherenceHistoryChart = null;
 let currentHistoryPage = 0;
 let currentFilteredSessions = [];
 const HISTORY_PAGE_SIZE = 15;
@@ -99,6 +100,7 @@ async function loadStats() {
   } catch (error) {
     console.error('Error loading stats:', error);
   }
+  loadAdherence();
 }
 
 function getMuscleGroup(exerciseName) {
@@ -220,6 +222,116 @@ function renderMonthlyRecap(recap) {
 
   el.style.display = '';
   el.innerHTML = lines.map(l => `<p style="margin:4px 0; color:#ccc; font-size:.9rem;">${l}</p>`).join('');
+}
+
+// ── Cumplimiento del plan (ciclo actual + evolución histórica) ───────────────
+
+async function loadAdherence() {
+  try {
+    const res = await fetch('/api/coach/plan');
+    const plan = res.ok ? await res.json() : null;
+    renderAdherence(plan?.adherence || null);
+  } catch (e) {
+    renderAdherence(null);
+  }
+
+  try {
+    const res = await fetch('/api/coach/adherence-history');
+    const history = res.ok ? await res.json() : [];
+    renderAdherenceHistoryChart(history);
+  } catch (e) {
+    renderAdherenceHistoryChart([]);
+  }
+}
+
+function adherenceStatusColor(status) {
+  return status === 'on_track' ? '#4caf50' : status === 'over' ? '#f0b429' : 'var(--accent)';
+}
+function adherenceStatusLabel(status) {
+  return status === 'on_track' ? 'Al día' : status === 'over' ? 'Por encima' : 'Por debajo';
+}
+function adherenceOverallColor(pct) {
+  return pct >= 85 ? '#4caf50' : pct >= 50 ? '#f0b429' : 'var(--accent)';
+}
+
+function renderAdherence(adherence) {
+  const card = document.getElementById('adherence-card');
+  const currentWrap = document.getElementById('adherence-current-wrap');
+  if (!card || !currentWrap) return;
+
+  if (!adherence || adherence.weeksElapsed < 1 || adherence.perMuscleGroup.length === 0) {
+    currentWrap.classList.add('hidden');
+    return;
+  }
+
+  card.classList.remove('hidden');
+  currentWrap.classList.remove('hidden');
+
+  document.getElementById('adherence-overall-badge').textContent = `${adherence.overallAdherencePct}%`;
+  document.getElementById('adherence-overall-badge').style.background = adherenceOverallColor(adherence.overallAdherencePct);
+  document.getElementById('adherence-note').textContent =
+    `${adherence.overallSetsCompleted} de ${adherence.overallSetsPlanned} series planificadas, semana ${adherence.weeksElapsed} de 4 del plan actual.`;
+
+  document.getElementById('adherence-exercises').innerHTML = adherence.perMuscleGroup.map(g => `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border);">
+      <span style="color:var(--text); font-size:.85rem; flex:1; min-width:0;">${g.group}</span>
+      <span style="color:#888; font-size:.78rem; font-family:'JetBrains Mono',monospace;">${g.totalCompletedSoFar}/${g.totalPlannedSoFar}</span>
+      <span style="font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:10px; color:#fff; background:${adherenceStatusColor(g.status)}; white-space:nowrap;">${adherenceStatusLabel(g.status)}</span>
+    </div>`).join('');
+
+  const neverLoggedBlock = document.getElementById('adherence-never-logged');
+  if (adherence.neverLogged.length > 0) {
+    neverLoggedBlock.classList.remove('hidden');
+    document.getElementById('adherence-never-logged-list').textContent = adherence.neverLogged.join(', ');
+  } else {
+    neverLoggedBlock.classList.add('hidden');
+  }
+}
+
+function renderAdherenceHistoryChart(history) {
+  const wrap = document.getElementById('adherence-history-wrap');
+  if (!wrap) return;
+
+  if (!history || history.length === 0) {
+    wrap.classList.add('hidden');
+    return;
+  }
+  wrap.classList.remove('hidden');
+  document.getElementById('adherence-card').classList.remove('hidden');
+
+  const labels = history.map(h => {
+    const d = new Date(h.planGeneratedAt.replace(' ', 'T') + 'Z');
+    return d.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' });
+  });
+  const data = history.map(h => h.overallAdherencePct);
+
+  const ctx = document.getElementById('adherenceHistoryChart').getContext('2d');
+  if (adherenceHistoryChart) adherenceHistoryChart.destroy();
+
+  adherenceHistoryChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Cumplimiento (%)',
+        data,
+        borderColor: '#ff0000',
+        backgroundColor: 'rgba(255, 0, 0, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, max: 100, ticks: { color: '#ffffff' }, grid: { color: '#444444' } },
+        x: { ticks: { color: '#ffffff' }, grid: { color: '#444444' } },
+      },
+    },
+  });
 }
 
 function setupSelectors() {

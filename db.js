@@ -137,6 +137,24 @@ db.serialize(() => {
       workout_json TEXT NOT NULL
     )
   `);
+
+  // Foto del cumplimiento de cada ciclo de plan al ser sustituido por uno nuevo,
+  // para poder ver la evolución a lo largo de los meses (no solo los últimos N ciclos).
+  db.run(`
+    CREATE TABLE IF NOT EXISTS adherence_history (
+      id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+      plan_id                INTEGER NOT NULL UNIQUE,
+      plan_generated_at      DATETIME NOT NULL,
+      recorded_at            DATETIME DEFAULT CURRENT_TIMESTAMP,
+      overall_adherence_pct  INTEGER NOT NULL,
+      overall_sets_completed INTEGER NOT NULL,
+      overall_sets_planned   INTEGER NOT NULL,
+      per_muscle_group_json  TEXT NOT NULL,
+      never_logged_json      TEXT NOT NULL,
+      FOREIGN KEY (plan_id) REFERENCES coach_plans(id) ON DELETE CASCADE
+    )
+  `);
+  db.run('CREATE INDEX IF NOT EXISTS idx_adherence_history_generated_at ON adherence_history(plan_generated_at)');
 });
 
 module.exports = db;

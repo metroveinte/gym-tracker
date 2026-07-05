@@ -488,82 +488,6 @@ function renderExtraWorkoutDay(workout) {
     </div>`;
 }
 
-// ── Adherencia real vs planificado ────────────────────────────────────────────
-
-function adherenceStatusColor(status) {
-  return status === 'on_track' ? '#4caf50' : status === 'over' ? '#f0b429' : 'var(--accent)';
-}
-function adherenceStatusLabel(status) {
-  return status === 'on_track' ? 'Al día' : status === 'over' ? 'Por encima' : 'Por debajo';
-}
-function adherenceOverallColor(pct) {
-  return pct >= 85 ? '#4caf50' : pct >= 50 ? '#f0b429' : 'var(--accent)';
-}
-function renderAdherenceGroupRows(groups, completedField, plannedField) {
-  return groups.map(g => `
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border);">
-      <span style="color:var(--text); font-size:.85rem; flex:1; min-width:0;">${g.group}</span>
-      <span style="color:#888; font-size:.78rem; font-family:'JetBrains Mono',monospace;">${g[completedField]}/${g[plannedField]}</span>
-      <span style="font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:10px; color:#fff; background:${adherenceStatusColor(g.status)}; white-space:nowrap;">${adherenceStatusLabel(g.status)}</span>
-    </div>`).join('');
-}
-
-function renderAdherence(adherence) {
-  const card = document.getElementById('adherence-card');
-  if (!card) return;
-
-  if (!adherence || adherence.weeksElapsed < 1 || adherence.perMuscleGroup.length === 0) {
-    card.classList.add('hidden');
-    return;
-  }
-
-  card.classList.remove('hidden');
-
-  document.getElementById('adherence-overall-badge').textContent = `${adherence.overallAdherencePct}%`;
-  document.getElementById('adherence-overall-badge').style.background = adherenceOverallColor(adherence.overallAdherencePct);
-  document.getElementById('adherence-note').textContent =
-    `${adherence.overallSetsCompleted} de ${adherence.overallSetsPlanned} series planificadas, semana ${adherence.weeksElapsed} de 4.`;
-
-  document.getElementById('adherence-exercises').innerHTML =
-    renderAdherenceGroupRows(adherence.perMuscleGroup, 'totalCompletedSoFar', 'totalPlannedSoFar');
-
-  const neverLoggedBlock = document.getElementById('adherence-never-logged');
-  if (adherence.neverLogged.length > 0) {
-    neverLoggedBlock.classList.remove('hidden');
-    document.getElementById('adherence-never-logged-list').textContent = adherence.neverLogged.join(', ');
-  } else {
-    neverLoggedBlock.classList.add('hidden');
-  }
-}
-
-function renderGeneralAdherence(general) {
-  const wrap = document.getElementById('general-adherence-wrap');
-  if (!wrap) return;
-
-  if (!general || general.perMuscleGroup.length === 0) {
-    wrap.classList.add('hidden');
-    return;
-  }
-
-  wrap.classList.remove('hidden');
-
-  document.getElementById('general-adherence-badge').textContent = `${general.overallAdherencePct}%`;
-  document.getElementById('general-adherence-badge').style.background = adherenceOverallColor(general.overallAdherencePct);
-  document.getElementById('general-adherence-note').textContent =
-    `(últimos ${general.cyclesConsidered} ciclo${general.cyclesConsidered === 1 ? '' : 's'})`;
-
-  document.getElementById('general-adherence-exercises').innerHTML =
-    renderAdherenceGroupRows(general.perMuscleGroup, 'totalCompleted', 'totalPlanned');
-
-  const neverLoggedBlock = document.getElementById('general-adherence-never-logged');
-  if (general.neverLogged.length > 0) {
-    neverLoggedBlock.classList.remove('hidden');
-    document.getElementById('general-adherence-never-logged-list').textContent = general.neverLogged.join(', ');
-  } else {
-    neverLoggedBlock.classList.add('hidden');
-  }
-}
-
 function renderExtraWorkoutBar(hasWorkout) {
   const bar      = document.getElementById('extra-workout-bar');
   const btn      = document.getElementById('extra-workout-btn');
@@ -651,8 +575,6 @@ async function load() {
     const ew = ewRes.ok ? await ewRes.json() : null;
 
     renderPlan(data.plan_json, data.generated_at, data.valid_until, ww?.weights_json || null);
-    renderAdherence(data.adherence);
-    renderGeneralAdherence(data.generalAdherence);
     renderWeeklyWeightsBar(ww);
     renderExtraWorkoutBar(!!ew);
     if (ew) {

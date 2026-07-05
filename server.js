@@ -390,13 +390,19 @@ app.get('/api/coach/plan', async (req, res) => {
     if (!plan) return res.json(null);
     const planJson = JSON.parse(plan.plan_json);
     const ctx = await coach.buildContext();
-    const [adherence, generalAdherence] = await Promise.all([
-      coach.computeAdherence(planJson, ctx.allSessions, plan.generated_at),
-      coach.computeGeneralAdherence(ctx.allSessions),
-    ]);
-    res.json({ ...plan, plan_json: planJson, adherence, generalAdherence });
+    const adherence = await coach.computeAdherence(planJson, ctx.allSessions, plan.generated_at);
+    res.json({ ...plan, plan_json: planJson, adherence });
   } catch (e) {
     res.status(500).json({ error: 'Error al cargar el plan.' });
+  }
+});
+
+app.get('/api/coach/adherence-history', async (req, res) => {
+  try {
+    const history = await coach.getAdherenceHistory();
+    res.json(history);
+  } catch (e) {
+    res.status(500).json({ error: 'Error al cargar el histórico de cumplimiento.' });
   }
 });
 
