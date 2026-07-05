@@ -139,59 +139,6 @@ async function buildContext() {
   // Detailed session listing: last 30 days (kept short to avoid bloating the prompt)
   const recentSessionsFull = allSessions.filter(s => s.date >= cutoff30);
 
-  // Stagnation detection: exercises with no improvement (ni en peso ni en reps) en 3+ semanas.
-  // Importante: si el plan activo aplica la Herramienta 1 (mismo peso, más reps), el peso máximo
-  // se mantiene plano A PROPÓSITO durante 4 semanas — eso NO es estancamiento si las reps mejoran.
-  // Solo se marca como estancado si NINGUNA de las dos dimensiones progresa.
-  const STAGNATION_WEEKS = 3;
-  const stagnantExercises = [];
-  const now = Date.now();
-
-  for (const [name] of Object.entries(exerciseStats)) {
-    const exSessions = allSessions
-      .filter(s => s.exercise === name && s.series.some(sr => sr.weight > 0))
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    if (exSessions.length === 0) continue;
-
-    const weekBuckets = {};
-    for (const s of exSessions) {
-      const daysAgo = Math.floor((now - new Date(s.date).getTime()) / 86400000);
-      if (daysAgo > 56) continue;
-      const bucket = Math.floor(daysAgo / 7);
-      const workingSets = s.series.filter(sr => sr.weight > 0);
-      const sessionMaxWeight = Math.max(...workingSets.map(sr => sr.weight));
-      const sessionMaxReps = Math.max(...workingSets.map(sr => sr.reps || 0));
-      if (!weekBuckets[bucket]) {
-        weekBuckets[bucket] = { maxWeight: sessionMaxWeight, maxReps: sessionMaxReps };
-      } else {
-        weekBuckets[bucket].maxWeight = Math.max(weekBuckets[bucket].maxWeight, sessionMaxWeight);
-        weekBuckets[bucket].maxReps = Math.max(weekBuckets[bucket].maxReps, sessionMaxReps);
-      }
-    }
-
-    const sortedWeeks = Object.entries(weekBuckets)
-      .map(([w, v]) => ({ week: Number(w), ...v }))
-      .sort((a, b) => a.week - b.week); // index 0 = semana más reciente
-
-    if (sortedWeeks.length < STAGNATION_WEEKS) continue;
-
-    const current   = sortedWeeks[0];
-    const reference = sortedWeeks[STAGNATION_WEEKS - 1];
-
-    const weightStagnant = current.maxWeight <= reference.maxWeight;
-    const repsStagnant   = current.maxReps <= reference.maxReps;
-
-    if (weightStagnant && repsStagnant) {
-      let plateauWeeks = STAGNATION_WEEKS;
-      for (let i = STAGNATION_WEEKS; i < sortedWeeks.length; i++) {
-        if (sortedWeeks[i].maxWeight >= current.maxWeight && sortedWeeks[i].maxReps >= current.maxReps) plateauWeeks++;
-        else break;
-      }
-      stagnantExercises.push({ name, weeks: plateauWeeks, maxWeight: current.maxWeight });
-    }
-  }
-
   // ── Nivel 1 analytics ────────────────────────────────────────────────────────
 
   // 1. Adherencia: sesiones/semana promedio (últimos 90 días)
@@ -244,9 +191,104 @@ async function buildContext() {
 
   return {
     profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights,
-    stagnantExercises, avgSessionsPerWeek, pushPullNote, volumeStatus, lowVarietyGroups, allSessions,
+    avgSessionsPerWeek, pushPullNote, volumeStatus, lowVarietyGroups, allSessions,
     windowDays90,
   };
+}
+
+// Detección de estancamiento: sin mejora de peso NI de reps en STAGNATION_WEEKS semanas.
+// Si el ejercicio estaba en el plan anterior, se compara además contra el objetivo de reps
+// que ESE plan marcó explícitamente (p. ej. "8-10" → objetivo 10) durante el ciclo que
+// acaba de terminar — así, alcanzar el objetivo cuenta como progreso aunque el peso se
+// mantuviera plano a propósito (Herramienta 1), en vez de exigir siempre una tendencia
+// genérica al alza que nunca se cumpliría mientras el peso está congelado por diseño.
+const STAGNATION_WEEKS = 4;
+
+function parseRepsTargetMax(reps) {
+  if (reps === null || reps === undefined) return null;
+  const str = String(reps);
+  const rangeMatch = str.match(/(\d+)\s*-\s*(\d+)/);
+  if (rangeMatch) return parseInt(rangeMatch[2], 10);
+  const singleMatch = str.match(/(\d+)/);
+  return singleMatch ? parseInt(singleMatch[1], 10) : null;
+}
+
+function computeStagnantExercises(plan, allSessions, generatedAt) {
+  const now = Date.now();
+  const genTime = generatedAt ? new Date(generatedAt).getTime() : null;
+
+  // Objetivo de reps por ejercicio, según el plan que se acaba de cumplir (o está en curso).
+  const targetRepsByExercise = {};
+  if (plan) {
+    for (const day of (plan.weekly_plan?.days || [])) {
+      for (const ex of (day.exercises || [])) {
+        if (!ex.name) continue;
+        const target = parseRepsTargetMax(ex.reps);
+        if (target !== null) targetRepsByExercise[ex.name.toLowerCase()] = target;
+      }
+    }
+  }
+
+  const exerciseNames = new Set(allSessions.map(s => s.exercise).filter(Boolean));
+  const stagnantExercises = [];
+
+  for (const name of exerciseNames) {
+    const exSessions = allSessions
+      .filter(s => s.exercise === name && s.series.some(sr => sr.weight > 0))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (exSessions.length === 0) continue;
+
+    const weekBuckets = {};
+    for (const s of exSessions) {
+      const daysAgo = Math.floor((now - new Date(s.date).getTime()) / 86400000);
+      if (daysAgo > 56) continue;
+      const bucket = Math.floor(daysAgo / 7);
+      const workingSets = s.series.filter(sr => sr.weight > 0);
+      const sessionMaxWeight = Math.max(...workingSets.map(sr => sr.weight));
+      const sessionMaxReps = Math.max(...workingSets.map(sr => sr.reps || 0));
+      if (!weekBuckets[bucket]) {
+        weekBuckets[bucket] = { maxWeight: sessionMaxWeight, maxReps: sessionMaxReps };
+      } else {
+        weekBuckets[bucket].maxWeight = Math.max(weekBuckets[bucket].maxWeight, sessionMaxWeight);
+        weekBuckets[bucket].maxReps = Math.max(weekBuckets[bucket].maxReps, sessionMaxReps);
+      }
+    }
+
+    const sortedWeeks = Object.entries(weekBuckets)
+      .map(([w, v]) => ({ week: Number(w), ...v }))
+      .sort((a, b) => a.week - b.week); // index 0 = semana más reciente
+
+    if (sortedWeeks.length < STAGNATION_WEEKS) continue;
+
+    const current   = sortedWeeks[0];
+    const reference = sortedWeeks[STAGNATION_WEEKS - 1];
+
+    const weightStagnant = current.maxWeight <= reference.maxWeight;
+
+    const targetRepsMax = targetRepsByExercise[name.toLowerCase()];
+    let repsProgressed;
+    if (targetRepsMax !== undefined && genTime !== null) {
+      const hitTargetThisCycle = exSessions.some(s =>
+        new Date(s.date).getTime() >= genTime &&
+        s.series.some(sr => sr.weight > 0 && (sr.reps || 0) >= targetRepsMax)
+      );
+      repsProgressed = hitTargetThisCycle || current.maxReps > reference.maxReps;
+    } else {
+      repsProgressed = current.maxReps > reference.maxReps;
+    }
+
+    if (weightStagnant && !repsProgressed) {
+      let plateauWeeks = STAGNATION_WEEKS;
+      for (let i = STAGNATION_WEEKS; i < sortedWeeks.length; i++) {
+        if (sortedWeeks[i].maxWeight >= current.maxWeight && sortedWeeks[i].maxReps >= current.maxReps) plateauWeeks++;
+        else break;
+      }
+      stagnantExercises.push({ name, weeks: plateauWeeks, maxWeight: current.maxWeight });
+    }
+  }
+
+  return stagnantExercises;
 }
 
 // ── Adherencia real vs planificado ────────────────────────────────────────────
@@ -471,9 +513,9 @@ function formatCheckin(checkin) {
   return lines.join('\n');
 }
 
-function buildPrompt(ctx, checkin, adherence = null) {
+function buildPrompt(ctx, checkin, adherence = null, stagnantExercises = []) {
   const { profile, recentSessionsFull, muscleStats, recentExerciseStats, muscleExerciseMap, weights,
-          stagnantExercises, avgSessionsPerWeek, pushPullNote, volumeStatus, lowVarietyGroups, windowDays90 } = ctx;
+          avgSessionsPerWeek, pushPullNote, volumeStatus, lowVarietyGroups, windowDays90 } = ctx;
   const today = new Date().toISOString().slice(0, 10);
 
   const profileText = profile ? `
@@ -892,6 +934,22 @@ Responde SOLO con JSON (sin texto adicional), con exactamente esta estructura:
 }`;
 }
 
+// El prompt ya pide que "alternative" no repita otro ejercicio del mismo día/entreno, pero
+// el modelo no siempre lo respeta — se sanea aquí de forma determinista en vez de confiar
+// solo en la instrucción: si la alternativa coincide con otro ejercicio ya presente en esa
+// misma lista, se elimina en vez de dejar un duplicado en el plan guardado.
+function nullifyDuplicateAlternatives(exercises) {
+  if (!Array.isArray(exercises)) return;
+  const namesInList = new Set(
+    exercises.map(ex => ex.name && ex.name.toLowerCase()).filter(Boolean)
+  );
+  for (const ex of exercises) {
+    if (ex.alternative && namesInList.has(String(ex.alternative).toLowerCase())) {
+      ex.alternative = null;
+    }
+  }
+}
+
 async function generateExtraWorkout() {
   const planRow = await getLatestPlan();
   if (!planRow) throw new Error('No hay plan activo. Genera un plan primero.');
@@ -900,6 +958,8 @@ async function generateExtraWorkout() {
   const ctx    = await buildContext();
   const prompt = buildExtraWorkoutPrompt(plan, ctx);
   const { parsed } = await callClaude(prompt);
+
+  nullifyDuplicateAlternatives(parsed.exercises);
 
   const weekStart = getWeekMonday();
   await dbRun(
@@ -934,13 +994,22 @@ async function generatePlan(checkin = null) {
   const ctx = await buildContext();
 
   let adherence = null;
+  let stagnantExercises = [];
   const prevPlan = await getLatestPlan();
   if (prevPlan) {
-    adherence = await computeAdherence(JSON.parse(prevPlan.plan_json), ctx.allSessions, prevPlan.generated_at);
+    const prevPlanJson = JSON.parse(prevPlan.plan_json);
+    adherence = await computeAdherence(prevPlanJson, ctx.allSessions, prevPlan.generated_at);
+    stagnantExercises = computeStagnantExercises(prevPlanJson, ctx.allSessions, prevPlan.generated_at);
+  } else {
+    stagnantExercises = computeStagnantExercises(null, ctx.allSessions, null);
   }
 
-  const prompt = buildPrompt(ctx, checkin, adherence);
+  const prompt = buildPrompt(ctx, checkin, adherence, stagnantExercises);
   const { parsed, raw } = await callClaude(prompt);
+
+  for (const day of (parsed.weekly_plan?.days || [])) {
+    nullifyDuplicateAlternatives(day.exercises);
+  }
 
   const validUntil = parsed.next_review ||
     new Date(Date.now() + PLAN_DAYS * 86400000).toISOString().slice(0, 10);
@@ -957,4 +1026,4 @@ async function generatePlan(checkin = null) {
   return parsed;
 }
 
-module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights, generateExtraWorkout, getLatestExtraWorkout, deleteExtraWorkout, buildContext, computeAdherence, computeGeneralAdherence };
+module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights, generateExtraWorkout, getLatestExtraWorkout, deleteExtraWorkout, buildContext, computeAdherence, computeGeneralAdherence, computeStagnantExercises };
