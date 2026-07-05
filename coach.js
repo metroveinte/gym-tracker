@@ -139,7 +139,10 @@ async function buildContext() {
   // Detailed session listing: last 30 days (kept short to avoid bloating the prompt)
   const recentSessionsFull = allSessions.filter(s => s.date >= cutoff30);
 
-  // Stagnation detection: exercises with no max-weight improvement in 3+ consecutive weeks
+  // Stagnation detection: exercises with no improvement (ni en peso ni en reps) en 3+ semanas.
+  // Importante: si el plan activo aplica la Herramienta 1 (mismo peso, más reps), el peso máximo
+  // se mantiene plano A PROPÓSITO durante 4 semanas — eso NO es estancamiento si las reps mejoran.
+  // Solo se marca como estancado si NINGUNA de las dos dimensiones progresa.
   const STAGNATION_WEEKS = 3;
   const stagnantExercises = [];
   const now = Date.now();
@@ -156,26 +159,36 @@ async function buildContext() {
       const daysAgo = Math.floor((now - new Date(s.date).getTime()) / 86400000);
       if (daysAgo > 56) continue;
       const bucket = Math.floor(daysAgo / 7);
-      const sessionMax = Math.max(...s.series.filter(sr => sr.weight > 0).map(sr => sr.weight));
-      if (!weekBuckets[bucket] || sessionMax > weekBuckets[bucket]) weekBuckets[bucket] = sessionMax;
+      const workingSets = s.series.filter(sr => sr.weight > 0);
+      const sessionMaxWeight = Math.max(...workingSets.map(sr => sr.weight));
+      const sessionMaxReps = Math.max(...workingSets.map(sr => sr.reps || 0));
+      if (!weekBuckets[bucket]) {
+        weekBuckets[bucket] = { maxWeight: sessionMaxWeight, maxReps: sessionMaxReps };
+      } else {
+        weekBuckets[bucket].maxWeight = Math.max(weekBuckets[bucket].maxWeight, sessionMaxWeight);
+        weekBuckets[bucket].maxReps = Math.max(weekBuckets[bucket].maxReps, sessionMaxReps);
+      }
     }
 
     const sortedWeeks = Object.entries(weekBuckets)
-      .map(([w, max]) => ({ week: Number(w), max }))
-      .sort((a, b) => a.week - b.week); // index 0 = most recent week
+      .map(([w, v]) => ({ week: Number(w), ...v }))
+      .sort((a, b) => a.week - b.week); // index 0 = semana más reciente
 
     if (sortedWeeks.length < STAGNATION_WEEKS) continue;
 
-    const currentMax = sortedWeeks[0].max;
-    const referenceMax = sortedWeeks[STAGNATION_WEEKS - 1].max;
+    const current   = sortedWeeks[0];
+    const reference = sortedWeeks[STAGNATION_WEEKS - 1];
 
-    if (currentMax <= referenceMax) {
+    const weightStagnant = current.maxWeight <= reference.maxWeight;
+    const repsStagnant   = current.maxReps <= reference.maxReps;
+
+    if (weightStagnant && repsStagnant) {
       let plateauWeeks = STAGNATION_WEEKS;
       for (let i = STAGNATION_WEEKS; i < sortedWeeks.length; i++) {
-        if (sortedWeeks[i].max >= currentMax) plateauWeeks++;
+        if (sortedWeeks[i].maxWeight >= current.maxWeight && sortedWeeks[i].maxReps >= current.maxReps) plateauWeeks++;
         else break;
       }
-      stagnantExercises.push({ name, weeks: plateauWeeks, maxWeight: currentMax });
+      stagnantExercises.push({ name, weeks: plateauWeeks, maxWeight: current.maxWeight });
     }
   }
 
