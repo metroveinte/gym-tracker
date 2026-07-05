@@ -280,12 +280,16 @@ function computeStagnantExercises(plan, allSessions, generatedAt) {
 
     const targetRepsMax = targetRepsByExercise[name.toLowerCase()];
     let repsProgressed;
-    if (targetRepsMax !== undefined && genTime !== null) {
-      const hitTargetThisCycle = exSessions.some(s =>
+    if (targetRepsMax !== undefined) {
+      // Ya está en el techo del rango objetivo (o por encima): no es estancamiento real, es que
+      // nunca se subió el peso pese a estar claramente listo. Aplicar deload/periodización aquí
+      // sería contraproducente — lo que corresponde es Herramienta 2 (subir peso), no herramientas 4-6.
+      const alreadyAtOrAboveTarget = current.maxReps >= targetRepsMax;
+      const hitTargetThisCycle = genTime !== null && exSessions.some(s =>
         new Date(s.date).getTime() >= genTime &&
         s.series.some(sr => sr.weight > 0 && (sr.reps || 0) >= targetRepsMax)
       );
-      repsProgressed = hitTargetThisCycle || current.maxReps > reference.maxReps;
+      repsProgressed = alreadyAtOrAboveTarget || hitTargetThisCycle || current.maxReps > reference.maxReps;
     } else {
       repsProgressed = current.maxReps > reference.maxReps;
     }
@@ -963,7 +967,11 @@ async function generatePlan(checkin = null) {
         ]
       );
     }
-    stagnantExercises = computeStagnantExercises(prevPlanJson, ctx.allSessions, prevPlan.generated_at);
+    // Igual que con la adherencia: si el plan anterior es demasiado reciente (varias
+    // regeneraciones seguidas el mismo día), sus objetivos de reps no son una referencia
+    // fiable — usar el fallback de tendencia pura en vez del objetivo de ese plan concreto.
+    const meaningfulPrevPlan = prevPlanAgeDays >= MIN_ADHERENCE_REVIEW_DAYS ? prevPlanJson : null;
+    stagnantExercises = computeStagnantExercises(meaningfulPrevPlan, ctx.allSessions, prevPlan.generated_at);
   } else {
     stagnantExercises = computeStagnantExercises(null, ctx.allSessions, null);
   }
