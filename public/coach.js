@@ -334,15 +334,23 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
         ? `<span style="font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(240,180,41,.15);border:1px solid rgba(240,180,41,.4);color:#f0b429;white-space:nowrap;">⚙ ${ex.active_tool}</span>`
         : '';
 
-      // Weekly reps/weight overview (only when reps vary week to week, e.g. periodización)
-      const weeklyReps = ex.weekly_reps || null;
-      const weeklyTable = weeklyReps ? `
+      // Weekly reps/weight overview: siempre que el peso cambie de una semana a otra dentro
+      // del ciclo (deload/periodización, o una subida de peso a mitad de mes), para que la
+      // semana en la que toca subir salte a la vista y no se olvide.
+      const weeklyReps  = ex.weekly_reps || null;
+      const weekKeys    = ['week1', 'week2', 'week3', 'week4'];
+      const weightsVary = weekKeys.some(wk => ww[wk] && ww[wk] !== ww.week1);
+      const weeklyTable = (weeklyReps || weightsVary) ? `
         <div style="margin-top:6px;display:flex;flex-direction:column;gap:2px;background:var(--bg-raised);border:1px solid var(--border);border-radius:6px;padding:6px 10px;">
-          ${['week1','week2','week3','week4'].map((wk, i) => `
-            <div style="display:flex;justify-content:space-between;font-size:.75rem;">
-              <span style="color:#888;">Sem ${i + 1}</span>
-              <span style="color:var(--text);font-family:'JetBrains Mono',monospace;">${weeklyReps[wk] || ex.reps} reps @ ${ww[wk] || sw1[0] || '—'}</span>
-            </div>`).join('')}
+          ${weekKeys.map((wk, i) => {
+            const isJump = i > 0 && ww[wk] && ww[weekKeys[i - 1]] && ww[wk] !== ww[weekKeys[i - 1]];
+            const color = isJump ? '#4cde85' : null;
+            return `
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:.75rem;${isJump ? 'font-weight:700;' : ''}">
+              <span style="color:${color || '#888'};">Sem ${i + 1}${isJump ? ' ↑ sube peso' : ''}</span>
+              <span style="color:${color || 'var(--text)'};font-family:'JetBrains Mono',monospace;">${(weeklyReps && weeklyReps[wk]) || ex.reps} reps @ ${ww[wk] || sw1[0] || '—'}</span>
+            </div>`;
+          }).join('')}
         </div>` : '';
 
       // Scheme execution note
