@@ -298,12 +298,19 @@ function renderAdherence(adherence) {
   const card = document.getElementById('adherence-card');
   if (!card) return;
 
+  // Card siempre visible, para que las dos cards de cumplimiento mantengan el layout
+  // de ~50%/50% en vez de que la otra se estire a 100% cuando esta no tiene datos.
+  card.classList.remove('hidden');
+
   if (!adherence || adherence.weeksElapsed < 1 || adherence.perMuscleGroup.length === 0) {
-    card.classList.add('hidden');
+    const badge = document.getElementById('adherence-overall-badge');
+    badge.textContent = '';
+    badge.style.background = 'transparent';
+    document.getElementById('adherence-note').textContent = 'Aún no hay datos de cumplimiento para el plan actual.';
+    document.getElementById('adherence-exercises').innerHTML = '';
+    document.getElementById('adherence-never-logged').classList.add('hidden');
     return;
   }
-
-  card.classList.remove('hidden');
 
   document.getElementById('adherence-overall-badge').textContent = `${adherence.overallAdherencePct}%`;
   document.getElementById('adherence-overall-badge').style.background = adherenceOverallColor(adherence.overallAdherencePct);
@@ -332,12 +339,14 @@ function renderAdherenceHistoryList(history) {
   const list = document.getElementById('adherence-history-list');
   if (!card || !list) return;
 
+  // Card siempre visible (aunque no haya histórico aún), para que las dos cards de
+  // cumplimiento mantengan el layout de ~50%/50% en vez de que una se estire a 100%.
+  card.classList.remove('hidden');
+
   if (!history || history.length === 0) {
-    card.classList.add('hidden');
+    list.innerHTML = `<p style="color:#888; font-size:.85rem; margin:0;">Aún no hay ciclos de plan completados. Aparecerán aquí a medida que regeneres el plan (cada ciclo necesita al menos unos días activo para contar).</p>`;
     return;
   }
-
-  card.classList.remove('hidden');
 
   // Un ciclo = una fila, más reciente primero (los ciclos de prueba ya se filtran
   // al guardar el snapshot: solo se registra si el plan anterior llevó ≥3 días activo).
