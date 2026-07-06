@@ -527,3 +527,11 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Gym Tracker running at http://localhost:${PORT}`);
 });
+
+// Rellena el histórico de cumplimiento con ciclos de plan ya completados antes de que
+// existiera adherence_history. Idempotente (no duplica filas) y no bloquea el arranque.
+coach.backfillAdherenceHistory()
+  .then(({ inserted }) => {
+    if (inserted > 0) console.log(`Cumplimiento histórico: ${inserted} ciclo(s) rellenado(s).`);
+  })
+  .catch(err => console.error('Error al rellenar el histórico de cumplimiento:', err.message));

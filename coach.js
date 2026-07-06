@@ -943,6 +943,50 @@ async function getLatestPlan() {
 // engañoso, no un reflejo real de la constancia del usuario.
 const MIN_ADHERENCE_REVIEW_DAYS = 3;
 
+// Rellena adherence_history con ciclos de plan ya completados ANTES de que existiera
+// esta tabla (o que por cualquier motivo no llegaron a guardarse). Recalcula con los
+// datos reales ya existentes (sessions/series/coach_plans) — no inventa nada, y es
+// idempotente: se puede llamar en cada arranque del servidor sin duplicar filas.
+async function backfillAdherenceHistory() {
+  const plans = await dbAll('SELECT * FROM coach_plans ORDER BY generated_at ASC');
+  if (plans.length < 2) return { inserted: 0 }; // hace falta un plan "siguiente" para saber que un ciclo terminó
+
+  const existingRows = await dbAll('SELECT plan_id FROM adherence_history');
+  const existingIds  = new Set(existingRows.map(r => r.plan_id));
+
+  const ctx = await buildContext();
+  let inserted = 0;
+
+  // El último plan es el activo (ciclo en curso, aún no "completado") — no se backfillea.
+  for (let i = 0; i < plans.length - 1; i++) {
+    const planRow = plans[i];
+    if (existingIds.has(planRow.id)) continue;
+
+    const nextRow      = plans[i + 1];
+    const genTime      = parseUTC(planRow.generated_at).getTime();
+    const nextGenTime  = parseUTC(nextRow.generated_at).getTime();
+    const activeDays   = (nextGenTime - genTime) / 86400000;
+    if (activeDays < MIN_ADHERENCE_REVIEW_DAYS) continue; // ciclo de prueba, se descarta igual que en vivo
+
+    const planJson  = JSON.parse(planRow.plan_json);
+    const adherence = await computeAdherence(planJson, ctx.allSessions, planRow.generated_at);
+
+    await dbRun(
+      `INSERT OR IGNORE INTO adherence_history
+         (plan_id, plan_generated_at, overall_adherence_pct, overall_sets_completed, overall_sets_planned, per_muscle_group_json, never_logged_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        planRow.id, planRow.generated_at,
+        adherence.overallAdherencePct, adherence.overallSetsCompleted, adherence.overallSetsPlanned,
+        JSON.stringify(adherence.perMuscleGroup), JSON.stringify(adherence.neverLogged),
+      ]
+    );
+    inserted++;
+  }
+
+  return { inserted };
+}
+
 async function generatePlan(checkin = null) {
   const ctx = await buildContext();
 
@@ -998,4 +1042,4 @@ async function generatePlan(checkin = null) {
   return parsed;
 }
 
-module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights, generateExtraWorkout, getLatestExtraWorkout, deleteExtraWorkout, buildContext, computeAdherence, computeStagnantExercises, getAdherenceHistory };
+module.exports = { getLatestPlan, generatePlan, generateWeeklyWeights, getLatestWeeklyWeights, generateExtraWorkout, getLatestExtraWorkout, deleteExtraWorkout, buildContext, computeAdherence, computeStagnantExercises, getAdherenceHistory, backfillAdherenceHistory };
