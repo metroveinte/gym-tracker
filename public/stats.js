@@ -4,10 +4,39 @@ let currentFilter = 'all';
 let progressChart = null;
 let topExercisesChart = null;
 let muscleGroupChart = null;
-let adherenceHistoryChart = null;
 let currentHistoryPage = 0;
 let currentFilteredSessions = [];
 const HISTORY_PAGE_SIZE = 15;
+
+function toggleCollapse(bodyId, chevronId) {
+  const body    = document.getElementById(bodyId);
+  const chevron = document.getElementById(chevronId);
+  if (!body) return;
+  const collapsed = body.classList.contains('is-collapsed') || body.style.maxHeight === '0px' || body.style.maxHeight === '0';
+  if (collapsed) {
+    body.classList.remove('is-collapsed');
+    body.classList.remove('is-open');
+    body.style.overflow  = 'hidden';
+    body.style.maxHeight = body.scrollHeight + 'px';
+    body.style.opacity   = '1';
+    chevron?.classList.remove('is-collapsed');
+    const done = () => {
+      body.style.maxHeight = 'none';
+      body.classList.add('is-open');
+    };
+    const timer = setTimeout(done, 350);
+    body.addEventListener('transitionend', () => { clearTimeout(timer); done(); }, { once: true });
+  } else {
+    body.classList.remove('is-open');
+    body.style.overflow  = 'hidden';
+    body.style.maxHeight = body.scrollHeight + 'px';
+    body.offsetHeight; // force reflow
+    body.style.maxHeight = '0';
+    body.style.opacity   = '0';
+    body.classList.add('is-collapsed');
+    chevron?.classList.add('is-collapsed');
+  }
+}
 
 function updateButtonMode() {
   const isMobile = window.innerWidth <= 768;
@@ -224,7 +253,9 @@ function renderMonthlyRecap(recap) {
   el.innerHTML = lines.map(l => `<p style="margin:4px 0; color:#ccc; font-size:.9rem;">${l}</p>`).join('');
 }
 
-// ── Cumplimiento del plan (ciclo actual + evolución histórica) ───────────────
+// ── Cumplimiento del plan (ciclo actual + histórico por mes) ─────────────────
+
+let adherenceHistoryData = [];
 
 async function loadAdherence() {
   try {
@@ -238,9 +269,9 @@ async function loadAdherence() {
   try {
     const res = await fetch('/api/coach/adherence-history');
     const history = res.ok ? await res.json() : [];
-    renderAdherenceHistoryChart(history);
+    renderAdherenceHistoryList(history);
   } catch (e) {
-    renderAdherenceHistoryChart([]);
+    renderAdherenceHistoryList([]);
   }
 }
 
@@ -254,30 +285,32 @@ function adherenceOverallColor(pct) {
   return pct >= 85 ? '#4caf50' : pct >= 50 ? '#f0b429' : 'var(--accent)';
 }
 
+function renderAdherenceGroupRows(groups) {
+  return groups.map(g => `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border);">
+      <span style="color:var(--text); font-size:.85rem; flex:1; min-width:0;">${g.group}</span>
+      <span style="color:#888; font-size:.78rem; font-family:'JetBrains Mono',monospace;">${g.totalCompletedSoFar}/${g.totalPlannedSoFar}</span>
+      <span style="font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:10px; color:#fff; background:${adherenceStatusColor(g.status)}; white-space:nowrap;">${adherenceStatusLabel(g.status)}</span>
+    </div>`).join('');
+}
+
 function renderAdherence(adherence) {
   const card = document.getElementById('adherence-card');
-  const currentWrap = document.getElementById('adherence-current-wrap');
-  if (!card || !currentWrap) return;
+  if (!card) return;
 
   if (!adherence || adherence.weeksElapsed < 1 || adherence.perMuscleGroup.length === 0) {
-    currentWrap.classList.add('hidden');
+    card.classList.add('hidden');
     return;
   }
 
   card.classList.remove('hidden');
-  currentWrap.classList.remove('hidden');
 
   document.getElementById('adherence-overall-badge').textContent = `${adherence.overallAdherencePct}%`;
   document.getElementById('adherence-overall-badge').style.background = adherenceOverallColor(adherence.overallAdherencePct);
   document.getElementById('adherence-note').textContent =
     `${adherence.overallSetsCompleted} de ${adherence.overallSetsPlanned} series planificadas, semana ${adherence.weeksElapsed} de 4 del plan actual.`;
 
-  document.getElementById('adherence-exercises').innerHTML = adherence.perMuscleGroup.map(g => `
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border);">
-      <span style="color:var(--text); font-size:.85rem; flex:1; min-width:0;">${g.group}</span>
-      <span style="color:#888; font-size:.78rem; font-family:'JetBrains Mono',monospace;">${g.totalCompletedSoFar}/${g.totalPlannedSoFar}</span>
-      <span style="font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:10px; color:#fff; background:${adherenceStatusColor(g.status)}; white-space:nowrap;">${adherenceStatusLabel(g.status)}</span>
-    </div>`).join('');
+  document.getElementById('adherence-exercises').innerHTML = renderAdherenceGroupRows(adherence.perMuscleGroup);
 
   const neverLoggedBlock = document.getElementById('adherence-never-logged');
   if (adherence.neverLogged.length > 0) {
@@ -288,50 +321,56 @@ function renderAdherence(adherence) {
   }
 }
 
-function renderAdherenceHistoryChart(history) {
-  const wrap = document.getElementById('adherence-history-wrap');
-  if (!wrap) return;
+function monthLabel(dateStr) {
+  const d = new Date(dateStr.replace(' ', 'T') + 'Z');
+  const label = d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function renderAdherenceHistoryList(history) {
+  const card = document.getElementById('adherence-history-card');
+  const list = document.getElementById('adherence-history-list');
+  if (!card || !list) return;
 
   if (!history || history.length === 0) {
-    wrap.classList.add('hidden');
+    card.classList.add('hidden');
     return;
   }
-  wrap.classList.remove('hidden');
-  document.getElementById('adherence-card').classList.remove('hidden');
 
-  const labels = history.map(h => {
-    const d = new Date(h.planGeneratedAt.replace(' ', 'T') + 'Z');
-    return d.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' });
-  });
-  const data = history.map(h => h.overallAdherencePct);
+  card.classList.remove('hidden');
 
-  const ctx = document.getElementById('adherenceHistoryChart').getContext('2d');
-  if (adherenceHistoryChart) adherenceHistoryChart.destroy();
+  // Un ciclo = una fila, más reciente primero (los ciclos de prueba ya se filtran
+  // al guardar el snapshot: solo se registra si el plan anterior llevó ≥3 días activo).
+  adherenceHistoryData = [...history].sort((a, b) => new Date(b.planGeneratedAt) - new Date(a.planGeneratedAt));
 
-  adherenceHistoryChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Cumplimiento (%)',
-        data,
-        borderColor: '#ff0000',
-        backgroundColor: 'rgba(255, 0, 0, 0.1)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.3,
-      }],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, max: 100, ticks: { color: '#ffffff' }, grid: { color: '#444444' } },
-        x: { ticks: { color: '#ffffff' }, grid: { color: '#444444' } },
-      },
-    },
-  });
+  list.innerHTML = adherenceHistoryData.map((h, idx) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 10px; background:var(--bg-raised); border:1px solid var(--border); border-radius:6px;">
+      <span style="color:var(--text); font-size:.85rem;">${monthLabel(h.planGeneratedAt)}</span>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:.8rem; font-weight:700; padding:2px 10px; border-radius:14px; color:#fff; background:${adherenceOverallColor(h.overallAdherencePct)};">${h.overallAdherencePct}%</span>
+        <button type="button" class="btn-secondary" style="width:auto; margin:0; padding:4px 10px; font-size:.72rem;" onclick="showAdherenceMonthDetail(${idx})">Ver detalle</button>
+      </div>
+    </div>`).join('');
+}
+
+function showAdherenceMonthDetail(idx) {
+  const h = adherenceHistoryData[idx];
+  if (!h) return;
+
+  const rows = renderAdherenceGroupRows(h.perMuscleGroup);
+  const neverLogged = h.neverLogged && h.neverLogged.length > 0
+    ? `<div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+        <p style="color:var(--accent); font-size:0.78rem; font-weight:700; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;">Nunca registrados</p>
+        <p style="color:#ccc; font-size:.85rem; margin:0;">${h.neverLogged.join(', ')}</p>
+      </div>`
+    : '';
+
+  const body = `
+    <p style="color:#888; font-size:.78rem; margin-bottom:14px;">${h.overallSetsCompleted} de ${h.overallSetsPlanned} series planificadas.</p>
+    <div>${rows}</div>
+    ${neverLogged}`;
+
+  showAlert(monthLabel(h.planGeneratedAt), body);
 }
 
 function setupSelectors() {

@@ -63,24 +63,34 @@
       </div>
     </div>
 
-    <div id="adherence-card" class="card hidden" style="margin-bottom:16px;">
-      <div id="adherence-current-wrap" class="hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <h2 style="margin:0;">Cumplimiento del plan</h2>
-          <span id="adherence-overall-badge" style="font-size:.85rem; font-weight:700; padding:4px 12px; border-radius:20px; color:#fff;"></span>
+    <div class="adherence-cards-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:16px;">
+      <div id="adherence-card" class="card hidden" style="margin-bottom:0;">
+        <div class="collapse-header" onclick="toggleCollapse('adherence-current-body','adherence-current-chevron')" style="display:flex;justify-content:space-between;align-items:center;">
+          <h2 style="margin:0;">Plan actual</h2>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span id="adherence-overall-badge" style="font-size:.85rem; font-weight:700; padding:4px 12px; border-radius:20px; color:#fff;"></span>
+            <svg id="adherence-current-chevron" class="collapse-chevron is-collapsed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
         </div>
-        <p id="adherence-note" style="color:#888; font-size:.78rem; margin-bottom:14px;"></p>
-        <div id="adherence-exercises"></div>
-        <div id="adherence-never-logged" class="hidden" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
-          <p style="color:var(--accent); font-size:0.78rem; font-weight:700; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;">Nunca registrados</p>
-          <p id="adherence-never-logged-list" style="color:#ccc; font-size:.85rem; margin:0;"></p>
+        <div id="adherence-current-body" class="collapse-body" style="max-height:0;opacity:0;">
+          <div style="padding-top:16px;">
+            <p id="adherence-note" style="color:#888; font-size:.78rem; margin-bottom:14px;"></p>
+            <div id="adherence-exercises"></div>
+            <div id="adherence-never-logged" class="hidden" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+              <p style="color:var(--accent); font-size:0.78rem; font-weight:700; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;">Nunca registrados</p>
+              <p id="adherence-never-logged-list" style="color:#ccc; font-size:.85rem; margin:0;"></p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div id="adherence-history-wrap" class="hidden" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
-        <h2 style="font-size:1rem; margin-bottom:12px;">Evolución del cumplimiento</h2>
-        <div class="chart-container" style="height:220px;">
-          <canvas id="adherenceHistoryChart"></canvas>
+      <div id="adherence-history-card" class="card hidden" style="margin-bottom:0;">
+        <div class="collapse-header" onclick="toggleCollapse('adherence-history-body','adherence-history-chevron')" style="display:flex;justify-content:space-between;align-items:center;">
+          <h2 style="margin:0;">Cumplimiento por mes</h2>
+          <svg id="adherence-history-chevron" class="collapse-chevron is-collapsed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div id="adherence-history-body" class="collapse-body" style="max-height:0;opacity:0;">
+          <div id="adherence-history-list" style="padding-top:14px; display:flex; flex-direction:column; gap:8px;"></div>
         </div>
       </div>
     </div>
