@@ -34,7 +34,9 @@
       "Bash(echo \"exit: $?\")",
       "Bash(cp \"/root/.claude/uploads/7f73d0e1-1110-560e-90fc-282e41fe64e5/40bde848-gymtracker.db\" /tmp/claude-0/-home-user-gym-tracker/7f73d0e1-1110-560e-90fc-282e41fe64e5/scratchpad/user-gymtracker.db)",
       "Bash(chmod 444 /tmp/claude-0/-home-user-gym-tracker/7f73d0e1-1110-560e-90fc-282e41fe64e5/scratchpad/user-gymtracker.db)",
-      "Bash(cp /home/user/gym-tracker/data/gym-tracker.db /tmp/claude-0/-home-user-gym-tracker/7f73d0e1-1110-560e-90fc-282e41fe64e5/scratchpad/dev-db-backup.db *)"
+      "Bash(cp /home/user/gym-tracker/data/gym-tracker.db /tmp/claude-0/-home-user-gym-tracker/7f73d0e1-1110-560e-90fc-282e41fe64e5/scratchpad/dev-db-backup.db *)",
+      "Bash(cp \"/root/.claude/uploads/7f73d0e1-1110-560e-90fc-282e41fe64e5/40bde848-gymtracker.db\" /home/user/gym-tracker/data/gym-tracker.db)",
+      "Bash(node -e ' *)"
     ]
   }
 }

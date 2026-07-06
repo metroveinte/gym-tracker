@@ -938,10 +938,12 @@ async function getLatestPlan() {
 }
 
 // Si el plan anterior lleva menos de esto activo (p. ej. se regeneró varias veces
-// seguidas en el mismo día para pruebas), no ha habido tiempo real de generar
-// ninguna señal de cumplimiento fiable — inyectar un "0%" en ese caso sería
-// engañoso, no un reflejo real de la constancia del usuario.
-const MIN_ADHERENCE_REVIEW_DAYS = 3;
+// seguidas en el mismo día para pruebas, o se cambió de opinión a los pocos días),
+// no ha habido tiempo real de generar ninguna señal de cumplimiento fiable —
+// inyectar un "0%" en ese caso sería engañoso, no un reflejo real de la constancia
+// del usuario. 15 días (algo más de la mitad de un ciclo de 4 semanas) da margen
+// suficiente para descartar pruebas sin perder ciclos genuinos regenerados algo antes.
+const MIN_ADHERENCE_REVIEW_DAYS = 15;
 
 // Rellena adherence_history con ciclos de plan ya completados ANTES de que existiera
 // esta tabla (o que por cualquier motivo no llegaron a guardarse). Recalcula con los
