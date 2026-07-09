@@ -194,8 +194,20 @@ function computeMonthlyRecap(sessions, weights) {
     return d.getFullYear() === y && d.getMonth() === m;
   };
 
+  const dayOfMonth      = now.getDate();
+  const daysInThisMonth = new Date(curY, curM + 1, 0).getDate();
+
   const daysThisMonth = new Set(sessions.filter(s => inMonth(s.date, curY, curM)).map(s => s.date)).size;
   const daysLastMonth = new Set(sessions.filter(s => inMonth(s.date, prevY, prevM)).map(s => s.date)).size;
+  // Comparación justa: días entrenados en el mes anterior hasta la MISMA fecha (no el mes completo).
+  const daysLastMonthSoFar = new Set(
+    sessions.filter(s => {
+      const d = new Date(s.date);
+      return d.getFullYear() === prevY && d.getMonth() === prevM && d.getDate() <= dayOfMonth;
+    }).map(s => s.date)
+  ).size;
+  // Proyección: si sigues a este ritmo, cuántos días acabarás teniendo este mes.
+  const projectedDaysThisMonth = Math.round((daysThisMonth / dayOfMonth) * daysInThisMonth);
 
   const thisMonthWeights = weights.filter(w => inMonth(w.date, curY, curM)).sort((a, b) => a.date.localeCompare(b.date));
   const lastMonthWeights = weights.filter(w => inMonth(w.date, prevY, prevM)).sort((a, b) => a.date.localeCompare(b.date));
@@ -234,7 +246,6 @@ function computeMonthlyRecap(sessions, weights) {
     .sort((a, b) => (b.newMax - b.prevMax) - (a.newMax - a.prevMax));
 
   // 4. Constancia perfecta: cada bloque de 7 días ya completado este mes tiene al menos un entreno.
-  const dayOfMonth = now.getDate();
   const completedWeeks = Math.floor((dayOfMonth - 1) / 7);
   let perfectConsistency = false;
   if (completedWeeks >= 2) {
@@ -270,7 +281,10 @@ function computeMonthlyRecap(sessions, weights) {
     longestGapDays = Math.max(longestGapDays, Math.round((monthEnd - prev) / 86400000));
   }
 
-  return { daysThisMonth, daysLastMonth, weightDelta, prs, perfectConsistency, lastCycleAdherence, longestGapDays };
+  return {
+    daysThisMonth, daysLastMonth, daysLastMonthSoFar, dayOfMonth, projectedDaysThisMonth,
+    weightDelta, prs, perfectConsistency, lastCycleAdherence, longestGapDays,
+  };
 }
 
 function renderMonthlyRecap(recap) {
@@ -290,17 +304,23 @@ function renderMonthlyRecap(recap) {
     lines.push(`🔥 Constancia perfecta: has entrenado todas las semanas de este mes, ¡sigue así!`);
   }
 
-  if (recap.daysLastMonth > 0) {
-    const diff = recap.daysThisMonth - recap.daysLastMonth;
-    if (diff > 0) {
-      lines.push(`💪 Entrenaste <strong>${recap.daysThisMonth} días</strong> este mes (${recap.daysLastMonth} el mes pasado) — ¡vas mejor que el mes pasado!`);
-    } else if (diff < 0) {
-      lines.push(`💪 Entrenaste <strong>${recap.daysThisMonth} días</strong> este mes (${recap.daysLastMonth} el mes pasado) — un poco menos que el mes pasado, ¡a por el próximo!`);
-    } else {
-      lines.push(`💪 Entrenaste <strong>${recap.daysThisMonth} días</strong> este mes, igual que el mes pasado.`);
+  // Días entrenados: sin comparar hasta pasada la primera semana (una comparación contra
+  // un mes ya cerrado no tiene sentido a principios de mes). Después, comparación justa
+  // por fecha equivalente (no contra el total del mes pasado), en tono ligero, sin
+  // repetir cifras del mes anterior más de una vez.
+  if (recap.dayOfMonth <= 7) {
+    if (recap.daysThisMonth > 0) {
+      lines.push(`💪 Llevas <strong>${recap.daysThisMonth} día${recap.daysThisMonth === 1 ? '' : 's'}</strong> entrenado${recap.daysThisMonth === 1 ? '' : 's'} este mes. ¡Vamos con todo!`);
     }
-  } else if (recap.daysThisMonth > 0) {
-    lines.push(`💪 Entrenaste <strong>${recap.daysThisMonth} días</strong> este mes.`);
+  } else if (recap.daysThisMonth > 0 || recap.daysLastMonthSoFar > 0) {
+    const diff = recap.daysThisMonth - recap.daysLastMonthSoFar;
+    const tone = diff > 0 ? 'vas a mejor ritmo que hace un mes'
+      : diff < 0 ? 'un poco por debajo de tu ritmo habitual, aún hay margen'
+      : 'mismo ritmo que sueles llevar';
+    const projection = recap.dayOfMonth >= 15
+      ? ` A este ritmo, acabarás el mes con unos ${recap.projectedDaysThisMonth} días.`
+      : '';
+    lines.push(`💪 Llevas <strong>${recap.daysThisMonth} día${recap.daysThisMonth === 1 ? '' : 's'}</strong> entrenado${recap.daysThisMonth === 1 ? '' : 's'} este mes — ${tone}.${projection}`);
   }
 
   if (recap.weightDelta !== null) {
