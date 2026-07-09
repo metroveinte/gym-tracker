@@ -116,6 +116,9 @@ async function loadStats() {
     allSessions = await fetch('/api/sessions').then(r => r.json());
     const exercisesRes = await fetch('/api/exercises').then(r => r.json());
     weightLog = await fetch('/api/weight').then(r => r.json()).catch(() => []);
+    const history = await fetch('/api/coach/adherence-history').then(r => r.ok ? r.json() : []).catch(() => []);
+    adherenceHistoryData = [...history].sort((a, b) => new Date(b.planGeneratedAt) - new Date(a.planGeneratedAt));
+    renderAdherenceHistoryList(adherenceHistoryData);
 
     exercisesRes.forEach(ex => {
       if (typeof ex === 'object' && ex.name && ex.muscle_group) {
@@ -125,11 +128,11 @@ async function loadStats() {
 
     setupSelectors();
     loadExerciseSelect();
-    updateStats();
+    updateStats(); // el recap mensual ya puede usar adherenceHistoryData (cumplimiento del mes pasado)
   } catch (error) {
     console.error('Error loading stats:', error);
   }
-  loadAdherence();
+  loadCurrentAdherence();
 }
 
 function getMuscleGroup(exerciseName) {
@@ -211,7 +214,63 @@ function computeMonthlyRecap(sessions, weights) {
     }
   }
 
-  return { daysThisMonth, daysLastMonth, weightDelta };
+  // 1. PRs de peso este mes: máximo de este mes supera el máximo histórico ANTERIOR a este mes.
+  const monthStart = new Date(curY, curM, 1);
+  const beforeMax = {}, thisMonthMax = {};
+  for (const s of sessions) {
+    if (!s.exercise || !s.series || !s.series.length) continue;
+    const maxW = s.series.reduce((m, se) => Math.max(m, se.weight || 0), 0);
+    if (maxW <= 0) continue;
+    const d = new Date(s.date);
+    if (inMonth(s.date, curY, curM)) {
+      thisMonthMax[s.exercise] = Math.max(thisMonthMax[s.exercise] || 0, maxW);
+    } else if (d < monthStart) {
+      beforeMax[s.exercise] = Math.max(beforeMax[s.exercise] || 0, maxW);
+    }
+  }
+  const prs = Object.entries(thisMonthMax)
+    .filter(([ex, maxThis]) => beforeMax[ex] > 0 && maxThis > beforeMax[ex])
+    .map(([ex, maxThis]) => ({ exercise: ex, newMax: maxThis, prevMax: beforeMax[ex] }))
+    .sort((a, b) => (b.newMax - b.prevMax) - (a.newMax - a.prevMax));
+
+  // 4. Constancia perfecta: cada bloque de 7 días ya completado este mes tiene al menos un entreno.
+  const dayOfMonth = now.getDate();
+  const completedWeeks = Math.floor((dayOfMonth - 1) / 7);
+  let perfectConsistency = false;
+  if (completedWeeks >= 2) {
+    const trainingDaysOfMonth = new Set(
+      sessions.filter(s => inMonth(s.date, curY, curM)).map(s => new Date(s.date).getDate())
+    );
+    perfectConsistency = true;
+    for (let w = 0; w < completedWeeks; w++) {
+      const weekStart = w * 7 + 1, weekEnd = weekStart + 6;
+      let hasSession = false;
+      for (const day of trainingDaysOfMonth) {
+        if (day >= weekStart && day <= weekEnd) { hasSession = true; break; }
+      }
+      if (!hasSession) { perfectConsistency = false; break; }
+    }
+  }
+
+  // 6. Cumplimiento del último ciclo de plan ya completado (adherenceHistoryData ya viene ordenado, más reciente primero).
+  const lastCycleAdherence = adherenceHistoryData.length > 0 ? adherenceHistoryData[0] : null;
+
+  // 7. Hueco largo de inactividad dentro de este mes.
+  const isCurrentMonth = curY === now.getFullYear() && curM === now.getMonth();
+  const monthEnd = isCurrentMonth ? now : new Date(curY, curM + 1, 0);
+  const trainingDates = [...new Set(sessions.filter(s => inMonth(s.date, curY, curM)).map(s => s.date))]
+    .map(d => new Date(d)).sort((a, b) => a - b);
+  let longestGapDays = 0;
+  if (trainingDates.length > 0) {
+    let prev = monthStart;
+    for (const d of trainingDates) {
+      longestGapDays = Math.max(longestGapDays, Math.round((d - prev) / 86400000));
+      prev = d;
+    }
+    longestGapDays = Math.max(longestGapDays, Math.round((monthEnd - prev) / 86400000));
+  }
+
+  return { daysThisMonth, daysLastMonth, weightDelta, prs, perfectConsistency, lastCycleAdherence, longestGapDays };
 }
 
 function renderMonthlyRecap(recap) {
@@ -219,6 +278,17 @@ function renderMonthlyRecap(recap) {
   if (!el) return;
 
   const lines = [];
+
+  // Buenas noticias primero.
+  if (recap.prs.length > 0) {
+    const top = recap.prs.slice(0, 2).map(pr => `${pr.exercise} (${pr.newMax}kg, antes ${pr.prevMax}kg)`);
+    const extra = recap.prs.length > 2 ? ` y ${recap.prs.length - 2} más` : '';
+    lines.push(`🏆 ¡Nuevo récord este mes en ${top.join(' y ')}${extra}! Enhorabuena.`);
+  }
+
+  if (recap.perfectConsistency) {
+    lines.push(`🔥 Constancia perfecta: has entrenado todas las semanas de este mes, ¡sigue así!`);
+  }
 
   if (recap.daysLastMonth > 0) {
     const diff = recap.daysThisMonth - recap.daysLastMonth;
@@ -244,6 +314,15 @@ function renderMonthlyRecap(recap) {
     }
   }
 
+  // Avisos al final.
+  if (recap.lastCycleAdherence && recap.lastCycleAdherence.overallAdherencePct < 60) {
+    lines.push(`⚠️ El último ciclo de plan (${monthLabel(recap.lastCycleAdherence.planGeneratedAt)}) se cumplió solo al <strong>${recap.lastCycleAdherence.overallAdherencePct}%</strong> — a por más constancia este ciclo.`);
+  }
+
+  if (recap.longestGapDays >= 10) {
+    lines.push(`⏸️ Hubo un hueco de <strong>${recap.longestGapDays} días</strong> sin entrenar este mes.`);
+  }
+
   if (lines.length === 0) {
     el.style.display = 'none';
     return;
@@ -257,21 +336,13 @@ function renderMonthlyRecap(recap) {
 
 let adherenceHistoryData = [];
 
-async function loadAdherence() {
+async function loadCurrentAdherence() {
   try {
     const res = await fetch('/api/coach/plan');
     const plan = res.ok ? await res.json() : null;
     renderAdherence(plan?.adherence || null);
   } catch (e) {
     renderAdherence(null);
-  }
-
-  try {
-    const res = await fetch('/api/coach/adherence-history');
-    const history = res.ok ? await res.json() : [];
-    renderAdherenceHistoryList(history);
-  } catch (e) {
-    renderAdherenceHistoryList([]);
   }
 }
 
