@@ -497,9 +497,12 @@ function buildPrompt(ctx, checkin, adherence = null, stagnantExercises = []) {
   const checkinText = formatCheckin(checkin);
 
   const exerciseLines = recentExerciseStats.map(([name, s]) => {
-    const avgW = avg(s.weights);
-    const maxW = max(s.weights);
-    const weightStr = avgW ? ` | peso: media ${avgW}kg/máx ${maxW}kg` : '';
+    // Media/máx de peso SIEMPRE sobre la ventana reciente (recentWeights), igual que las reps —
+    // usar el histórico completo diluiría una subida de peso ya consolidada con datos de hace
+    // meses o años, haciendo que el coach no reconozca el peso de trabajo actual real.
+    const avgW = avg(s.recentWeights);
+    const maxW = max(s.recentWeights);
+    const weightStr = avgW ? ` | peso últimos 3 meses: media ${avgW}kg/máx ${maxW}kg` : '';
     let repsStr = '';
     if (s.recentReps.length > 0) {
       const avgR = avgDec(s.recentReps);
@@ -558,6 +561,10 @@ Genera una respuesta JSON con exactamente esta estructura (sin texto fuera del J
 REGLAS IMPORTANTES:
 - day: usa siempre nombres genéricos "Día 1", "Día 2", "Día 3"… (nunca días de la semana como Lunes, Martes, etc.), ya que el usuario puede entrenar cualquier día.
 - estimated_minutes: calcula el tiempo real de sesión sumando (sets_totales × 1.5 min de ejecución) + (sets_totales × 2.5 min de descanso) + 12 min de overhead (calentamiento, buscar máquinas, transiciones). Redondea a múltiplos de 5.
+- CONSISTENCIA DEL PESO DE TRABAJO: el peso actual de cada ejercicio (media/máx de los últimos 3 meses)
+  ya refleja subidas anteriores consolidadas — es el peso real actual, no una media histórica diluida.
+  NUNCA propongas un peso de partida (semana 1) por debajo de ese peso reciente salvo que estés aplicando
+  explícitamente Herramienta 5 (deload completo). Una subida de peso ya asentada no se revierte sin motivo.
 - JERARQUÍA DE PROGRESIÓN — Aplica las herramientas en orden de prioridad para cada ejercicio:
     HERRAMIENTA 1 — Subir reps (progresión primaria):
       Si media de reps < máximo del rango → mantén el peso; asigna reps objetivo más altas este mes.

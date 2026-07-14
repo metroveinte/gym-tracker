@@ -347,7 +347,7 @@ function renderPlan(plan, generatedAt, validUntil, weeklyWeights = null) {
             const color = isJump ? '#4cde85' : null;
             return `
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:.75rem;${isJump ? 'font-weight:700;' : ''}">
-              <span style="color:${color || '#888'};">Sem ${i + 1}${isJump ? ' ↑ sube peso' : ''}</span>
+              <span style="color:${color || '#888'};">Sem ${i + 1}${isJump ? ' ↑ sube si cumples' : ''}</span>
               <span style="color:${color || 'var(--text)'};font-family:'JetBrains Mono',monospace;">${(weeklyReps && weeklyReps[wk]) || ex.reps} reps @ ${ww[wk] || sw1[0] || '—'}</span>
             </div>`;
           }).join('')}
